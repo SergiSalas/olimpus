@@ -3,6 +3,8 @@ package com.sergisalas.olimpus.config;
 import com.sergisalas.olimpus.auth.adapter.in.NotAuthenticatedException;
 import com.sergisalas.olimpus.auth.domain.InvalidEmailException;
 import com.sergisalas.olimpus.auth.domain.InvalidLoginCodeException;
+import com.sergisalas.olimpus.profile.domain.ProfileNotFoundException;
+import com.sergisalas.olimpus.profile.domain.UnderageException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -35,6 +37,16 @@ public class ApiErrors {
     @ExceptionHandler(NotAuthenticatedException.class)
     public ResponseEntity<ApiError> auth(NotAuthenticatedException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiError(e.getMessage()));
+    }
+
+    @ExceptionHandler(ProfileNotFoundException.class)
+    public ResponseEntity<ApiError> noProfile(ProfileNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError(e.getMessage()));
+    }
+
+    @ExceptionHandler(UnderageException.class)
+    public ResponseEntity<ApiError> underage(UnderageException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiError(e.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

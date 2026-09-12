@@ -19,7 +19,14 @@ export function backendUrl(): string {
 }
 
 /** El backend contesta {"error": "..."} con un mensaje ya escrito para mostrar. */
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
 
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
   const response = await fetch(`${backendUrl()}${path}`, {
@@ -37,7 +44,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   const data = body ? JSON.parse(body) : null;
 
   if (!response.ok) {
-    throw new ApiError(data?.error ?? `El servidor respondió ${response.status}`);
+    throw new ApiError(data?.error ?? `El servidor respondió ${response.status}`, response.status);
   }
   return data as T;
 }
@@ -76,3 +83,49 @@ export const verifyLoginCode = (email: string, code: string) =>
   });
 
 export const fetchMe = (token: string) => request<Me>('/api/me', {}, token);
+
+// ---------- registro ----------
+
+export type Gender = 'MUJER' | 'HOMBRE' | 'NO_BINARIO' | 'OTRO';
+export type Intent = 'AMISTAD' | 'CITAS' | 'PAREJA' | 'CASUAL';
+export type LanguageLevel = 'BASICO' | 'MEDIO' | 'NATIVO';
+
+export type LanguageSkill = { code: string; level: LanguageLevel };
+
+export type Interest = { name: string; label: string };
+
+export type ProfileData = {
+  nickname: string;
+  bio: string;
+  /** "1995-03-20" */
+  birthDate: string;
+  gender: Gender;
+  seeking: Gender[];
+  ageMin: number;
+  ageMax: number;
+  maxDistanceKm: number;
+  latitude: number;
+  longitude: number;
+  languages: LanguageSkill[];
+  sociability: number;
+  conversationDepth: number;
+  intent: Intent;
+  interests: string[];
+};
+
+export type Profile = ProfileData & { age: number };
+
+export const fetchInterests = () => request<Interest[]>('/api/interests');
+
+/** Devuelve null si esa cuenta todavía no ha hecho el registro. */
+export async function fetchProfile(token: string): Promise<Profile | null> {
+  try {
+    return await request<Profile>('/api/profile', {}, token);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+export const saveProfile = (token: string, data: ProfileData) =>
+  request<Profile>('/api/profile', { method: 'PUT', body: JSON.stringify(data) }, token);

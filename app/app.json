@@ -22,7 +22,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Olimpus usa tu ubicación una sola vez, y la guarda redondeada a más de un kilómetro, para saber a qué distancia estáis."
+        }
+      ]
     ]
   }
 }

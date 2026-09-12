@@ -10,6 +10,9 @@ import com.sergisalas.olimpus.auth.domain.Secrets;
 import com.sergisalas.olimpus.auth.domain.SessionRepository;
 import com.sergisalas.olimpus.health.application.CheckHealth;
 import com.sergisalas.olimpus.health.domain.DatabaseInfo;
+import com.sergisalas.olimpus.profile.application.GetProfile;
+import com.sergisalas.olimpus.profile.application.SaveProfile;
+import com.sergisalas.olimpus.profile.domain.ProfileRepository;
 import com.sergisalas.olimpus.shared.domain.Hasher;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
@@ -52,6 +55,16 @@ public class DomainBeans {
             Hasher hasher,
             Clock clock) {
         return new VerifyLoginCode(codes, accounts, sessions, secrets, hasher, clock);
+    }
+
+    @Bean
+    SaveProfile saveProfile(ProfileRepository profiles, Clock clock) {
+        return new SaveProfile(profiles, clock);
+    }
+
+    @Bean
+    GetProfile getProfile(ProfileRepository profiles) {
+        return new GetProfile(profiles);
     }
 
     @Bean
