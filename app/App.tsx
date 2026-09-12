@@ -1,112 +1,75 @@
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { backendUrl, fetchHealth, type Health } from './src/api';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { fetchMe, type Me, type StartedSession } from './src/api';
+import { HomeScreen } from './src/screens/HomeScreen';
+import { LoginScreen } from './src/screens/LoginScreen';
+import { clearToken, readToken, saveToken } from './src/session';
+import { colors } from './src/theme';
 
-type State =
-  | { kind: 'cargando' }
-  | { kind: 'ok'; health: Health }
-  | { kind: 'error'; mensaje: string };
+type State = { kind: 'comprobando' } | { kind: 'fuera' } | { kind: 'dentro'; me: Me };
 
 export default function App() {
-  const [state, setState] = useState<State>({ kind: 'cargando' });
+  const [state, setState] = useState<State>({ kind: 'comprobando' });
 
-  const comprobar = useCallback(async () => {
-    setState({ kind: 'cargando' });
+  /**
+   * Al abrir la app se mira si hay una llave guardada y si el servidor la sigue
+   * aceptando: puede haber caducado o haber sido anulada desde el backend.
+   */
+  const comprobarSesion = useCallback(async () => {
+    setState({ kind: 'comprobando' });
+    const token = await readToken();
+    if (!token) {
+      setState({ kind: 'fuera' });
+      return;
+    }
     try {
-      setState({ kind: 'ok', health: await fetchHealth() });
+      setState({ kind: 'dentro', me: await fetchMe(token) });
     } catch (error) {
-      setState({ kind: 'error', mensaje: error instanceof Error ? error.message : String(error) });
+      // La llave ya no vale: se borra y se vuelve a empezar.
+      await clearToken();
+      setState({ kind: 'fuera' });
     }
   }, []);
 
   useEffect(() => {
-    comprobar();
-  }, [comprobar]);
+    comprobarSesion();
+  }, [comprobarSesion]);
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.titulo}>Olimpus</Text>
-      <Text style={styles.lema}>Hablar primero, ver después</Text>
-      <Text style={styles.subtitulo}>Paso 1 · el móvil habla con el servidor</Text>
+  async function entrar(sesion: StartedSession) {
+    await saveToken(sesion.token);
+    setState({
+      kind: 'dentro',
+      me: { accountId: sesion.accountId, email: sesion.email, createdAt: new Date().toISOString() },
+    });
+  }
 
-      <View style={styles.tarjeta}>
-        {state.kind === 'cargando' && <ActivityIndicator />}
+  async function salir() {
+    await clearToken();
+    setState({ kind: 'fuera' });
+  }
 
-        {state.kind === 'ok' && (
-          <>
-            <Text style={styles.ok}>Conectado</Text>
-            <Fila etiqueta="Esquema" valor={state.health.schemaVersion} />
-            <Fila etiqueta="Hora de la base de datos" valor={horaLocal(state.health.databaseTime)} />
-            <Fila etiqueta="Servidor" valor={backendUrl()} />
-          </>
-        )}
-
-        {state.kind === 'error' && (
-          <>
-            <Text style={styles.error}>Sin conexión con el servidor</Text>
-            <Text style={styles.detalle}>{state.mensaje}</Text>
-          </>
-        )}
+  if (state.kind === 'comprobando') {
+    return (
+      <View style={styles.centrado}>
+        <ActivityIndicator />
+        <StatusBar style="auto" />
       </View>
+    );
+  }
 
-      <Pressable style={styles.boton} onPress={comprobar}>
-        <Text style={styles.botonTexto}>Volver a comprobar</Text>
-      </Pressable>
-
-      <StatusBar style="auto" />
-    </View>
-  );
-}
-
-function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
-    <View style={styles.fila}>
-      <Text style={styles.etiqueta}>{etiqueta}</Text>
-      <Text style={styles.valor}>{valor}</Text>
-    </View>
+    <>
+      {state.kind === 'dentro' ? (
+        <HomeScreen me={state.me} onSalir={salir} />
+      ) : (
+        <LoginScreen onEntrar={entrar} />
+      )}
+      <StatusBar style="auto" />
+    </>
   );
-}
-
-/** El servidor manda siempre UTC; aquí se pasa a la hora del móvil. */
-function horaLocal(iso: string): string {
-  return new Date(iso).toLocaleString();
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#E9ECF1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 16,
-  },
-  titulo: { fontSize: 30, fontWeight: '700', color: '#10151C', textAlign: 'center', letterSpacing: 1 },
-  lema: { fontSize: 16, color: '#48525F', textAlign: 'center' },
-  subtitulo: { fontSize: 14, color: '#6E7885', marginBottom: 8 },
-  tarjeta: {
-    width: '100%',
-    backgroundColor: '#FBFCFD',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#C8D0DA',
-    padding: 20,
-    gap: 10,
-    minHeight: 120,
-    justifyContent: 'center',
-  },
-  ok: { fontSize: 18, fontWeight: '600', color: '#2C6A4F' },
-  error: { fontSize: 18, fontWeight: '600', color: '#B23A2F' },
-  detalle: { fontSize: 13, color: '#48525F' },
-  fila: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  etiqueta: { fontSize: 13, color: '#6E7885' },
-  valor: { fontSize: 13, color: '#10151C', fontWeight: '600', flexShrink: 1, textAlign: 'right' },
-  boton: {
-    backgroundColor: '#1E5F79',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  botonTexto: { color: '#FBFCFD', fontWeight: '600' },
+  centrado: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
 });
