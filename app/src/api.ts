@@ -129,3 +129,27 @@ export async function fetchProfile(token: string): Promise<Profile | null> {
 
 export const saveProfile = (token: string, data: ProfileData) =>
   request<Profile>('/api/profile', { method: 'PUT', body: JSON.stringify(data) }, token);
+
+// ---------- la conversación del día ----------
+
+export type Partner = {
+  age: number;
+  /** Solo dos, y del nivel 0: ni apodo, ni bio, ni foto. */
+  interests: string[];
+  approxDistanceKm: number;
+  level: number;
+};
+
+export type Today = {
+  hasConversation: boolean;
+  conversationId: string | null;
+  /** Instante de cierre en UTC; siempre las 22:00 de la comunidad. */
+  closesAt: string | null;
+  partner: Partner | null;
+  sharedInterests: string[];
+  /** Cuándo llega la siguiente oportunidad, si hoy no hay nadie. */
+  nextRoundAt: string | null;
+  message: string | null;
+};
+
+export const fetchToday = (token: string) => request<Today>('/api/today', {}, token);

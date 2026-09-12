@@ -5,6 +5,7 @@ import { fetchMe, fetchProfile, type Me, type Profile, type StartedSession } fro
 import { HomeScreen } from './src/screens/HomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { TodayScreen } from './src/screens/TodayScreen';
 import { clearToken, readToken, saveToken } from './src/session';
 import { colors } from './src/theme';
 
@@ -13,7 +14,8 @@ type State =
   | { kind: 'fuera' }
   /** Con sesión pero sin registro hecho: el único camino es terminarlo. */
   | { kind: 'registro'; token: string; me: Me }
-  | { kind: 'dentro'; token: string; me: Me; perfil: Profile };
+  | { kind: 'hoy'; token: string; me: Me; perfil: Profile }
+  | { kind: 'miRegistro'; token: string; me: Me; perfil: Profile };
 
 export default function App() {
   const [state, setState] = useState<State>({ kind: 'comprobando' });
@@ -32,7 +34,7 @@ export default function App() {
     try {
       const me = await fetchMe(token);
       const perfil = await fetchProfile(token);
-      setState(perfil ? { kind: 'dentro', token, me, perfil } : { kind: 'registro', token, me });
+      setState(perfil ? { kind: 'hoy', token, me, perfil } : { kind: 'registro', token, me });
     } catch {
       // La llave ya no vale (caducada o anulada): se borra y se empieza de nuevo.
       await clearToken();
@@ -71,15 +73,25 @@ export default function App() {
         <OnboardingScreen
           token={state.token}
           onTerminado={(perfil) =>
-            setState({ kind: 'dentro', token: state.token, me: state.me, perfil })
+            setState({ kind: 'hoy', token: state.token, me: state.me, perfil })
           }
         />
       )}
 
-      {state.kind === 'dentro' && (
+      {state.kind === 'hoy' && (
+        <TodayScreen
+          token={state.token}
+          perfil={state.perfil}
+          onPerfil={() => setState({ ...state, kind: 'miRegistro' })}
+          onSalir={salir}
+        />
+      )}
+
+      {state.kind === 'miRegistro' && (
         <HomeScreen
           me={state.me}
           perfil={state.perfil}
+          onVolver={() => setState({ ...state, kind: 'hoy' })}
           onEditar={() => setState({ kind: 'registro', token: state.token, me: state.me })}
           onSalir={salir}
         />

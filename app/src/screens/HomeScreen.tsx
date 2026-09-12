@@ -39,25 +39,23 @@ const ESCALA_CHARLA = [
 export function HomeScreen({
   me,
   perfil,
+  onVolver,
   onEditar,
   onSalir,
 }: {
   me: Me;
   perfil: Profile;
+  onVolver: () => void;
   onEditar: () => void;
   onSalir: () => void;
 }) {
   return (
     <ScrollView style={estilos.pantalla} contentContainerStyle={estilos.contenido}>
-      <Text style={estilos.titulo}>Olimpus</Text>
-      <Text style={estilos.saludo}>Hola, {perfil.nickname}</Text>
-
-      <View style={estilos.aviso}>
-        <Text style={estilos.avisoTexto}>
-          Tu registro está guardado. Todavía no hay reparto de conversaciones: llegará en el paso 4,
-          con la ronda diaria de las 4:00.
-        </Text>
-      </View>
+      <Pressable onPress={onVolver}>
+        <Text style={estilos.volver}>‹ Hoy</Text>
+      </Pressable>
+      <Text style={estilos.titulo}>Mi registro</Text>
+      <Text style={estilos.saludo}>{perfil.nickname}</Text>
 
       <View style={estilos.tarjeta}>
         <Text style={estilos.seccion}>Tu registro</Text>
@@ -125,14 +123,7 @@ const estilos = StyleSheet.create({
     letterSpacing: 1,
   },
   saludo: { fontSize: 18, color: colors.ink2, textAlign: 'center' },
-  aviso: {
-    backgroundColor: colors.surface,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.accent,
-    borderRadius: 6,
-    padding: 14,
-  },
-  avisoTexto: { fontSize: 13, color: colors.ink2, lineHeight: 19 },
+  volver: { fontSize: 16, color: colors.accent, marginBottom: 4 },
   tarjeta: {
     backgroundColor: colors.surface,
     borderRadius: 12,

@@ -16,6 +16,16 @@ spring:
 server:
   port: 8080
 
+olimpus:
+  # Zona de la comunidad donde se lanza. Con ella se calculan las 4:00 (reparto),
+  # las 14:00 (repesca) y las 22:00 (cierre).
+  zona: Europe/Madrid
+  rondas:
+    principal: "0 0 4 * * *"
+    repesca: "0 0 14 * * *"
+  # Permite lanzar rondas a mano mientras se programa. En la beta: false.
+  dev-endpoints: true
+
 logging:
   level:
     org.flywaydb: info
