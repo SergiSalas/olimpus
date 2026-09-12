@@ -1,7 +1,7 @@
-package com.sergisalas.conocer.config;
+package com.sergisalas.olimpus.config;
 
-import com.sergisalas.conocer.health.application.CheckHealth;
-import com.sergisalas.conocer.health.domain.DatabaseInfo;
+import com.sergisalas.olimpus.health.application.CheckHealth;
+import com.sergisalas.olimpus.health.domain.DatabaseInfo;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

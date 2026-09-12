@@ -1,7 +1,7 @@
-package com.sergisalas.conocer.health.application;
+package com.sergisalas.olimpus.health.application;
 
-import com.sergisalas.conocer.health.domain.DatabaseInfo;
-import com.sergisalas.conocer.health.domain.Health;
+import com.sergisalas.olimpus.health.domain.DatabaseInfo;
+import com.sergisalas.olimpus.health.domain.Health;
 
 /**
  * Caso de uso: comprobar que la aplicacion y su base de datos se hablan.

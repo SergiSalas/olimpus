@@ -1,10 +1,10 @@
-package com.sergisalas.conocer.health.application;
+package com.sergisalas.olimpus.health.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.sergisalas.conocer.health.domain.DatabaseInfo;
-import com.sergisalas.conocer.health.domain.Health;
+import com.sergisalas.olimpus.health.domain.DatabaseInfo;
+import com.sergisalas.olimpus.health.domain.Health;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 

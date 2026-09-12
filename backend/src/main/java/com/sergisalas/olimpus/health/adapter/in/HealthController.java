@@ -1,7 +1,7 @@
-package com.sergisalas.conocer.health.adapter.in;
+package com.sergisalas.olimpus.health.adapter.in;
 
-import com.sergisalas.conocer.health.application.CheckHealth;
-import com.sergisalas.conocer.health.domain.Health;
+import com.sergisalas.olimpus.health.application.CheckHealth;
+import com.sergisalas.olimpus.health.domain.Health;
 import java.time.Instant;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

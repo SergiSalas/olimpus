@@ -1,11 +1,11 @@
 services:
   db:
     image: postgres:17-alpine
-    container_name: conocer-db
+    container_name: olimpus-db
     environment:
-      POSTGRES_DB: conocer
-      POSTGRES_USER: conocer
-      POSTGRES_PASSWORD: conocer
+      POSTGRES_DB: olimpus
+      POSTGRES_USER: olimpus
+      POSTGRES_PASSWORD: olimpus
       # Todo el proyecto trabaja en UTC; la hora local de cada persona
       # se calcula al mostrarla, nunca se guarda.
       TZ: UTC
@@ -14,12 +14,12 @@ services:
       # en el 5432, y no lo tocamos.
       - "5433:5432"
     volumes:
-      - conocer-db-data:/var/lib/postgresql/data
+      - olimpus-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U conocer -d conocer"]
+      test: ["CMD-SHELL", "pg_isready -U olimpus -d olimpus"]
       interval: 5s
       timeout: 3s
       retries: 10
 
 volumes:
-  conocer-db-data:
+  olimpus-db-data:

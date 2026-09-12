@@ -26,7 +26,8 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.titulo}>Hablar primero, ver después</Text>
+      <Text style={styles.titulo}>Olimpus</Text>
+      <Text style={styles.lema}>Hablar primero, ver después</Text>
       <Text style={styles.subtitulo}>Paso 1 · el móvil habla con el servidor</Text>
 
       <View style={styles.tarjeta}>
@@ -81,7 +82,8 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 16,
   },
-  titulo: { fontSize: 24, fontWeight: '700', color: '#10151C', textAlign: 'center' },
+  titulo: { fontSize: 30, fontWeight: '700', color: '#10151C', textAlign: 'center', letterSpacing: 1 },
+  lema: { fontSize: 16, color: '#48525F', textAlign: 'center' },
   subtitulo: { fontSize: 14, color: '#6E7885', marginBottom: 8 },
   tarjeta: {
     width: '100%',

@@ -1,10 +1,10 @@
 spring:
   application:
-    name: conocer
+    name: olimpus
   datasource:
-    url: jdbc:postgresql://localhost:5433/conocer
-    username: conocer
-    password: conocer
+    url: jdbc:postgresql://localhost:5433/olimpus
+    username: olimpus
+    password: olimpus
   flyway:
     enabled: true
     locations: classpath:db/migration

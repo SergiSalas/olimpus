@@ -1,6 +1,7 @@
-# Hablar primero, ver después
+# Project Olimpus
 
-App de citas en la que el perfil se descubre según va funcionando la conversación.
+«Hablar primero, ver después»: app de citas en la que el perfil se descubre
+según va funcionando la conversación.
 Estado: **paso 1 de 10** — esqueleto que ya se ve funcionando de punta a punta.
 
 Descripción de producto: https://claude.ai/code/artifact/2e92f35d-5b0b-43df-9937-9440a0e5ca1d
@@ -17,7 +18,7 @@ El backend sigue **arquitectura hexagonal**: las reglas del negocio viven en
 clases Java normales que no saben nada de Spring, y alrededor van los
 adaptadores (HTTP, base de datos, y más adelante moderación o verificación de
 edad, que son piezas intercambiables). Ejemplo completo y pequeño en
-`backend/src/main/java/com/sergisalas/conocer/health/`:
+`backend/src/main/java/com/sergisalas/olimpus/health/`:
 
 | Pieza | Fichero |
 |---|---|

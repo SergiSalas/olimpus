@@ -1,4 +1,4 @@
-package com.sergisalas.conocer.health.domain;
+package com.sergisalas.olimpus.health.domain;
 
 import java.time.Instant;
 

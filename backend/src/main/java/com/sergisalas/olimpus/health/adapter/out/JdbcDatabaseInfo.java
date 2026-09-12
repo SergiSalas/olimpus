@@ -1,6 +1,6 @@
-package com.sergisalas.conocer.health.adapter.out;
+package com.sergisalas.olimpus.health.adapter.out;
 
-import com.sergisalas.conocer.health.domain.DatabaseInfo;
+import com.sergisalas.olimpus.health.domain.DatabaseInfo;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import org.springframework.jdbc.core.JdbcTemplate;
