@@ -10,7 +10,9 @@ services:
       # se calcula al mostrarla, nunca se guarda.
       TZ: UTC
     ports:
-      - "5432:5432"
+      # 5433 y no 5432: este equipo ya tiene un PostgreSQL propio instalado
+      # en el 5432, y no lo tocamos.
+      - "5433:5432"
     volumes:
       - conocer-db-data:/var/lib/postgresql/data
     healthcheck:

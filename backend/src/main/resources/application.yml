@@ -2,7 +2,7 @@ spring:
   application:
     name: conocer
   datasource:
-    url: jdbc:postgresql://localhost:5432/conocer
+    url: jdbc:postgresql://localhost:5433/conocer
     username: conocer
     password: conocer
   flyway:
