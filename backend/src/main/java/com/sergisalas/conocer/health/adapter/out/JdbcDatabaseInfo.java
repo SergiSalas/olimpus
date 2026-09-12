@@ -1,0 +1,30 @@
+package com.sergisalas.conocer.health.adapter.out;
+
+import com.sergisalas.conocer.health.domain.DatabaseInfo;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+/** Adaptador de salida: cumple el puerto preguntandole a PostgreSQL. */
+@Repository
+public class JdbcDatabaseInfo implements DatabaseInfo {
+
+    private final JdbcTemplate jdbc;
+
+    public JdbcDatabaseInfo(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+    }
+
+    @Override
+    public String schemaVersion() {
+        return jdbc.queryForObject(
+                "select valor from app_info where clave = 'esquema'", String.class);
+    }
+
+    @Override
+    public Instant now() {
+        OffsetDateTime now = jdbc.queryForObject("select now()", OffsetDateTime.class);
+        return now.toInstant();
+    }
+}
