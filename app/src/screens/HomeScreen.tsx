@@ -1,5 +1,5 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { type Me, type Profile } from '../api';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ownPhotoSource, type Me, type Profile } from '../api';
 import { Boton, Etiqueta, Pastilla, Tarjeta } from '../components';
 import { useNombreInteres } from '../interests';
 import { tipoDeProfundidad } from '../mapeo';
@@ -51,12 +51,14 @@ const SOCIABILIDAD = [
 export function HomeScreen({
   me,
   perfil,
+  token,
   onVolver,
   onEditar,
   onSalir,
 }: {
   me: Me;
   perfil: Profile;
+  token: string;
   onVolver: () => void;
   onEditar: () => void;
   onSalir: () => void;
@@ -73,6 +75,13 @@ export function HomeScreen({
       <Text style={[text.ayuda, { marginBottom: 4 }]}>
         Es solo el punto de partida: después pesa más con quién sigues hablando de verdad.
       </Text>
+
+      <Tarjeta>
+        <Etiqueta>Tu foto · nadie la ve hasta el nivel 3</Etiqueta>
+        <View style={{ alignItems: 'center', paddingVertical: 4 }}>
+          <Image source={ownPhotoSource(token)} style={estilos.foto} />
+        </View>
+      </Tarjeta>
 
       <Tarjeta>
         <Etiqueta>Lo básico</Etiqueta>
@@ -154,6 +163,7 @@ const estilos = StyleSheet.create({
     flexShrink: 1,
   },
   rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  foto: { width: 150, aspectRatio: 3 / 4, borderRadius: 14, backgroundColor: colors.surface2 },
   bio: { fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 21, color: colors.ink2 },
   enlaceFlojo: {
     fontFamily: fonts.sansMedia,

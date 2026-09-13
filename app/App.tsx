@@ -132,6 +132,7 @@ export default function App() {
         <HomeScreen
           me={state.me}
           perfil={state.perfil}
+          token={state.token}
           onVolver={() => setState({ ...state, kind: 'hoy' })}
           onEditar={() => setState({ kind: 'registro', token: state.token, me: state.me })}
           onSalir={salir}

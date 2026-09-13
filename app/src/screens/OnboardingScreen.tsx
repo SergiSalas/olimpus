@@ -1,11 +1,12 @@
 import Slider from '@react-native-community/slider';
 import * as Location from 'expo-location';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   ApiError,
   fetchInterests,
   saveProfile,
+  uploadPhoto,
   type Gender,
   type Intent,
   type Interest,
@@ -31,6 +32,7 @@ import {
   type Rasgos,
   type TipoConversacion,
 } from '../mapeo';
+import { elegirFoto } from '../foto';
 import { colors, fonts, radios, text } from '../theme';
 
 const GENEROS: { valor: Gender; etiqueta: string }[] = [
@@ -72,7 +74,7 @@ const IDIOMAS = [
  * remata el registro. Este número tiene que incluirla: si se queda corto, el
  * botón deja de avanzar en la penúltima y el registro se atasca sin decir nada.
  */
-const TOTAL = 11;
+const TOTAL = 12;
 const INTERESES_MIN = 5;
 const INTERESES_MAX = 8;
 
@@ -91,6 +93,8 @@ type Borrador = {
   conversacion: TipoConversacion;
   intencion: Intent | null;
   intereses: string[];
+  /** Ruta de la foto ya reducida en el móvil, lista para enviar. */
+  foto: string | null;
 };
 
 const VACIO: Borrador = {
@@ -108,6 +112,7 @@ const VACIO: Borrador = {
   conversacion: 'A fondo',
   intencion: null,
   intereses: [],
+  foto: null,
 };
 
 export function OnboardingScreen({
@@ -161,6 +166,20 @@ export function OnboardingScreen({
     }
   }
 
+  async function escogerFoto() {
+    setError(null);
+    try {
+      const elegida = await elegirFoto();
+      if (elegida) cambiar({ foto: elegida });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo abrir la galería.');
+    }
+  }
+
+  /**
+   * Primero el registro y después la foto, en ese orden: si la foto fallara, el
+   * registro ya está guardado y solo hay que reintentar la foto.
+   */
   async function terminar() {
     setOcupado(true);
     setError(null);
@@ -182,6 +201,11 @@ export function OnboardingScreen({
         intent: b.intencion!,
         interests: b.intereses,
       });
+
+      if (b.foto) {
+        await uploadPhoto(token, b.foto);
+      }
+
       onTerminado(perfil);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No se pudo guardar el registro.');
@@ -485,9 +509,7 @@ export function OnboardingScreen({
           : `${b.intereses.length} elegidos. Cuanto más raro, más dice de ti.`
       }
       listo={b.intereses.length >= INTERESES_MIN}
-      ocupado={ocupado}
-      botonTexto="Terminar registro"
-      onSiguiente={terminar}
+      onSiguiente={siguiente}
       desplazable>
       <View style={estilos.rejilla}>
         {catalogo.map((interes) => (
@@ -511,10 +533,52 @@ export function OnboardingScreen({
     </PantallaPaso>
   );
 
+  /**
+   * La foto, que es la única pregunta cuya respuesta no se ve nunca al
+   * principio. Va la última a propósito: se pide cuando ya se ha entendido para
+   * qué sirve.
+   */
+  const pantallaFoto = (
+    <PantallaPaso
+      titulo="Una foto tuya"
+      ayuda="Nadie la ve al emparejar. Aparece en el nivel 3, y solo si los dos habéis dicho que queréis veros."
+      listo={b.foto !== null}
+      ocupado={ocupado}
+      botonTexto="Terminar registro"
+      onSiguiente={terminar}>
+      <View style={{ alignItems: 'center', gap: 18, marginTop: 10 }}>
+        <Pressable style={estilos.marco} onPress={escogerFoto}>
+          {b.foto ? (
+            <Image source={{ uri: b.foto }} style={estilos.previa} />
+          ) : (
+            <View style={estilos.marcoVacio}>
+              <Text style={estilos.marcoTexto}>Tocar para elegir</Text>
+            </View>
+          )}
+        </Pressable>
+
+        {b.foto && (
+          <Pressable onPress={escogerFoto}>
+            <Text style={estilos.enlace}>Elegir otra</Text>
+          </Pressable>
+        )}
+
+        <Tarjeta>
+          <Etiqueta>Qué hacemos con ella</Etiqueta>
+          <Text style={estilos.notaTarjeta}>
+            Se reduce en tu móvil antes de enviarla, y al reescribirla se pierden los datos ocultos
+            que llevan las fotos, incluido el lugar donde se hizo. En el servidor no hay ningún
+            enlace público: cada vez que alguien la pide, se comprueba si tiene derecho a verla.
+          </Text>
+        </Tarjeta>
+      </View>
+    </PantallaPaso>
+  );
+
   return (
     <View style={estilos.pantalla}>
       <CabeceraPaso paso={paso} total={TOTAL} onAtras={atras} />
-      {pantallas[paso] ?? ultima}
+      {paso === TOTAL ? pantallaFoto : (pantallas[paso] ?? ultima)}
       {error && <Text style={estilos.error}>{error}</Text>}
     </View>
   );
@@ -575,6 +639,21 @@ const estilos = StyleSheet.create({
   notaTarjeta: { fontFamily: fonts.sans, fontSize: 13.5, lineHeight: 20, color: colors.ink2 },
 
   rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+
+  marco: { width: 190, aspectRatio: 3 / 4, borderRadius: 18, overflow: 'hidden' },
+  previa: { width: '100%', height: '100%' },
+  marcoVacio: {
+    flex: 1,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#D8CDBB',
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  marcoTexto: { fontFamily: fonts.sansMedia, fontSize: 14, color: colors.ink4 },
+  enlace: { fontFamily: fonts.sansMedia, fontSize: 14, color: colors.accent },
   error: {
     fontFamily: fonts.sansMedia,
     fontSize: 13.5,

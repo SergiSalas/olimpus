@@ -4,6 +4,7 @@ import com.sergisalas.olimpus.auth.adapter.in.NotAuthenticatedException;
 import com.sergisalas.olimpus.auth.domain.InvalidLoginCodeException;
 import com.sergisalas.olimpus.chat.domain.ChatClosedException;
 import com.sergisalas.olimpus.chat.domain.NotYourConversationException;
+import com.sergisalas.olimpus.profile.domain.PhotoNotVisibleException;
 import com.sergisalas.olimpus.profile.domain.ProfileNotFoundException;
 import com.sergisalas.olimpus.profile.domain.UnderageException;
 import com.sergisalas.olimpus.shared.adapter.Messages;
@@ -61,6 +62,12 @@ public class ApiErrors {
     @ExceptionHandler(UnderageException.class)
     public ResponseEntity<ApiError> underage(UnderageException e) {
         return respond(HttpStatus.FORBIDDEN, e);
+    }
+
+    /** Never uploaded, not approved, or not earned yet: all three answer alike. */
+    @ExceptionHandler(PhotoNotVisibleException.class)
+    public ResponseEntity<ApiError> noPhoto(PhotoNotVisibleException e) {
+        return respond(HttpStatus.NOT_FOUND, e);
     }
 
     /**

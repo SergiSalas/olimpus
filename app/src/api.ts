@@ -131,6 +131,51 @@ export async function fetchProfile(token: string): Promise<Profile | null> {
 export const saveProfile = (token: string, data: ProfileData) =>
   request<Profile>('/api/profile', { method: 'PUT', body: JSON.stringify(data) }, token);
 
+// ---------- la foto ----------
+
+export type PhotoState = {
+  uploaded: boolean;
+  moderation: 'PENDING' | 'APPROVED' | 'REJECTED';
+  uploadedAt: string;
+};
+
+/**
+ * La foto viaja como formulario, no como JSON: así no hay que convertirla a
+ * texto y crecer un tercio por el camino.
+ */
+export async function uploadPhoto(token: string, uri: string): Promise<PhotoState> {
+  const formulario = new FormData();
+  formulario.append('file', {
+    uri,
+    name: 'foto.jpg',
+    type: 'image/jpeg',
+  } as unknown as Blob);
+
+  const response = await fetch(`${backendUrl()}/api/profile/photo`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formulario,
+  });
+
+  const body = await response.text();
+  const data = body ? JSON.parse(body) : null;
+  if (!response.ok) {
+    throw new ApiError(data?.error ?? `El servidor respondió ${response.status}`, response.status);
+  }
+  return data as PhotoState;
+}
+
+/**
+ * La dirección de tu propia foto. No es un enlace público: el servidor
+ * comprueba la llave en cada petición, así que hay que pasarle la cabecera.
+ */
+export function ownPhotoSource(token: string) {
+  return {
+    uri: `${backendUrl()}/api/profile/photo`,
+    headers: { Authorization: `Bearer ${token}` },
+  };
+}
+
 // ---------- la conversación del día ----------
 
 export type Partner = {

@@ -22,6 +22,11 @@ import com.sergisalas.olimpus.matching.domain.ProfileDirectory;
 import com.sergisalas.olimpus.matching.domain.RoundSchedule;
 import com.sergisalas.olimpus.profile.application.GetProfile;
 import com.sergisalas.olimpus.profile.application.SaveProfile;
+import com.sergisalas.olimpus.profile.application.UploadPhoto;
+import com.sergisalas.olimpus.profile.application.ViewPhoto;
+import com.sergisalas.olimpus.profile.domain.PhotoModerator;
+import com.sergisalas.olimpus.profile.domain.PhotoRepository;
+import com.sergisalas.olimpus.profile.domain.PhotoStorage;
 import com.sergisalas.olimpus.profile.domain.ProfileRepository;
 import com.sergisalas.olimpus.shared.domain.Hasher;
 import java.time.Clock;
@@ -77,6 +82,17 @@ public class DomainBeans {
     @Bean
     GetProfile getProfile(ProfileRepository profiles) {
         return new GetProfile(profiles);
+    }
+
+    @Bean
+    UploadPhoto uploadPhoto(
+            PhotoRepository photos, PhotoStorage storage, PhotoModerator moderator, Clock clock) {
+        return new UploadPhoto(photos, storage, moderator, clock);
+    }
+
+    @Bean
+    ViewPhoto viewPhoto(PhotoRepository photos, PhotoStorage storage) {
+        return new ViewPhoto(photos, storage);
     }
 
     /** The community's time zone. The 4:00, 14:00 and 22:00 are computed in it. */
