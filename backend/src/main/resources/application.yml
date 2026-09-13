@@ -9,21 +9,27 @@ spring:
     enabled: true
     locations: classpath:db/migration
   jackson:
-    # Las fechas viajan siempre en UTC (ISO-8601). El movil las muestra
-    # en la hora local de quien mira.
+    # Dates always travel in UTC (ISO-8601). The phone shows them in the
+    # local time of whoever is looking.
     time-zone: UTC
+  messages:
+    # Texts for people live in messages.properties. Without this, a server with
+    # a system locale that has its own file would answer in that language.
+    basename: messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
 
 server:
   port: 8080
 
 olimpus:
-  # Zona de la comunidad donde se lanza. Con ella se calculan las 4:00 (reparto),
-  # las 14:00 (repesca) y las 22:00 (cierre).
-  zona: Europe/Madrid
-  rondas:
-    principal: "0 0 4 * * *"
-    repesca: "0 0 14 * * *"
-  # Permite lanzar rondas a mano mientras se programa. En la beta: false.
+  # Time zone of the launch community. The 4:00 (main round), 14:00 (second
+  # chance) and 22:00 (closing) are computed in it.
+  zone: Europe/Madrid
+  rounds:
+    main: "0 0 4 * * *"
+    second-chance: "0 0 14 * * *"
+  # Lets you run rounds by hand while developing. Must be false in the beta.
   dev-endpoints: true
 
 logging:

@@ -11,15 +11,15 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Caso de uso: escribir en la conversacion del dia.
+ * Use case: write in the conversation of the day.
  *
- * <p>Aqui viven las tres reglas que no pueden saltarse desde ninguna pantalla:
- * solo escriben los dos que estan dentro, solo mientras este abierta, y cada
- * mensaje suma a la cuenta de su lado.
+ * <p>This is where the three rules that no screen can skip live: only the two
+ * people inside write, only while it is open, and every message adds to its
+ * side's count.
  */
 public class SendMessage {
 
-    /** El mensaje guardado y como queda la conversacion despues. */
+    /** The stored message and how the conversation looks afterwards. */
     public record Sent(Message message, Conversation conversation) {}
 
     private final ConversationRepository conversations;
@@ -43,18 +43,17 @@ public class SendMessage {
 
         Instant now = clock.instant();
         if (!conversation.acceptsMessagesAt(now)) {
-            throw new ChatClosedException(
-                    conversation.isOpen()
-                            ? "La conversación ya ha cerrado."
-                            : "Esta conversación está cerrada.");
+            throw conversation.isOpen()
+                    ? ChatClosedException.timeOver()
+                    : ChatClosedException.notOpen();
         }
 
         Message message = Message.written(conversationId, sender, text, now);
         messages.save(message);
 
-        Conversation actualizada = conversation.withMessageFrom(sender);
-        conversations.save(actualizada);
+        Conversation updated = conversation.withMessageFrom(sender);
+        conversations.save(updated);
 
-        return new Sent(message, actualizada);
+        return new Sent(message, updated);
     }
 }

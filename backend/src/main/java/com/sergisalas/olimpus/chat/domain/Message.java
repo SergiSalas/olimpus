@@ -1,32 +1,32 @@
 package com.sergisalas.olimpus.chat.domain;
 
+import com.sergisalas.olimpus.shared.domain.RuleViolationException;
 import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Un mensaje dentro de la conversacion del dia.
+ * A message inside the conversation of the day.
  *
- * <p>Texto y nada mas: en la primera version no hay fotos en el chat, porque la
- * foto es justo lo que la app se guarda para el nivel 3.
+ * <p>Text and nothing else: the first version has no photos in the chat,
+ * because the photo is exactly what the app keeps for level 3.
  */
 public record Message(
         UUID id, UUID conversationId, UUID senderAccountId, String text, Instant sentAt) {
 
-    public static final int MAX_LARGO = 1000;
+    public static final int MAX_LENGTH = 1000;
 
     public Message {
-        if (id == null) throw new IllegalArgumentException("falta el id del mensaje");
-        if (conversationId == null) throw new IllegalArgumentException("falta la conversacion");
-        if (senderAccountId == null) throw new IllegalArgumentException("falta quien lo escribe");
-        if (sentAt == null) throw new IllegalArgumentException("falta la hora");
+        if (id == null) throw new IllegalArgumentException("message id is missing");
+        if (conversationId == null) throw new IllegalArgumentException("conversation is missing");
+        if (senderAccountId == null) throw new IllegalArgumentException("sender is missing");
+        if (sentAt == null) throw new IllegalArgumentException("sent time is missing");
 
         text = text == null ? "" : text.trim();
         if (text.isEmpty()) {
-            throw new IllegalArgumentException("el mensaje esta vacio");
+            throw new RuleViolationException("message.empty");
         }
-        if (text.length() > MAX_LARGO) {
-            throw new IllegalArgumentException(
-                    "el mensaje no puede pasar de " + MAX_LARGO + " caracteres");
+        if (text.length() > MAX_LENGTH) {
+            throw new RuleViolationException("message.too-long", MAX_LENGTH);
         }
     }
 

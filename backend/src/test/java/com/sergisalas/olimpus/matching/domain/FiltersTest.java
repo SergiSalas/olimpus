@@ -1,6 +1,6 @@
 package com.sergisalas.olimpus.matching.domain;
 
-import static com.sergisalas.olimpus.matching.domain.Gente.HOY;
+import static com.sergisalas.olimpus.matching.domain.TestPeople.TODAY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sergisalas.olimpus.profile.domain.Gender;
@@ -12,128 +12,128 @@ import org.junit.jupiter.api.Test;
 
 class FiltersTest {
 
-    private final MatchContext ctx = MatchContext.on(HOY).build();
+    private final MatchContext ctx = MatchContext.on(TODAY).build();
 
     @Nested
-    class LosQueNuncaCeden {
+    class TheOnesThatNeverGiveWay {
 
         @Test
-        void nadie_habla_consigo_mismo() {
-            Profile ana = Gente.cualquiera();
+        void nobody_talks_to_themselves() {
+            Profile ana = TestPeople.anyone();
 
             assertThat(Filters.passesHard(ana, ana, ctx)).isFalse();
         }
 
         @Test
-        void el_genero_tiene_que_encajar_por_los_dos_lados() {
-            Profile ana = Gente.persona().gender(Gender.MUJER).busca(Gender.HOMBRE).build();
-            Profile carlos = Gente.persona().gender(Gender.HOMBRE).busca(Gender.MUJER).build();
-            Profile luis = Gente.persona().gender(Gender.HOMBRE).busca(Gender.HOMBRE).build();
+        void gender_has_to_fit_on_both_sides() {
+            Profile ana = TestPeople.person().gender(Gender.WOMAN).seeking(Gender.MAN).build();
+            Profile carlos = TestPeople.person().gender(Gender.MAN).seeking(Gender.WOMAN).build();
+            Profile luis = TestPeople.person().gender(Gender.MAN).seeking(Gender.MAN).build();
 
             assertThat(Filters.passesHard(ana, carlos, ctx)).isTrue();
-            // A Ana le encaja Luis, pero Luis no busca mujeres: no hay pareja.
+            // Luis fits Ana, but Luis is not looking for women: no pair.
             assertThat(Filters.passesHard(ana, luis, ctx)).isFalse();
             assertThat(Filters.passesHard(luis, ana, ctx)).isFalse();
         }
 
         @Test
-        void un_bloqueo_corta_en_las_dos_direcciones() {
-            Profile ana = Gente.cualquiera();
-            Profile carlos = Gente.cualquiera();
-            MatchContext conBloqueo =
-                    MatchContext.on(HOY).blocked(ana.accountId(), carlos.accountId()).build();
+        void a_block_cuts_both_ways() {
+            Profile ana = TestPeople.anyone();
+            Profile carlos = TestPeople.anyone();
+            MatchContext withBlock =
+                    MatchContext.on(TODAY).blocked(ana.accountId(), carlos.accountId()).build();
 
-            assertThat(Filters.passesHard(ana, carlos, conBloqueo)).isFalse();
-            assertThat(Filters.passesHard(carlos, ana, conBloqueo)).isFalse();
+            assertThat(Filters.passesHard(ana, carlos, withBlock)).isFalse();
+            assertThat(Filters.passesHard(carlos, ana, withBlock)).isFalse();
         }
 
         @Test
-        void por_mucho_que_se_espere_el_nucleo_duro_no_se_mueve() {
-            Profile ana = Gente.persona().gender(Gender.MUJER).busca(Gender.HOMBRE).build();
-            Profile luis = Gente.persona().gender(Gender.HOMBRE).busca(Gender.HOMBRE).build();
-            MatchContext esperandoSiglos =
-                    MatchContext.on(HOY).waiting(ana.accountId(), 500).build();
+        void however_long_the_wait_the_hard_core_does_not_move() {
+            Profile ana = TestPeople.person().gender(Gender.WOMAN).seeking(Gender.MAN).build();
+            Profile luis = TestPeople.person().gender(Gender.MAN).seeking(Gender.MAN).build();
+            MatchContext waitingForAges =
+                    MatchContext.on(TODAY).waiting(ana.accountId(), 500).build();
 
-            assertThat(Filters.passesHard(ana, luis, esperandoSiglos)).isFalse();
+            assertThat(Filters.passesHard(ana, luis, waitingForAges)).isFalse();
         }
     }
 
     @Nested
-    class LosQueCedenConLaEspera {
+    class TheOnesThatGiveWayWithWaiting {
 
         @Test
-        void sin_espera_las_preferencias_se_respetan_tal_cual() {
-            Profile ana = Gente.persona().distancia(5).en(41.3874, 2.1686).build();
-            Profile lejos = Gente.persona().distancia(50).en(41.4500, 2.1686).build();
+        void with_no_wait_preferences_are_respected_as_they_are() {
+            Profile ana = TestPeople.person().maxDistanceKm(5).at(41.3874, 2.1686).build();
+            Profile farAway = TestPeople.person().maxDistanceKm(50).at(41.4500, 2.1686).build();
 
-            assertThat(Filters.passesSoft(ana, lejos, ctx, 0)).isFalse();
+            assertThat(Filters.passesSoft(ana, farAway, ctx, 0)).isFalse();
         }
 
         @Test
-        void con_la_maxima_relajacion_el_radio_llega_al_triple() {
-            Profile ana = Gente.persona().distancia(5).en(41.3874, 2.1686).build();
-            // Unos 7 km al norte: fuera de 5 km, dentro de 15.
-            Profile aSieteKm = Gente.persona().distancia(50).en(41.4500, 2.1686).build();
+        void at_maximum_relaxation_the_radius_reaches_three_times() {
+            Profile ana = TestPeople.person().maxDistanceKm(5).at(41.3874, 2.1686).build();
+            // About 7 km north: outside 5 km, inside 15.
+            Profile sevenKmAway = TestPeople.person().maxDistanceKm(50).at(41.4500, 2.1686).build();
 
-            assertThat(Filters.passesSoft(ana, aSieteKm, ctx, 1)).isTrue();
+            assertThat(Filters.passesSoft(ana, sevenKmAway, ctx, 1)).isTrue();
         }
 
         @Test
-        void la_distancia_tambien_es_mutua() {
-            Profile ana = Gente.persona().distancia(50).en(41.3874, 2.1686).build();
-            Profile casero = Gente.persona().distancia(5).en(41.4500, 2.1686).build();
+        void distance_is_mutual_too() {
+            Profile ana = TestPeople.person().maxDistanceKm(50).at(41.3874, 2.1686).build();
+            Profile homebody = TestPeople.person().maxDistanceKm(5).at(41.4500, 2.1686).build();
 
-            assertThat(Filters.passesSoft(ana, casero, ctx, 0)).isFalse();
+            assertThat(Filters.passesSoft(ana, homebody, ctx, 0)).isFalse();
         }
 
         @Test
-        void el_rango_de_edad_se_ensancha_hasta_cinco_anos_por_lado() {
-            Profile ana = Gente.persona().edad(30).edades(28, 35).build();
-            Profile joven = Gente.persona().edad(25).edades(18, 99).build();
+        void the_age_range_widens_up_to_five_years_on_each_side() {
+            Profile ana = TestPeople.person().age(30).ageRange(28, 35).build();
+            Profile younger = TestPeople.person().age(25).ageRange(18, 99).build();
 
-            assertThat(Filters.passesSoft(ana, joven, ctx, 0)).isFalse();
-            assertThat(Filters.passesSoft(ana, joven, ctx, 1)).isTrue();
+            assertThat(Filters.passesSoft(ana, younger, ctx, 0)).isFalse();
+            assertThat(Filters.passesSoft(ana, younger, ctx, 1)).isTrue();
         }
 
         @Test
-        void sin_idioma_en_comun_no_hay_conversacion_ni_esperando_mucho() {
-            Profile ana = Gente.persona().idiomas(new LanguageSkill("es", LanguageSkill.Level.NATIVO)).build();
-            Profile jan = Gente.persona().idiomas(new LanguageSkill("de", LanguageSkill.Level.NATIVO)).build();
+        void without_a_shared_language_there_is_no_conversation_even_after_a_long_wait() {
+            Profile ana = TestPeople.person().languages(new LanguageSkill("es", LanguageSkill.Level.NATIVE)).build();
+            Profile jan = TestPeople.person().languages(new LanguageSkill("de", LanguageSkill.Level.NATIVE)).build();
 
             assertThat(Filters.passesSoft(ana, jan, ctx, 0)).isFalse();
             assertThat(Filters.passesSoft(ana, jan, ctx, 1)).isFalse();
         }
 
         @Test
-        void un_idioma_flojo_en_comun_solo_vale_despues_de_esperar() {
+        void a_weak_shared_language_only_counts_after_waiting() {
             Profile ana =
-                    Gente.persona()
-                            .idiomas(
-                                    new LanguageSkill("es", LanguageSkill.Level.NATIVO),
-                                    new LanguageSkill("en", LanguageSkill.Level.BASICO))
+                    TestPeople.person()
+                            .languages(
+                                    new LanguageSkill("es", LanguageSkill.Level.NATIVE),
+                                    new LanguageSkill("en", LanguageSkill.Level.BASIC))
                             .build();
             Profile john =
-                    Gente.persona().idiomas(new LanguageSkill("en", LanguageSkill.Level.NATIVO)).build();
+                    TestPeople.person().languages(new LanguageSkill("en", LanguageSkill.Level.NATIVE)).build();
 
             assertThat(Filters.passesSoft(ana, john, ctx, 0)).isFalse();
             assertThat(Filters.passesSoft(ana, john, ctx, 1)).isTrue();
         }
 
         @Test
-        void intenciones_muy_distintas_solo_se_cruzan_al_final() {
-            Profile busca_pareja = Gente.persona().busca(Intent.PAREJA).build();
-            Profile busca_casual = Gente.persona().busca(Intent.CASUAL).build();
+        void very_different_intents_only_cross_at_the_end() {
+            Profile wantsRelationship = TestPeople.person().intent(Intent.RELATIONSHIP).build();
+            Profile wantsCasual = TestPeople.person().intent(Intent.CASUAL).build();
 
-            assertThat(Filters.passesSoft(busca_pareja, busca_casual, ctx, 0)).isFalse();
-            assertThat(Filters.passesSoft(busca_pareja, busca_casual, ctx, 1)).isTrue();
+            assertThat(Filters.passesSoft(wantsRelationship, wantsCasual, ctx, 0)).isFalse();
+            assertThat(Filters.passesSoft(wantsRelationship, wantsCasual, ctx, 1)).isTrue();
         }
     }
 
     @Nested
-    class LaRelajacion {
+    class Relaxation {
 
         @Test
-        void crece_con_los_dias_y_se_para_a_los_tres() {
+        void grows_with_the_days_and_stops_at_three() {
             assertThat(Filters.relaxationForDaysWaiting(0)).isZero();
             assertThat(Filters.relaxationForDaysWaiting(1)).isCloseTo(0.33, org.assertj.core.data.Offset.offset(0.01));
             assertThat(Filters.relaxationForDaysWaiting(3)).isEqualTo(1.0);
@@ -141,20 +141,20 @@ class FiltersTest {
         }
 
         @Test
-        void manda_el_que_mas_ha_esperado_de_los_dos() {
-            Profile ana = Gente.cualquiera();
-            Profile carlos = Gente.cualquiera();
-            MatchContext unoDesesperado =
-                    MatchContext.on(HOY)
+        void whoever_has_waited_longest_of_the_two_rules() {
+            Profile ana = TestPeople.anyone();
+            Profile carlos = TestPeople.anyone();
+            MatchContext oneDesperate =
+                    MatchContext.on(TODAY)
                             .waiting(ana.accountId(), 0)
                             .waiting(carlos.accountId(), 3)
                             .build();
 
-            assertThat(Filters.relaxationFor(ana, carlos, unoDesesperado)).isEqualTo(1.0);
+            assertThat(Filters.relaxationFor(ana, carlos, oneDesperate)).isEqualTo(1.0);
         }
 
         @Test
-        void el_nivel_de_idioma_exigido_baja_pero_tiene_suelo() {
+        void the_required_language_level_drops_but_has_a_floor() {
             assertThat(Filters.requiredLanguageLevel(0)).isEqualTo(0.70);
             assertThat(Filters.requiredLanguageLevel(1)).isEqualTo(0.35);
             assertThat(Filters.requiredLanguageLevel(5)).isEqualTo(0.35);

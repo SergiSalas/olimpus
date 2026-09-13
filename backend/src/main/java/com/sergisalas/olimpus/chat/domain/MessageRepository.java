@@ -7,6 +7,6 @@ public interface MessageRepository {
 
     void save(Message message);
 
-    /** Todos los mensajes de una conversacion, del mas viejo al mas nuevo. */
+    /** Every message of a conversation, oldest first. */
     List<Message> byConversation(UUID conversationId);
 }

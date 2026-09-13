@@ -8,12 +8,11 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Todo lo que el reparto necesita saber y que no esta en el perfil: quien ha
- * bloqueado a quien, quien hablo con quien y cuando, y cuanto lleva cada uno
- * esperando.
+ * Everything matching needs to know that is not in the profile: who blocked
+ * whom, who talked to whom and when, and how long each person has been waiting.
  *
- * <p>Es un dato, no un servicio: lo rellena un adaptador antes de la ronda y el
- * dominio solo lo consulta. Asi el reparto se puede probar sin base de datos.
+ * <p>It is data, not a service: an adapter fills it before the round and the
+ * domain only reads it. That way matching can be tested without a database.
  */
 public final class MatchContext {
 
@@ -45,12 +44,12 @@ public final class MatchContext {
         return interestWeights;
     }
 
-    /** Bloqueo o reporte en cualquiera de las dos direcciones. */
+    /** Block or report in either direction. */
     public boolean isBlockedEitherWay(UUID a, UUID b) {
         return blocked.contains(PairKey.of(a, b));
     }
 
-    /** Dias desde que esos dos hablaron, o vacio si nunca lo han hecho. */
+    /** Days since those two talked, or null if they never have. */
     public Integer daysSinceTalked(UUID a, UUID b) {
         LocalDate last = lastTalked.get(PairKey.of(a, b));
         if (last == null) return null;
@@ -61,7 +60,7 @@ public final class MatchContext {
         return conversations.getOrDefault(id, 0);
     }
 
-    /** Dias que lleva alguien sin que le toque conversacion. */
+    /** Days someone has gone without getting a conversation. */
     public int daysWaiting(UUID id) {
         return daysWaiting.getOrDefault(id, 0);
     }

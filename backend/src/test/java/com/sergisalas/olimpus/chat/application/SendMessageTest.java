@@ -12,6 +12,7 @@ import com.sergisalas.olimpus.matching.domain.ConversationRepository;
 import com.sergisalas.olimpus.matching.domain.ConversationState;
 import com.sergisalas.olimpus.matching.domain.Origin;
 import com.sergisalas.olimpus.matching.domain.RoundKind;
+import com.sergisalas.olimpus.shared.domain.RuleViolationException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -29,80 +30,80 @@ class SendMessageTest {
 
     private static final UUID ANA = UUID.randomUUID();
     private static final UUID LEO = UUID.randomUUID();
-    private static final UUID EXTRAÑO = UUID.randomUUID();
+    private static final UUID STRANGER = UUID.randomUUID();
 
-    private static final Instant MEDIODIA = Instant.parse("2026-09-13T10:00:00Z");
-    private static final Instant CIERRE = Instant.parse("2026-09-13T20:00:00Z");
+    private static final Instant MIDDAY = Instant.parse("2026-09-13T10:00:00Z");
+    private static final Instant CLOSING = Instant.parse("2026-09-13T20:00:00Z");
 
-    private Instant ahora = MEDIODIA;
-    private final Map<UUID, Conversation> conversaciones = new LinkedHashMap<>();
-    private final List<Message> mensajes = new ArrayList<>();
+    private Instant now = MIDDAY;
+    private final Map<UUID, Conversation> storedConversations = new LinkedHashMap<>();
+    private final List<Message> storedMessages = new ArrayList<>();
 
-    private Conversation charla;
-    private SendMessage escribir;
+    private Conversation chat;
+    private SendMessage send;
 
     @BeforeEach
     void setUp() {
-        charla =
+        chat =
                 new Conversation(
                         UUID.randomUUID(),
                         LocalDate.of(2026, 9, 13),
-                        RoundKind.PRINCIPAL,
+                        RoundKind.MAIN,
                         ANA,
                         LEO,
-                        Origin.MEJOR_PAREJA,
+                        Origin.BEST_MATCH,
                         0.8,
                         Instant.parse("2026-09-13T02:00:00Z"),
-                        CIERRE,
-                        ConversationState.ABIERTA,
+                        CLOSING,
+                        ConversationState.OPEN,
                         0,
                         0,
-                        "Los dos habéis puesto escalada: ¿montaña o rocódromo?");
-        conversaciones.put(charla.id(), charla);
+                        "climbing");
+        storedConversations.put(chat.id(), chat);
 
-        ConversationRepository repoConversaciones =
+        ConversationRepository conversations =
                 new ConversationRepository() {
                     @Override
                     public void save(Conversation conversation) {
-                        conversaciones.put(conversation.id(), conversation);
+                        storedConversations.put(conversation.id(), conversation);
                     }
 
                     @Override
                     public List<Conversation> byDate(LocalDate date) {
-                        return conversaciones.values().stream()
+                        return storedConversations.values().stream()
                                 .filter(c -> c.roundDate().equals(date))
                                 .toList();
                     }
 
                     @Override
                     public Optional<Conversation> openFor(UUID accountId, LocalDate date) {
-                        return conversaciones.values().stream()
+                        return storedConversations.values().stream()
                                 .filter(c -> c.isOpen() && c.involves(accountId))
                                 .findFirst();
                     }
 
                     @Override
                     public Optional<Conversation> byId(UUID id) {
-                        return Optional.ofNullable(conversaciones.get(id));
+                        return Optional.ofNullable(storedConversations.get(id));
                     }
                 };
 
-        MessageRepository repoMensajes =
+        MessageRepository messages =
                 new MessageRepository() {
                     @Override
                     public void save(Message message) {
-                        mensajes.add(message);
+                        storedMessages.add(message);
                     }
 
                     @Override
                     public List<Message> byConversation(UUID conversationId) {
-                        return mensajes.stream()
+                        return storedMessages.stream()
                                 .filter(m -> m.conversationId().equals(conversationId))
                                 .toList();
                     }
                 };
 
-        Clock reloj =
+        Clock clock =
                 new Clock() {
                     @Override
                     public java.time.ZoneId getZone() {
@@ -116,79 +117,83 @@ class SendMessageTest {
 
                     @Override
                     public Instant instant() {
-                        return ahora;
+                        return now;
                     }
                 };
 
-        escribir = new SendMessage(repoConversaciones, repoMensajes, reloj);
+        send = new SendMessage(conversations, messages, clock);
     }
 
     @Test
-    void escribir_guarda_el_mensaje_y_suma_a_la_cuenta_de_su_lado() {
-        var enviado = escribir.execute(charla.id(), ANA, "Rocódromo, casi siempre");
+    void writing_stores_the_message_and_adds_to_its_sides_count() {
+        var sent = send.execute(chat.id(), ANA, "Climbing gym, almost always");
 
-        assertThat(mensajes).hasSize(1);
-        assertThat(enviado.conversation().messagesFromA()).isEqualTo(1);
-        assertThat(enviado.conversation().messagesFromB()).isZero();
-        assertThat(enviado.conversation().bothHaveWritten()).isFalse();
+        assertThat(storedMessages).hasSize(1);
+        assertThat(sent.conversation().messagesFromA()).isEqualTo(1);
+        assertThat(sent.conversation().messagesFromB()).isZero();
+        assertThat(sent.conversation().bothHaveWritten()).isFalse();
     }
 
     @Test
-    void la_conversacion_arranca_cuando_han_escrito_los_dos() {
-        escribir.execute(charla.id(), ANA, "¡Hola!");
-        escribir.execute(charla.id(), ANA, "¿Qué tal?");
-        var despues = escribir.execute(charla.id(), LEO, "Buenas");
+    void the_conversation_takes_off_when_both_have_written() {
+        send.execute(chat.id(), ANA, "Hi!");
+        send.execute(chat.id(), ANA, "How are you?");
+        var after = send.execute(chat.id(), LEO, "Hey");
 
-        assertThat(despues.conversation().messagesFromA()).isEqualTo(2);
-        assertThat(despues.conversation().messagesFromB()).isEqualTo(1);
-        assertThat(despues.conversation().bothHaveWritten()).isTrue();
-        assertThat(despues.conversation().isSilent()).isFalse();
+        assertThat(after.conversation().messagesFromA()).isEqualTo(2);
+        assertThat(after.conversation().messagesFromB()).isEqualTo(1);
+        assertThat(after.conversation().bothHaveWritten()).isTrue();
+        assertThat(after.conversation().isSilent()).isFalse();
     }
 
     @Test
-    void un_desconocido_no_puede_escribir_en_una_conversacion_ajena() {
-        assertThatThrownBy(() -> escribir.execute(charla.id(), EXTRAÑO, "hola?"))
+    void a_stranger_cannot_write_in_someone_elses_conversation() {
+        assertThatThrownBy(() -> send.execute(chat.id(), STRANGER, "hello?"))
                 .isInstanceOf(NotYourConversationException.class);
 
-        assertThat(mensajes).isEmpty();
+        assertThat(storedMessages).isEmpty();
     }
 
     @Test
-    void una_conversacion_que_no_existe_se_trata_igual_que_una_ajena() {
-        assertThatThrownBy(() -> escribir.execute(UUID.randomUUID(), ANA, "hola?"))
+    void a_conversation_that_does_not_exist_is_treated_like_someone_elses() {
+        assertThatThrownBy(() -> send.execute(UUID.randomUUID(), ANA, "hello?"))
                 .isInstanceOf(NotYourConversationException.class);
     }
 
     @Test
-    void a_las_diez_de_la_noche_ya_no_se_puede_escribir() {
-        ahora = CIERRE;
+    void at_ten_at_night_nobody_can_write_any_more() {
+        now = CLOSING;
 
-        assertThatThrownBy(() -> escribir.execute(charla.id(), ANA, "¿sigues ahí?"))
-                .isInstanceOf(ChatClosedException.class);
+        assertThatThrownBy(() -> send.execute(chat.id(), ANA, "still there?"))
+                .isInstanceOfSatisfying(
+                        ChatClosedException.class,
+                        e -> assertThat(e.messageKey()).isEqualTo("error.chat.time-over"));
 
-        assertThat(mensajes).isEmpty();
+        assertThat(storedMessages).isEmpty();
     }
 
     @Test
-    void en_una_conversacion_cancelada_tampoco() {
-        conversaciones.put(charla.id(), charla.cancelled());
+    void nor_in_a_cancelled_conversation() {
+        storedConversations.put(chat.id(), chat.cancelled());
 
-        assertThatThrownBy(() -> escribir.execute(charla.id(), ANA, "hola"))
-                .isInstanceOf(ChatClosedException.class);
+        assertThatThrownBy(() -> send.execute(chat.id(), ANA, "hello"))
+                .isInstanceOfSatisfying(
+                        ChatClosedException.class,
+                        e -> assertThat(e.messageKey()).isEqualTo("error.chat.closed"));
     }
 
     @Test
-    void un_mensaje_vacio_o_de_solo_espacios_no_cuenta() {
-        assertThatThrownBy(() -> escribir.execute(charla.id(), ANA, "   "))
-                .isInstanceOf(IllegalArgumentException.class);
+    void an_empty_or_whitespace_only_message_does_not_count() {
+        assertThatThrownBy(() -> send.execute(chat.id(), ANA, "   "))
+                .isInstanceOf(RuleViolationException.class);
 
-        assertThat(mensajes).isEmpty();
-        assertThat(conversaciones.get(charla.id()).messagesFromA()).isZero();
+        assertThat(storedMessages).isEmpty();
+        assertThat(storedConversations.get(chat.id()).messagesFromA()).isZero();
     }
 
     @Test
-    void un_mensaje_kilometrico_se_rechaza() {
-        assertThatThrownBy(() -> escribir.execute(charla.id(), ANA, "x".repeat(1001)))
-                .isInstanceOf(IllegalArgumentException.class);
+    void a_huge_message_is_rejected() {
+        assertThatThrownBy(() -> send.execute(chat.id(), ANA, "x".repeat(1001)))
+                .isInstanceOf(RuleViolationException.class);
     }
 }

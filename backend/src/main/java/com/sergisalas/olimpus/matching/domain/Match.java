@@ -3,8 +3,8 @@ package com.sergisalas.olimpus.matching.domain;
 import java.util.UUID;
 
 /**
- * Una pareja ya decidida para la ronda de hoy: quienes, cuanto prometia y de
- * donde salio.
+ * A pair already decided for today's round: who, how promising it looked and
+ * where it came from.
  */
 public record Match(UUID accountA, UUID accountB, double score, Origin origin) {
 

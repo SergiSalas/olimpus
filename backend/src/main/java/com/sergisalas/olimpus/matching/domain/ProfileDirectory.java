@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Puerto: quien tiene el registro hecho y puede entrar en un reparto. */
+/** Port: who has finished signing up and can enter a round. */
 public interface ProfileDirectory {
 
     List<Profile> everyoneWithProfile();

@@ -1,6 +1,6 @@
--- El registro: las diez preguntas.
--- La ubicacion se guarda redondeada a dos decimales (algo mas de un km): con
--- eso la distancia sirve para emparejar y no senala la casa de nadie.
+-- Sign-up: the ten questions.
+-- The location is stored rounded to two decimals (a bit over a km): the
+-- distance is still good for matching and it does not point at anyone's home.
 
 create table profile (
     account_id         uuid        primary key references account (id) on delete cascade,
@@ -28,7 +28,7 @@ create table profile (
         array_length(interests, 1) between 5 and 8)
 );
 
--- Los idiomas en su propia tabla: son varios por persona y con nivel.
+-- Languages get their own table: a person has several, each with a level.
 create table profile_language (
     account_id uuid not null references profile (account_id) on delete cascade,
     code       text not null,

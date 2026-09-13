@@ -86,12 +86,13 @@ export const fetchMe = (token: string) => request<Me>('/api/me', {}, token);
 
 // ---------- registro ----------
 
-export type Gender = 'MUJER' | 'HOMBRE' | 'NO_BINARIO' | 'OTRO';
-export type Intent = 'AMISTAD' | 'CITAS' | 'PAREJA' | 'CASUAL';
-export type LanguageLevel = 'BASICO' | 'MEDIO' | 'NATIVO';
+export type Gender = 'WOMAN' | 'MAN' | 'NON_BINARY' | 'OTHER';
+export type Intent = 'FRIENDSHIP' | 'DATING' | 'RELATIONSHIP' | 'CASUAL';
+export type LanguageLevel = 'BASIC' | 'INTERMEDIATE' | 'NATIVE';
 
 export type LanguageSkill = { code: string; level: LanguageLevel };
 
+/** `name` es el id que se guarda ("ice-climbing"); `label`, lo que se enseña ("Escalada en hielo"). */
 export type Interest = { name: string; label: string };
 
 export type ProfileData = {
@@ -166,7 +167,7 @@ export type ChatMessage = {
 
 export type Chat = {
   conversationId: string;
-  state: 'ABIERTA' | 'CANCELADA' | 'CERRADA';
+  state: 'OPEN' | 'CANCELLED' | 'CLOSED';
   closesAt: string;
   /** La pregunta con la que arranca, sacada de un interés que compartís. */
   icebreaker: string;

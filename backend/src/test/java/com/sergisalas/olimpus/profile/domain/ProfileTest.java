@@ -1,9 +1,10 @@
 package com.sergisalas.olimpus.profile.domain;
 
-import static com.sergisalas.olimpus.profile.domain.TestProfiles.HOY;
+import static com.sergisalas.olimpus.profile.domain.TestProfiles.TODAY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.sergisalas.olimpus.shared.domain.RuleViolationException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
@@ -14,138 +15,155 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ProfileTest {
 
     @Test
-    void un_perfil_completo_se_construye_sin_quejas() {
-        assertThat(TestProfiles.valido().build().nickname()).isEqualTo("Sergi");
+    void a_complete_profile_builds_without_complaints() {
+        assertThat(TestProfiles.valid().build().nickname()).isEqualTo("Sergi");
     }
 
     @Test
-    void la_edad_sale_de_la_fecha_de_nacimiento() {
-        Profile sergi = TestProfiles.valido().birthDate(LocalDate.of(1995, 3, 20)).build();
+    void age_comes_from_the_birth_date() {
+        Profile sergi = TestProfiles.valid().birthDate(LocalDate.of(1995, 3, 20)).build();
 
-        assertThat(sergi.ageOn(HOY)).isEqualTo(31);
-        assertThat(sergi.isMinorOn(HOY)).isFalse();
+        assertThat(sergi.ageOn(TODAY)).isEqualTo(31);
+        assertThat(sergi.isMinorOn(TODAY)).isFalse();
     }
 
     @Test
-    void el_dia_antes_de_cumplir_dieciocho_todavia_es_menor() {
-        Profile casi = TestProfiles.valido().birthDate(HOY.minusYears(18).plusDays(1)).build();
-        Profile justo = TestProfiles.valido().birthDate(HOY.minusYears(18)).build();
+    void the_day_before_turning_eighteen_is_still_a_minor() {
+        Profile almost = TestProfiles.valid().birthDate(TODAY.minusYears(18).plusDays(1)).build();
+        Profile exactly = TestProfiles.valid().birthDate(TODAY.minusYears(18)).build();
 
-        assertThat(casi.isMinorOn(HOY)).isTrue();
-        assertThat(justo.isMinorOn(HOY)).isFalse();
+        assertThat(almost.isMinorOn(TODAY)).isTrue();
+        assertThat(exactly.isMinorOn(TODAY)).isFalse();
     }
 
     @Test
-    void las_escalas_de_uno_a_cinco_se_traducen_a_cero_y_uno_para_el_algoritmo() {
-        assertThat(TestProfiles.valido().sociability(1).build().sociabilityScore()).isZero();
-        assertThat(TestProfiles.valido().sociability(3).build().sociabilityScore()).isEqualTo(0.5);
-        assertThat(TestProfiles.valido().sociability(5).build().sociabilityScore()).isEqualTo(1.0);
-        assertThat(TestProfiles.valido().conversationDepth(5).build().conversationDepthScore())
+    void the_one_to_five_scales_become_zero_to_one_for_the_algorithm() {
+        assertThat(TestProfiles.valid().sociability(1).build().sociabilityScore()).isZero();
+        assertThat(TestProfiles.valid().sociability(3).build().sociabilityScore()).isEqualTo(0.5);
+        assertThat(TestProfiles.valid().sociability(5).build().sociabilityScore()).isEqualTo(1.0);
+        assertThat(TestProfiles.valid().conversationDepth(5).build().conversationDepthScore())
                 .isEqualTo(1.0);
     }
 
     @Test
-    void el_apodo_se_limpia_de_espacios() {
-        assertThat(TestProfiles.valido().nickname("  Ana  ").build().nickname()).isEqualTo("Ana");
+    void the_nickname_is_trimmed() {
+        assertThat(TestProfiles.valid().nickname("  Ana  ").build().nickname()).isEqualTo("Ana");
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", " ", "A", "unapodoexageradamentelargodeverdad"})
-    void un_apodo_demasiado_corto_o_largo_no_vale(String apodo) {
-        assertThatThrownBy(() -> TestProfiles.valido().nickname(apodo).build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("apodo");
+    @ValueSource(strings = {"", " ", "A", "anexaggeratedlylongnicknamereally"})
+    void a_nickname_that_is_too_short_or_too_long_is_rejected(String nickname) {
+        assertThatThrownBy(() -> TestProfiles.valid().nickname(nickname).build())
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("profile.nickname.length");
     }
 
     @Test
-    void la_bio_tiene_tope() {
-        assertThatThrownBy(() -> TestProfiles.valido().bio("x".repeat(201)).build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("bio");
+    void the_bio_has_a_limit() {
+        assertThatThrownBy(() -> TestProfiles.valid().bio("x".repeat(201)).build())
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("profile.bio.too-long");
     }
 
     @Test
-    void hay_que_buscar_al_menos_un_genero() {
-        assertThatThrownBy(() -> TestProfiles.valido().seeking(Set.of()).build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("genero");
+    void at_least_one_gender_must_be_sought() {
+        assertThatThrownBy(() -> TestProfiles.valid().seeking(Set.of()).build())
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("profile.seeking.empty");
     }
 
     @Test
-    void el_rango_de_edad_no_puede_estar_al_reves() {
-        assertThatThrownBy(() -> TestProfiles.valido().ages(40, 25).build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("al reves");
+    void the_age_range_cannot_be_reversed() {
+        assertThatThrownBy(() -> TestProfiles.valid().ages(40, 25).build())
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("profile.age-range.reversed");
     }
 
     @Test
-    void nadie_puede_buscar_menores() {
-        assertThatThrownBy(() -> TestProfiles.valido().ages(16, 30).build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("rango de edad");
+    void nobody_can_look_for_minors() {
+        assertThatThrownBy(() -> TestProfiles.valid().ages(16, 30).build())
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("profile.age-range.out-of-bounds");
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {0, 7, 20, 100})
-    void la_distancia_solo_puede_ser_una_de_las_cuatro(int km) {
-        assertThatThrownBy(() -> TestProfiles.valido().maxDistanceKm(km).build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("distancia");
+    @ValueSource(ints = {5, 30, 65, 120})
+    void distance_goes_from_five_to_one_hundred_twenty_in_steps_of_five(int km) {
+        assertThat(TestProfiles.valid().maxDistanceKm(km).build().maxDistanceKm()).isEqualTo(km);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 4, 7, 125, 1000})
+    void a_distance_out_of_range_or_off_step_is_rejected(int km) {
+        assertThatThrownBy(() -> TestProfiles.valid().maxDistanceKm(km).build())
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("profile.distance.invalid");
     }
 
     @Test
-    void hacen_falta_entre_cinco_y_ocho_intereses() {
-        assertThatThrownBy(() -> TestProfiles.valido().interests(Set.of("cine", "leer")).build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("intereses");
+    void between_five_and_eight_interests_are_required() {
+        assertThatThrownBy(() -> TestProfiles.valid().interests(Set.of("movies", "reading")).build())
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("profile.interests.count");
 
         assertThatThrownBy(
                         () ->
-                                TestProfiles.valido()
+                                TestProfiles.valid()
                                         .interests(
                                                 Set.of(
-                                                        "cine", "leer", "correr", "surf", "vinos",
-                                                        "teatro", "arte", "buceo", "kendo"))
+                                                        "movies", "reading", "running", "surfing", "wine",
+                                                        "theatre", "art", "diving", "kendo"))
                                         .build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("intereses");
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("profile.interests.count");
     }
 
     @Test
-    void un_interes_inventado_no_vale() {
+    void a_made_up_interest_is_rejected() {
         assertThatThrownBy(
                         () ->
-                                TestProfiles.valido()
+                                TestProfiles.valid()
                                         .interests(
-                                                Set.of("cine", "leer", "correr", "surf", "puenting-lunar"))
+                                                Set.of("movies", "reading", "running", "surfing", "moon-bungee"))
                                         .build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("no esta en la lista");
+                .isInstanceOf(RuleViolationException.class)
+                .hasMessageContaining("profile.interests.unknown")
+                .hasMessageContaining("moon-bungee");
     }
 
     @Test
-    void hace_falta_al_menos_un_idioma_y_sin_repetir() {
-        assertThatThrownBy(() -> TestProfiles.valido().languages(List.of()).build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("idioma");
+    void at_least_one_language_is_required_and_without_repeats() {
+        assertThatThrownBy(() -> TestProfiles.valid().languages(List.of()).build())
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("profile.languages.empty");
 
         assertThatThrownBy(
                         () ->
-                                TestProfiles.valido()
+                                TestProfiles.valid()
                                         .languages(
                                                 List.of(
-                                                        new LanguageSkill("es", LanguageSkill.Level.NATIVO),
-                                                        new LanguageSkill("es", LanguageSkill.Level.BASICO)))
+                                                        new LanguageSkill("es", LanguageSkill.Level.NATIVE),
+                                                        new LanguageSkill("es", LanguageSkill.Level.BASIC)))
                                         .build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("repetido");
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("profile.languages.duplicate");
     }
 
     @Test
-    void el_catalogo_de_intereses_es_el_del_laboratorio() {
+    void the_interest_catalog_is_the_one_from_the_lab() {
         assertThat(InterestCatalog.size()).isEqualTo(38);
-        assertThat(InterestCatalog.contains("escalada-en-hielo")).isTrue();
-        assertThat(InterestCatalog.contains("viajar")).isTrue();
-        assertThat(InterestCatalog.contains("lo-que-sea")).isFalse();
+        assertThat(InterestCatalog.contains("ice-climbing")).isTrue();
+        assertThat(InterestCatalog.contains("travel")).isTrue();
+        assertThat(InterestCatalog.contains("whatever")).isFalse();
     }
 }

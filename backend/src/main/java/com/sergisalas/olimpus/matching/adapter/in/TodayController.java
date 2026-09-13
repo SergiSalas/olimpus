@@ -5,6 +5,7 @@ import com.sergisalas.olimpus.auth.domain.Account;
 import com.sergisalas.olimpus.matching.application.GetTodaysConversation;
 import com.sergisalas.olimpus.matching.domain.RoundKind;
 import com.sergisalas.olimpus.matching.domain.RoundSchedule;
+import com.sergisalas.olimpus.shared.adapter.Messages;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -13,14 +14,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Lo que la app pregunta al abrirse: ¿con quien hablo hoy? */
+/** What the app asks when it opens: who am I talking to today? */
 @RestController
 @RequestMapping("/api")
 public class TodayController {
 
     /**
-     * Del otro solo viaja lo que el nivel permite ver. Si algun dia hiciera falta
-     * mas, se añade aqui a proposito, no por descuido.
+     * Only what the level allows travels about the other person. If more were
+     * ever needed, it gets added here on purpose, not by accident.
      */
     public record PartnerResponse(int age, List<String> interests, int approxDistanceKm, int level) {}
 
@@ -35,32 +36,37 @@ public class TodayController {
 
     private final GetTodaysConversation getTodaysConversation;
     private final RoundSchedule schedule;
+    private final Messages messages;
     private final Clock clock;
 
     public TodayController(
-            GetTodaysConversation getTodaysConversation, RoundSchedule schedule, Clock clock) {
+            GetTodaysConversation getTodaysConversation,
+            RoundSchedule schedule,
+            Messages messages,
+            Clock clock) {
         this.getTodaysConversation = getTodaysConversation;
         this.schedule = schedule;
+        this.messages = messages;
         this.clock = clock;
     }
 
     @GetMapping("/today")
     public TodayResponse today(@CurrentAccount Account account) {
-        var hoy = getTodaysConversation.execute(account.id());
+        var today = getTodaysConversation.execute(account.id());
 
-        if (hoy.conversation().isEmpty()) {
+        if (today.conversation().isEmpty()) {
             return new TodayResponse(
                     false,
                     null,
                     null,
                     null,
                     List.of(),
-                    proximaRonda(),
-                    "Hoy todavía no tienes conversación. El reparto sale a las 4:00 y hay repesca a las 14:00.");
+                    nextRound(),
+                    messages.get("today.no-conversation"));
         }
 
-        var conversation = hoy.conversation().get();
-        var partner = hoy.partner().orElseThrow();
+        var conversation = today.conversation().get();
+        var partner = today.partner().orElseThrow();
 
         return new TodayResponse(
                 true,
@@ -71,19 +77,19 @@ public class TodayController {
                         partner.interestsShown(),
                         partner.approxDistanceKm(),
                         partner.level()),
-                hoy.sharedInterests(),
+                today.sharedInterests(),
                 null,
                 null);
     }
 
-    /** La proxima hora a la que puede aparecer alguien, para no esperar a ciegas. */
-    private Instant proximaRonda() {
-        Instant ahora = clock.instant();
-        var hoy = schedule.dateOf(ahora);
+    /** The next time someone may show up, so nobody waits blind. */
+    private Instant nextRound() {
+        Instant now = clock.instant();
+        var date = schedule.dateOf(now);
 
-        Instant repesca = schedule.opensAt(hoy, RoundKind.REPESCA);
-        if (ahora.isBefore(repesca)) return repesca;
+        Instant secondChance = schedule.opensAt(date, RoundKind.SECOND_CHANCE);
+        if (now.isBefore(secondChance)) return secondChance;
 
-        return schedule.opensAt(hoy.plusDays(1), RoundKind.PRINCIPAL);
+        return schedule.opensAt(date.plusDays(1), RoundKind.MAIN);
     }
 }

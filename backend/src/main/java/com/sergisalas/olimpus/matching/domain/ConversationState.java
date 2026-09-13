@@ -1,10 +1,10 @@
 package com.sergisalas.olimpus.matching.domain;
 
 public enum ConversationState {
-    /** Viva: se puede escribir hasta la hora de cierre. */
-    ABIERTA,
-    /** Se cerro en silencio a mediodia y los dos volvieron al reparto. */
-    CANCELADA,
-    /** Llego las 22:00. A partir de aqui manda la decision de cada uno. */
-    CERRADA
+    /** Live: messages can be written until closing time. */
+    OPEN,
+    /** Closed in silence at midday, and both went back into the round. */
+    CANCELLED,
+    /** 22:00 arrived. From here on, each person's decision rules. */
+    CLOSED
 }

@@ -10,9 +10,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
- * El reparto necesita a todo el mundo de golpe; el registro solo sabe buscar de
- * uno en uno. Este adaptador pone la lista completa, reutilizando el repositorio
- * del registro para leer cada perfil con sus idiomas.
+ * Matching needs everyone at once; the profile module only looks people up one
+ * by one. This adapter provides the full list, reusing the profile repository to
+ * read each profile with its languages.
  */
 @Repository
 public class JdbcProfileDirectory implements ProfileDirectory {

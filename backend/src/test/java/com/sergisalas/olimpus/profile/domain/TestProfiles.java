@@ -6,40 +6,40 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Un perfil valido al que cada test le cambia solo lo que quiere probar. Sin
- * esto, cada test tendria que repetir las quince respuestas del registro.
+ * A valid profile that each test changes only in what it wants to check.
+ * Without it, every test would have to repeat the fifteen sign-up answers.
  */
 public final class TestProfiles {
 
-    public static final UUID CUENTA = UUID.fromString("00000000-0000-0000-0000-000000000001");
-    public static final LocalDate HOY = LocalDate.of(2026, 9, 12);
+    public static final UUID ACCOUNT = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    public static final LocalDate TODAY = LocalDate.of(2026, 9, 12);
 
     private TestProfiles() {}
 
-    public static Builder valido() {
+    public static Builder valid() {
         return new Builder();
     }
 
     public static final class Builder {
-        private UUID accountId = CUENTA;
+        private UUID accountId = ACCOUNT;
         private String nickname = "Sergi";
-        private String bio = "Me gusta el mar.";
+        private String bio = "I like the sea.";
         private LocalDate birthDate = LocalDate.of(1995, 3, 20);
-        private Gender gender = Gender.HOMBRE;
-        private Set<Gender> seeking = Set.of(Gender.MUJER);
+        private Gender gender = Gender.MAN;
+        private Set<Gender> seeking = Set.of(Gender.WOMAN);
         private int ageMin = 25;
         private int ageMax = 40;
         private int maxDistanceKm = 15;
         private Location location = Location.rounded(41.3874, 2.1686);
         private List<LanguageSkill> languages =
                 List.of(
-                        new LanguageSkill("es", LanguageSkill.Level.NATIVO),
-                        new LanguageSkill("en", LanguageSkill.Level.MEDIO));
+                        new LanguageSkill("es", LanguageSkill.Level.NATIVE),
+                        new LanguageSkill("en", LanguageSkill.Level.INTERMEDIATE));
         private int sociability = 4;
         private int conversationDepth = 4;
-        private Intent intent = Intent.PAREJA;
+        private Intent intent = Intent.RELATIONSHIP;
         private Set<String> interests =
-                Set.of("escalada", "cine", "cocinar", "astronomia", "ajedrez");
+                Set.of("climbing", "movies", "cooking", "astronomy", "chess");
 
         public Builder nickname(String v) {
             nickname = v;

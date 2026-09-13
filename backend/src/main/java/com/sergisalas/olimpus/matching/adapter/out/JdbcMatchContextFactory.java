@@ -5,18 +5,19 @@ import com.sergisalas.olimpus.matching.domain.MatchContext;
 import com.sergisalas.olimpus.matching.domain.MatchContextFactory;
 import com.sergisalas.olimpus.profile.domain.Profile;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Reune de la base de datos la historia que el reparto necesita: bloqueos, con
- * quien hablo cada uno y cuando, cuantas conversaciones lleva y cuantos dias
- * lleva esperando.
+ * Gathers from the database the history matching needs: blocks, who talked to
+ * whom and when, how many conversations each person has had and how many days
+ * they have been waiting.
  *
- * <p>Son cuatro consultas sobre toda la poblacion, no una por persona: a escala
- * de una ciudad se hace de una vez y el reparto trabaja despues en memoria.
+ * <p>Four queries over the whole population, not one per person: at city scale
+ * it is done in one go and matching then works in memory.
  */
 @Component
 public class JdbcMatchContextFactory implements MatchContextFactory {
@@ -39,60 +40,55 @@ public class JdbcMatchContextFactory implements MatchContextFactory {
                             rs.getObject("blocker", UUID.class), rs.getObject("blocked", UUID.class));
                 });
 
-        // Ultimo dia en que cada pareja hablo: alimenta el factor de novedad, que
-        // permite volver a coincidir pasado un tiempo en vez de bloquear para
-        // siempre.
+        // Last day each pair talked: feeds the novelty factor, which lets people
+        // meet again after a while instead of blocking them forever.
         jdbc.query(
                 """
-                select account_a, account_b, max(round_date) as ultima
+                select account_a, account_b, max(round_date) as last_day
                 from conversation
-                where state <> 'CANCELADA'
+                where state <> 'CANCELLED'
                 group by account_a, account_b
                 """,
                 rs -> {
                     builder.talked(
                             rs.getObject("account_a", UUID.class),
                             rs.getObject("account_b", UUID.class),
-                            rs.getDate("ultima").toLocalDate());
+                            rs.getDate("last_day").toLocalDate());
                 });
 
-        // Conversaciones por persona (las dos columnas, en una sola pasada).
+        // Conversations per person (both columns, in a single pass).
         jdbc.query(
                 """
-                select cuenta, count(*) as cuantas, max(round_date) as ultima
+                select account, count(*) as how_many, max(round_date) as last_day
                 from (
-                    select account_a as cuenta, round_date from conversation where state <> 'CANCELADA'
+                    select account_a as account, round_date from conversation where state <> 'CANCELLED'
                     union all
-                    select account_b as cuenta, round_date from conversation where state <> 'CANCELADA'
-                ) as todas
-                group by cuenta
+                    select account_b as account, round_date from conversation where state <> 'CANCELLED'
+                ) as everyone
+                group by account
                 """,
                 rs -> {
-                    UUID cuenta = rs.getObject("cuenta", UUID.class);
-                    builder.conversations(cuenta, rs.getInt("cuantas"));
-                    LocalDate ultima = rs.getDate("ultima").toLocalDate();
-                    builder.waiting(
-                            cuenta,
-                            (int) java.time.temporal.ChronoUnit.DAYS.between(ultima, today));
+                    UUID account = rs.getObject("account", UUID.class);
+                    builder.conversations(account, rs.getInt("how_many"));
+                    LocalDate lastDay = rs.getDate("last_day").toLocalDate();
+                    builder.waiting(account, (int) ChronoUnit.DAYS.between(lastDay, today));
                 });
 
-        // Quien nunca ha tenido conversacion lleva esperando desde que se
-        // registro: si no, no se le relajaria nada y podria no salir nunca.
+        // Whoever never had a conversation has been waiting since they signed up:
+        // otherwise nothing would be relaxed for them and they might never appear.
         jdbc.query(
                 """
-                select p.account_id, p.created_at::date as desde
+                select p.account_id, p.created_at::date as since
                 from profile p
                 where not exists (
                     select 1 from conversation c
-                    where c.state <> 'CANCELADA'
+                    where c.state <> 'CANCELLED'
                       and (c.account_a = p.account_id or c.account_b = p.account_id))
                 """,
                 rs -> {
                     builder.waiting(
                             rs.getObject("account_id", UUID.class),
-                            (int)
-                                    java.time.temporal.ChronoUnit.DAYS.between(
-                                            rs.getDate("desde").toLocalDate(), today));
+                            (int) ChronoUnit.DAYS.between(rs.getDate("since").toLocalDate(), today));
                 });
 
         return builder.build();

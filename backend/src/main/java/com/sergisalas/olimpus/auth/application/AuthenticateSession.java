@@ -9,8 +9,8 @@ import java.time.Clock;
 import java.util.Optional;
 
 /**
- * Caso de uso: saber quien viene en cada peticion, a partir de la llave que
- * manda el movil. Si la sesion caduco o fue anulada, no hay nadie.
+ * Use case: know who is behind each request, from the token the phone sends.
+ * If the session expired or was revoked, there is nobody.
  */
 public class AuthenticateSession {
 

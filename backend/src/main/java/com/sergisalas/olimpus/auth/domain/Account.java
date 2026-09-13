@@ -4,15 +4,15 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Una cuenta. Solo existe cuando alguien ha demostrado que el email es suyo
- * metiendo el codigo: pedir el codigo no crea nada.
+ * An account. It only exists once someone has proven the email is theirs by
+ * entering the code: requesting the code creates nothing.
  */
 public record Account(UUID id, EmailAddress email, Instant createdAt) {
 
     public Account {
-        if (id == null) throw new IllegalArgumentException("falta el id de la cuenta");
-        if (email == null) throw new IllegalArgumentException("falta el email");
-        if (createdAt == null) throw new IllegalArgumentException("falta la fecha de creacion");
+        if (id == null) throw new IllegalArgumentException("account id is missing");
+        if (email == null) throw new IllegalArgumentException("email is missing");
+        if (createdAt == null) throw new IllegalArgumentException("creation date is missing");
     }
 
     public static Account created(EmailAddress email, Instant now) {

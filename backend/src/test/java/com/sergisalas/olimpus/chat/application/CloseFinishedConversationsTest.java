@@ -2,59 +2,59 @@ package com.sergisalas.olimpus.chat.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.sergisalas.olimpus.matching.application.MundoDeRondas;
+import com.sergisalas.olimpus.matching.application.FakeRoundWorld;
 import com.sergisalas.olimpus.matching.domain.ConversationState;
-import com.sergisalas.olimpus.matching.domain.Gente;
 import com.sergisalas.olimpus.matching.domain.RoundKind;
+import com.sergisalas.olimpus.matching.domain.TestPeople;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class CloseFinishedConversationsTest {
 
-    private MundoDeRondas mundo;
-    private CloseFinishedConversations cerrar;
+    private FakeRoundWorld world;
+    private CloseFinishedConversations close;
 
     @BeforeEach
     void setUp() {
-        mundo = new MundoDeRondas();
-        mundo.gente.addAll(Gente.poblacion(10, 1));
-        mundo.rondaDiaria().execute(Gente.HOY, RoundKind.PRINCIPAL);
-        cerrar = new CloseFinishedConversations(mundo.conversations, mundo.schedule, mundo.clock);
+        world = new FakeRoundWorld();
+        world.people.addAll(TestPeople.population(10, 1));
+        world.dailyRound().execute(TestPeople.TODAY, RoundKind.MAIN);
+        close = new CloseFinishedConversations(world.conversations, world.schedule, world.clock);
     }
 
     @Test
-    void antes_de_las_diez_no_se_cierra_nada() {
-        mundo.ahora = Instant.parse("2026-09-12T19:59:00Z"); // 21:59 en Madrid
+    void before_ten_nothing_is_closed() {
+        world.now = Instant.parse("2026-09-12T19:59:00Z"); // 21:59 in Madrid
 
-        assertThat(cerrar.execute()).isEmpty();
-        assertThat(mundo.guardadas.values()).allMatch(c -> c.state() == ConversationState.ABIERTA);
+        assertThat(close.execute()).isEmpty();
+        assertThat(world.stored.values()).allMatch(c -> c.state() == ConversationState.OPEN);
     }
 
     @Test
-    void a_las_diez_en_punto_se_cierran_todas() {
-        mundo.ahora = Instant.parse("2026-09-12T20:00:00Z"); // 22:00 en Madrid
+    void at_ten_sharp_they_all_close() {
+        world.now = Instant.parse("2026-09-12T20:00:00Z"); // 22:00 in Madrid
 
-        var cerradas = cerrar.execute();
+        var closed = close.execute();
 
-        assertThat(cerradas).isNotEmpty();
-        assertThat(mundo.guardadas.values()).allMatch(c -> c.state() == ConversationState.CERRADA);
+        assertThat(closed).isNotEmpty();
+        assertThat(world.stored.values()).allMatch(c -> c.state() == ConversationState.CLOSED);
     }
 
     @Test
-    void si_el_servidor_estuvo_caido_las_de_ayer_tambien_se_cierran() {
-        // Se despierta a las 10 de la mañana del dia siguiente.
-        mundo.ahora = Instant.parse("2026-09-13T08:00:00Z");
+    void if_the_server_was_down_yesterdays_ones_are_closed_too() {
+        // It wakes up at 10 in the morning of the next day.
+        world.now = Instant.parse("2026-09-13T08:00:00Z");
 
-        assertThat(cerrar.execute()).isNotEmpty();
-        assertThat(mundo.guardadas.values()).noneMatch(c -> c.state() == ConversationState.ABIERTA);
+        assertThat(close.execute()).isNotEmpty();
+        assertThat(world.stored.values()).noneMatch(c -> c.state() == ConversationState.OPEN);
     }
 
     @Test
-    void cerrar_dos_veces_no_vuelve_a_cerrar_lo_ya_cerrado() {
-        mundo.ahora = Instant.parse("2026-09-12T20:00:00Z");
-        cerrar.execute();
+    void closing_twice_does_not_close_what_is_already_closed() {
+        world.now = Instant.parse("2026-09-12T20:00:00Z");
+        close.execute();
 
-        assertThat(cerrar.execute()).isEmpty();
+        assertThat(close.execute()).isEmpty();
     }
 }

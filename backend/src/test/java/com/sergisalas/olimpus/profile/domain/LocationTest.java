@@ -8,23 +8,23 @@ import org.junit.jupiter.api.Test;
 class LocationTest {
 
     @Test
-    void la_ubicacion_se_guarda_redondeada_a_dos_decimales() {
-        Location exacta = Location.rounded(41.387423, 2.168665);
+    void the_location_is_stored_rounded_to_two_decimals() {
+        Location exact = Location.rounded(41.387423, 2.168665);
 
-        assertThat(exacta.latitude()).isEqualTo(41.39);
-        assertThat(exacta.longitude()).isEqualTo(2.17);
+        assertThat(exact.latitude()).isEqualTo(41.39);
+        assertThat(exact.longitude()).isEqualTo(2.17);
     }
 
     @Test
-    void el_redondeo_pierde_como_mucho_algo_mas_de_un_kilometro() {
-        Location exacta = new Location(41.387423, 2.168665);
-        Location guardada = Location.rounded(41.387423, 2.168665);
+    void rounding_loses_at_most_a_bit_over_a_kilometre() {
+        Location exact = new Location(41.387423, 2.168665);
+        Location stored = Location.rounded(41.387423, 2.168665);
 
-        assertThat(exacta.distanceKmTo(guardada)).isLessThan(1.6);
+        assertThat(exact.distanceKmTo(stored)).isLessThan(1.6);
     }
 
     @Test
-    void dos_puntos_de_la_misma_ciudad_estan_a_pocos_kilometros() {
+    void two_points_in_the_same_city_are_a_few_kilometres_apart() {
         Location sagradaFamilia = Location.rounded(41.4036, 2.1744);
         Location barceloneta = Location.rounded(41.3797, 2.1900);
 
@@ -32,7 +32,7 @@ class LocationTest {
     }
 
     @Test
-    void barcelona_y_madrid_estan_a_unos_seiscientos_kilometros() {
+    void barcelona_and_madrid_are_about_five_hundred_kilometres_apart() {
         Location barcelona = Location.rounded(41.3874, 2.1686);
         Location madrid = Location.rounded(40.4168, -3.7038);
 
@@ -40,14 +40,14 @@ class LocationTest {
     }
 
     @Test
-    void la_distancia_de_un_punto_a_si_mismo_es_cero() {
-        Location aqui = Location.rounded(41.3874, 2.1686);
+    void the_distance_from_a_point_to_itself_is_zero() {
+        Location here = Location.rounded(41.3874, 2.1686);
 
-        assertThat(aqui.distanceKmTo(aqui)).isZero();
+        assertThat(here.distanceKmTo(here)).isZero();
     }
 
     @Test
-    void unas_coordenadas_imposibles_se_rechazan() {
+    void impossible_coordinates_are_rejected() {
         assertThatThrownBy(() -> new Location(95, 0)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new Location(0, 200)).isInstanceOf(IllegalArgumentException.class);
     }

@@ -6,36 +6,36 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 
 /**
- * Las horas del dia en Olimpus.
+ * The hours of the day in Olimpus.
  *
- * <p>El reparto sale a las 4:00 y la conversacion cierra a las 22:00 del mismo
- * dia: las dieciocho horas del documento. La repesca de mediodia comparte la
- * misma hora de cierre, para que todo el mundo vuelva a la app a la vez.
+ * <p>The round comes out at 4:00 and the conversation closes at 22:00 the same
+ * day: the eighteen hours of the product document. The midday second-chance
+ * round shares the same closing time, so everyone comes back to the app at once.
  *
- * <p>Las horas se guardan siempre como instante en UTC, pero se calculan en la
- * zona de la comunidad: si la app crece a otro pais, esa zona cambia sin tocar
- * nada mas.
+ * <p>Times are always stored as UTC instants, but computed in the community's
+ * zone: if the app grows into another country, that zone changes and nothing
+ * else does.
  */
-public record RoundSchedule(ZoneId zone, LocalTime principal, LocalTime repesca, LocalTime cierre) {
+public record RoundSchedule(ZoneId zone, LocalTime main, LocalTime secondChance, LocalTime closing) {
 
-    public static final LocalTime HORA_PRINCIPAL = LocalTime.of(4, 0);
-    public static final LocalTime HORA_REPESCA = LocalTime.of(14, 0);
-    public static final LocalTime HORA_CIERRE = LocalTime.of(22, 0);
+    public static final LocalTime MAIN_TIME = LocalTime.of(4, 0);
+    public static final LocalTime SECOND_CHANCE_TIME = LocalTime.of(14, 0);
+    public static final LocalTime CLOSING_TIME = LocalTime.of(22, 0);
 
     public static RoundSchedule of(ZoneId zone) {
-        return new RoundSchedule(zone, HORA_PRINCIPAL, HORA_REPESCA, HORA_CIERRE);
+        return new RoundSchedule(zone, MAIN_TIME, SECOND_CHANCE_TIME, CLOSING_TIME);
     }
 
     public Instant opensAt(LocalDate date, RoundKind kind) {
-        LocalTime hora = kind == RoundKind.PRINCIPAL ? principal : repesca;
-        return date.atTime(hora).atZone(zone).toInstant();
+        LocalTime time = kind == RoundKind.MAIN ? main : secondChance;
+        return date.atTime(time).atZone(zone).toInstant();
     }
 
     public Instant closesAt(LocalDate date) {
-        return date.atTime(cierre).atZone(zone).toInstant();
+        return date.atTime(closing).atZone(zone).toInstant();
     }
 
-    /** Que dia de reparto es un instante dado, en la zona de la comunidad. */
+    /** Which round day an instant belongs to, in the community's zone. */
     public LocalDate dateOf(Instant instant) {
         return instant.atZone(zone).toLocalDate();
     }

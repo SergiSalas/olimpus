@@ -19,10 +19,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class JdbcConversationRepository implements ConversationRepository {
 
-    private static final String COLUMNAS =
+    private static final String COLUMNS =
             """
             id, round_date, round_kind, account_a, account_b, origin, score,
-            opens_at, closes_at, state, messages_from_a, messages_from_b, icebreaker
+            opens_at, closes_at, state, messages_from_a, messages_from_b, icebreaker_interest
             """;
 
     private static final RowMapper<Conversation> MAPPER = JdbcConversationRepository::toConversation;
@@ -39,7 +39,7 @@ public class JdbcConversationRepository implements ConversationRepository {
                 """
                 insert into conversation (
                     id, round_date, round_kind, account_a, account_b, origin, score,
-                    opens_at, closes_at, state, messages_from_a, messages_from_b, icebreaker)
+                    opens_at, closes_at, state, messages_from_a, messages_from_b, icebreaker_interest)
                 values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict (id) do update set
                     state = excluded.state,
@@ -58,13 +58,13 @@ public class JdbcConversationRepository implements ConversationRepository {
                 c.state().name(),
                 c.messagesFromA(),
                 c.messagesFromB(),
-                c.icebreaker());
+                c.icebreakerInterest());
     }
 
     @Override
     public List<Conversation> byDate(LocalDate date) {
         return jdbc.query(
-                "select " + COLUMNAS + " from conversation where round_date = ? order by created_at",
+                "select " + COLUMNS + " from conversation where round_date = ? order by created_at",
                 MAPPER,
                 java.sql.Date.valueOf(date));
     }
@@ -73,11 +73,11 @@ public class JdbcConversationRepository implements ConversationRepository {
     public Optional<Conversation> openFor(UUID accountId, LocalDate date) {
         return jdbc.query(
                         "select "
-                                + COLUMNAS
+                                + COLUMNS
                                 + """
                                 from conversation
                                 where round_date = ?
-                                  and state = 'ABIERTA'
+                                  and state = 'OPEN'
                                   and (account_a = ? or account_b = ?)
                                 order by created_at desc
                                 limit 1
@@ -92,7 +92,7 @@ public class JdbcConversationRepository implements ConversationRepository {
 
     @Override
     public Optional<Conversation> byId(UUID id) {
-        return jdbc.query("select " + COLUMNAS + " from conversation where id = ?", MAPPER, id)
+        return jdbc.query("select " + COLUMNS + " from conversation where id = ?", MAPPER, id)
                 .stream()
                 .findFirst();
     }
@@ -111,6 +111,6 @@ public class JdbcConversationRepository implements ConversationRepository {
                 ConversationState.valueOf(rs.getString("state")),
                 rs.getInt("messages_from_a"),
                 rs.getInt("messages_from_b"),
-                rs.getString("icebreaker"));
+                rs.getString("icebreaker_interest"));
     }
 }

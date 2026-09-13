@@ -5,11 +5,11 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Puerto: reunir la historia que el reparto necesita (bloqueos, quien hablo con
- * quien y cuando, cuanto lleva esperando cada uno).
+ * Port: gather the history matching needs (blocks, who talked to whom and when,
+ * how long each person has been waiting).
  *
- * <p>Vive detras de un puerto porque son varias consultas a la base de datos, y
- * el reparto tiene que poder probarse sin ninguna.
+ * <p>It lives behind a port because it takes several database queries, and
+ * matching has to be testable without any.
  */
 public interface MatchContextFactory {
 

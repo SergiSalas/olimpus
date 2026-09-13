@@ -18,7 +18,8 @@ import {
   type Chat,
   type ChatMessage,
 } from '../api';
-import { colors } from '../theme';
+import { Etiqueta } from '../components';
+import { colors, fonts, radios } from '../theme';
 
 /**
  * El chat del día. Los mensajes se envían por HTTP y se reciben por la conexión
@@ -72,7 +73,9 @@ export function ChatScreen({
     try {
       const mensaje = await sendMessage(token, conversationId, limpio);
       setTexto('');
-      setChat((actual) => (actual ? { ...actual, messages: [...actual.messages, mensaje] } : actual));
+      setChat((actual) =>
+        actual ? { ...actual, messages: [...actual.messages, mensaje] } : actual,
+      );
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No se pudo enviar.');
     } finally {
@@ -83,7 +86,11 @@ export function ChatScreen({
   if (!chat) {
     return (
       <View style={estilos.centrado}>
-        {error ? <Text style={estilos.error}>{error}</Text> : <ActivityIndicator />}
+        {error ? (
+          <Text style={estilos.error}>{error}</Text>
+        ) : (
+          <ActivityIndicator color={colors.accent} />
+        )}
         <Pressable onPress={onVolver}>
           <Text style={estilos.volver}>‹ Volver</Text>
         </Pressable>
@@ -91,22 +98,30 @@ export function ChatScreen({
     );
   }
 
-  const cerrada = chat.state !== 'ABIERTA';
+  const cerrada = chat.state !== 'OPEN';
 
   return (
     <KeyboardAvoidingView
       style={estilos.pantalla}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={0}>
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={estilos.cabecera}>
-        <Pressable onPress={onVolver}>
-          <Text style={estilos.volver}>‹ Hoy</Text>
+        <Pressable style={estilos.redondo} onPress={onVolver}>
+          <Text style={estilos.flecha}>←</Text>
         </Pressable>
-        <Text style={estilos.tituloCabecera}>
-          {chat.bothHaveWritten ? 'Conversación en marcha' : 'Alguien nuevo'} ·{' '}
-          {chat.partner.age} años
-        </Text>
-        <Text style={estilos.subCabecera}>Cierra a las {hora(chat.closesAt)}</Text>
+        <View style={estilos.circuloFoto}>
+          <Text style={estilos.interrogante}>?</Text>
+        </View>
+        <View style={{ flexShrink: 1, gap: 2 }}>
+          <Text style={estilos.nombre}>
+            {chat.bothHaveWritten ? 'Conversación en marcha' : 'Alguien nuevo'}
+          </Text>
+          <Text style={estilos.nivel}>
+            {chat.partner.age} años · nivel {chat.partner.level}
+          </Text>
+        </View>
+        <View style={estilos.pastillaCierre}>
+          <Text style={estilos.pastillaCierreTexto}>Cierra {hora(chat.closesAt)}</Text>
+        </View>
       </View>
 
       <FlatList
@@ -117,7 +132,7 @@ export function ChatScreen({
         onContentSizeChange={() => lista.current?.scrollToEnd({ animated: true })}
         ListHeaderComponent={
           <View style={estilos.arranque}>
-            <Text style={estilos.arranqueEtiqueta}>Para empezar</Text>
+            <Etiqueta tono="accent">Para empezar</Etiqueta>
             <Text style={estilos.arranqueTexto}>{chat.icebreaker}</Text>
           </View>
         }
@@ -132,7 +147,7 @@ export function ChatScreen({
       {error && <Text style={estilos.error}>{error}</Text>}
 
       {cerrada ? (
-        <View style={estilos.cerrado}>
+        <View style={estilos.barra}>
           <Text style={estilos.cerradoTexto}>
             Esta conversación está cerrada. Mañana a las 4:00 hay reparto nuevo.
           </Text>
@@ -144,7 +159,7 @@ export function ChatScreen({
             value={texto}
             onChangeText={setTexto}
             placeholder="Escribe algo"
-            placeholderTextColor={colors.ink3}
+            placeholderTextColor={colors.ink5}
             multiline
             maxLength={1000}
           />
@@ -153,7 +168,7 @@ export function ChatScreen({
             onPress={enviar}
             disabled={!texto.trim() || enviando}>
             {enviando ? (
-              <ActivityIndicator color={colors.surface} />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={estilos.enviarTexto}>Enviar</Text>
             )}
@@ -170,80 +185,121 @@ function hora(iso: string): string {
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.bg },
-  centrado: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', gap: 16 },
+  centrado: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', gap: 18 },
+
   cabecera: {
-    paddingTop: 56,
+    paddingTop: 54,
     paddingHorizontal: 20,
     paddingBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.bg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.line,
-    backgroundColor: colors.surface,
-    gap: 2,
+    borderBottomColor: '#EAE0D0',
   },
-  volver: { fontSize: 16, color: colors.accent },
-  tituloCabecera: { fontSize: 17, fontWeight: '700', color: colors.ink },
-  subCabecera: { fontSize: 12, color: colors.ink3 },
-  mensajes: { padding: 16, gap: 8 },
+  redondo: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  flecha: { fontFamily: fonts.sansNegrita, fontSize: 16, color: colors.ink2 },
+  circuloFoto: {
+    width: 38,
+    height: 38,
+    borderRadius: 999,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  interrogante: { fontFamily: fonts.sansNegrita, fontSize: 12, color: colors.ink5 },
+  nombre: { fontFamily: fonts.sansNegrita, fontSize: 15, color: colors.ink },
+  nivel: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3 },
+  pastillaCierre: {
+    marginLeft: 'auto',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: colors.ink,
+  },
+  pastillaCierreTexto: { fontFamily: fonts.sansNegrita, fontSize: 11.5, color: colors.onInk },
+
+  mensajes: { padding: 20, gap: 10 },
   arranque: {
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
     borderLeftWidth: 3,
     borderLeftColor: colors.accent,
-    borderRadius: 6,
-    padding: 14,
-    marginBottom: 8,
-    gap: 4,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    gap: 6,
   },
-  arranqueEtiqueta: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.ink3,
-    textTransform: 'uppercase',
-  },
-  arranqueTexto: { fontSize: 15, color: colors.ink, lineHeight: 21 },
-  burbuja: { maxWidth: '82%', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 9 },
-  mia: { alignSelf: 'flex-end', backgroundColor: colors.accent, borderBottomRightRadius: 4 },
+  arranqueTexto: { fontFamily: fonts.sans, fontSize: 15, lineHeight: 22, color: colors.ink },
+
+  burbuja: { maxWidth: '82%', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 14 },
+  mia: { alignSelf: 'flex-end', backgroundColor: colors.ink, borderBottomRightRadius: 6 },
   suya: {
     alignSelf: 'flex-start',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
-    borderBottomLeftRadius: 4,
+    borderBottomLeftRadius: 6,
   },
-  textoMio: { color: colors.surface, fontSize: 15, lineHeight: 20 },
-  textoSuyo: { color: colors.ink, fontSize: 15, lineHeight: 20 },
-  horaMia: { color: '#CFE3EC', fontSize: 10, marginTop: 3, textAlign: 'right' },
-  horaSuya: { color: colors.ink3, fontSize: 10, marginTop: 3 },
+  textoMio: { fontFamily: fonts.sans, fontSize: 16, lineHeight: 23, color: colors.onInk },
+  textoSuyo: { fontFamily: fonts.sans, fontSize: 16, lineHeight: 23, color: colors.ink },
+  horaMia: { fontFamily: fonts.sans, fontSize: 10.5, color: colors.onInk2, marginTop: 4, textAlign: 'right' },
+  horaSuya: { fontFamily: fonts.sans, fontSize: 10.5, color: colors.ink5, marginTop: 4 },
+
   barra: {
     flexDirection: 'row',
-    gap: 8,
-    padding: 12,
+    gap: 9,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 26,
     borderTopWidth: 1,
-    borderTopColor: colors.line,
-    backgroundColor: colors.surface,
+    borderTopColor: '#EAE0D0',
+    backgroundColor: colors.bg,
     alignItems: 'flex-end',
   },
   campo: {
     flex: 1,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 10,
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontFamily: fonts.sans,
     fontSize: 16,
     maxHeight: 120,
     color: colors.ink,
-    backgroundColor: colors.bg,
   },
   enviar: {
     backgroundColor: colors.accent,
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
   },
   apagado: { opacity: 0.4 },
-  enviarTexto: { color: colors.surface, fontWeight: '600' },
-  cerrado: { padding: 16, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line },
-  cerradoTexto: { fontSize: 13, color: colors.ink3, textAlign: 'center' },
-  error: { color: colors.error, fontSize: 13, textAlign: 'center', paddingHorizontal: 16 },
+  enviarTexto: { fontFamily: fonts.sansNegrita, fontSize: 15, color: '#FFFFFF' },
+  cerradoTexto: {
+    flex: 1,
+    fontFamily: fonts.sans,
+    fontSize: 13,
+    color: colors.ink3,
+    textAlign: 'center',
+  },
+  volver: { fontFamily: fonts.sansMedia, fontSize: 15, color: colors.accent },
+  error: {
+    fontFamily: fonts.sansMedia,
+    fontSize: 13,
+    color: colors.error,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
 });

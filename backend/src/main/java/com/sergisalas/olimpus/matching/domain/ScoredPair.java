@@ -1,17 +1,18 @@
 package com.sergisalas.olimpus.matching.domain;
 
 import com.sergisalas.olimpus.profile.domain.Profile;
+import java.util.UUID;
 
 /**
- * Una pareja posible y lo que promete.
+ * A possible pair and how promising it is.
  *
- * @param score lo que promete para el que sale peor parado de los dos
- * @param sideA lo que le conviene b a la persona a
- * @param sideB lo que le conviene a a la persona b
+ * @param score how promising it is for whichever of the two comes off worse
+ * @param sideA how well b suits person a
+ * @param sideB how well a suits person b
  */
 public record ScoredPair(Profile a, Profile b, double score, double sideA, double sideB) {
 
-    public boolean involves(java.util.UUID accountId) {
+    public boolean involves(UUID accountId) {
         return a.accountId().equals(accountId) || b.accountId().equals(accountId);
     }
 }

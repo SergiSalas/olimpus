@@ -7,9 +7,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Las 22:00. Se comprueba cada cinco minutos en vez de una sola vez al dia: si
- * el servidor estaba caido justo a esa hora, las conversaciones no se quedan
- * abiertas hasta el dia siguiente.
+ * 22:00. It checks every five minutes instead of once a day: if the server was
+ * down right at that time, conversations do not stay open until the next day.
  */
 @Component
 public class ClosingScheduler {
@@ -22,11 +21,11 @@ public class ClosingScheduler {
         this.closeFinished = closeFinished;
     }
 
-    @Scheduled(fixedDelayString = "${olimpus.cierre.cada-ms:300000}")
-    public void cerrarLasQueTocan() {
-        var cerradas = closeFinished.execute();
-        if (!cerradas.isEmpty()) {
-            log.info("Cerradas {} conversaciones a las que se les paso la hora.", cerradas.size());
+    @Scheduled(fixedDelayString = "${olimpus.closing.every-ms:300000}")
+    public void closeTheDueOnes() {
+        var closed = closeFinished.execute();
+        if (!closed.isEmpty()) {
+            log.info("Closed {} conversations that were past their time.", closed.size());
         }
     }
 }

@@ -1,15 +1,17 @@
 package com.sergisalas.olimpus.profile.domain;
 
+import com.sergisalas.olimpus.shared.domain.RuleViolationException;
+
 /**
- * Un idioma y cuanto se maneja. El nivel se pregunta con palabras y el
- * algoritmo lo usa como numero entre 0 y 1.
+ * A language and how well it is spoken. The level is asked in words and the
+ * algorithm uses it as a number between 0 and 1.
  */
 public record LanguageSkill(String code, Level level) {
 
     public enum Level {
-        BASICO(0.4),
-        MEDIO(0.7),
-        NATIVO(1.0);
+        BASIC(0.4),
+        INTERMEDIATE(0.7),
+        NATIVE(1.0);
 
         private final double fluency;
 
@@ -24,10 +26,10 @@ public record LanguageSkill(String code, Level level) {
 
     public LanguageSkill {
         if (code == null || !code.matches("[a-z]{2}")) {
-            throw new IllegalArgumentException("el idioma se escribe con dos letras, como \"es\"");
+            throw new RuleViolationException("language.code.invalid");
         }
         if (level == null) {
-            throw new IllegalArgumentException("falta el nivel del idioma " + code);
+            throw new RuleViolationException("language.level.missing", code);
         }
     }
 

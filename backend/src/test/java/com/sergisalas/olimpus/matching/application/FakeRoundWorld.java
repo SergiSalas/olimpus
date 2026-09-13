@@ -18,14 +18,14 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/** Mundo de juguete para probar las rondas sin base de datos. */
-public class MundoDeRondas {
+/** A toy world to test the rounds without a database. */
+public class FakeRoundWorld {
 
-    public final List<Profile> gente = new ArrayList<>();
-    public final Map<UUID, Conversation> guardadas = new LinkedHashMap<>();
+    public final List<Profile> people = new ArrayList<>();
+    public final Map<UUID, Conversation> stored = new LinkedHashMap<>();
     public final RoundSchedule schedule = RoundSchedule.of(java.time.ZoneId.of("Europe/Madrid"));
 
-    public Instant ahora = Instant.parse("2026-09-12T06:00:00Z");
+    public Instant now = Instant.parse("2026-09-12T06:00:00Z");
 
     public final Clock clock =
             new Clock() {
@@ -41,7 +41,7 @@ public class MundoDeRondas {
 
                 @Override
                 public Instant instant() {
-                    return ahora;
+                    return now;
                 }
             };
 
@@ -49,12 +49,12 @@ public class MundoDeRondas {
             new ProfileDirectory() {
                 @Override
                 public List<Profile> everyoneWithProfile() {
-                    return List.copyOf(gente);
+                    return List.copyOf(people);
                 }
 
                 @Override
                 public Optional<Profile> byAccountId(UUID accountId) {
-                    return gente.stream().filter(p -> p.accountId().equals(accountId)).findFirst();
+                    return people.stream().filter(p -> p.accountId().equals(accountId)).findFirst();
                 }
             };
 
@@ -62,26 +62,26 @@ public class MundoDeRondas {
             new ConversationRepository() {
                 @Override
                 public void save(Conversation conversation) {
-                    guardadas.put(conversation.id(), conversation);
+                    stored.put(conversation.id(), conversation);
                 }
 
                 @Override
                 public List<Conversation> byDate(java.time.LocalDate date) {
-                    return guardadas.values().stream()
+                    return stored.values().stream()
                             .filter(c -> c.roundDate().equals(date))
                             .collect(Collectors.toList());
                 }
 
                 @Override
                 public Optional<Conversation> openFor(UUID accountId, java.time.LocalDate date) {
-                    return guardadas.values().stream()
+                    return stored.values().stream()
                             .filter(c -> c.roundDate().equals(date) && c.isOpen() && c.involves(accountId))
                             .findFirst();
                 }
 
                 @Override
                 public Optional<Conversation> byId(UUID id) {
-                    return Optional.ofNullable(guardadas.get(id));
+                    return Optional.ofNullable(stored.get(id));
                 }
             };
 
@@ -91,11 +91,11 @@ public class MundoDeRondas {
                             .interestWeights(InterestWeights.fromPopulation(pool))
                             .build();
 
-    public RunDailyRound rondaDiaria() {
+    public RunDailyRound dailyRound() {
         return new RunDailyRound(profiles, conversations, contexts, schedule);
     }
 
-    public GetTodaysConversation conversacionDeHoy() {
+    public GetTodaysConversation todaysConversation() {
         return new GetTodaysConversation(conversations, profiles, schedule, clock);
     }
 }

@@ -4,27 +4,27 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * El codigo de seis cifras que se manda al email, ya convertido en huella.
+ * The six-digit code emailed to the person, already turned into a hash.
  *
- * <p>Dura poco y tiene los intentos contados: si no, probar las 999.999
- * combinaciones seria cuestion de tiempo.
+ * <p>It is short-lived and has a limited number of attempts: otherwise trying
+ * all 999,999 combinations would only be a matter of time.
  */
 public record LoginCode(EmailAddress email, String codeHash, Instant expiresAt, int attemptsLeft) {
 
-    public static final Duration DURACION = Duration.ofMinutes(10);
-    public static final int INTENTOS = 5;
+    public static final Duration LIFETIME = Duration.ofMinutes(10);
+    public static final int ATTEMPTS = 5;
 
     public LoginCode {
-        if (email == null) throw new IllegalArgumentException("falta el email");
+        if (email == null) throw new IllegalArgumentException("email is missing");
         if (codeHash == null || codeHash.isBlank()) {
-            throw new IllegalArgumentException("falta la huella del codigo");
+            throw new IllegalArgumentException("code hash is missing");
         }
-        if (expiresAt == null) throw new IllegalArgumentException("falta la caducidad");
-        if (attemptsLeft < 0) throw new IllegalArgumentException("los intentos no pueden ser negativos");
+        if (expiresAt == null) throw new IllegalArgumentException("expiry is missing");
+        if (attemptsLeft < 0) throw new IllegalArgumentException("attempts cannot be negative");
     }
 
     public static LoginCode issued(EmailAddress email, String codeHash, Instant now) {
-        return new LoginCode(email, codeHash, now.plus(DURACION), INTENTOS);
+        return new LoginCode(email, codeHash, now.plus(LIFETIME), ATTEMPTS);
     }
 
     public boolean hasExpired(Instant now) {

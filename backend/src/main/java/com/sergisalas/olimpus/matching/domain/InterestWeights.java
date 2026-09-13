@@ -7,11 +7,12 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Cada interes pesa segun lo raro que sea en la gente que hay de verdad.
+ * Each interest weighs according to how rare it is among the people actually
+ * there.
  *
- * <p>Que dos personas compartan "viajar" no dice nada: lo marca la mayoria.
- * Que compartan "escalada-en-hielo" es una senal enorme. Contar intereses
- * comunes sin pesarlos tira a la basura casi toda esa informacion.
+ * <p>Two people sharing "travel" says nothing: most people pick it. Sharing
+ * "ice-climbing" is a huge signal. Counting shared interests without weighting
+ * them throws away almost all of that information.
  */
 public final class InterestWeights {
 
@@ -22,8 +23,8 @@ public final class InterestWeights {
     }
 
     /**
-     * Se calcula sobre la poblacion real, no sobre una tabla fija: en un campus
-     * "escalada" puede ser comun y en otra ciudad rarisimo.
+     * Computed over the real population, not a fixed table: on a campus
+     * "climbing" may be common and in another city extremely rare.
      */
     public static InterestWeights fromPopulation(Collection<Profile> population) {
         Map<String, Integer> counts = new HashMap<>();
@@ -35,14 +36,14 @@ public final class InterestWeights {
         int n = population.size();
         Map<String, Double> weights = new HashMap<>();
         for (Map.Entry<String, Integer> entry : counts.entrySet()) {
-            // +1 arriba y abajo para que un interes que nadie eligio no reviente
-            // el logaritmo y para que el mas comun siga pesando algo.
+            // +1 on top and bottom so an interest nobody picked does not blow up
+            // the logarithm, and so the most common one still weighs something.
             weights.put(entry.getKey(), Math.log((n + 1.0) / (entry.getValue() + 1.0)));
         }
         return new InterestWeights(weights);
     }
 
-    /** Todos los intereses pesan igual. Solo para tests. */
+    /** Every interest weighs the same. Tests only. */
     public static InterestWeights uniform() {
         return new InterestWeights(Map.of());
     }
@@ -52,11 +53,11 @@ public final class InterestWeights {
     }
 
     /**
-     * Parecido entre dos listas de intereses, de 0 a 1.
+     * Similarity between two sets of interests, from 0 to 1.
      *
-     * <p>Se divide por la raiz del producto de los dos totales (parecido tipo
-     * coseno) para que alguien con ocho intereses no gane por volumen a alguien
-     * con cinco.
+     * <p>It divides by the square root of the product of both totals (cosine-like
+     * similarity) so someone with eight interests does not win by volume over
+     * someone with five.
      */
     public double similarity(Set<String> mine, Set<String> theirs) {
         double shared = 0;

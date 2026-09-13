@@ -1,5 +1,5 @@
--- Identidad: entrar con email y un codigo de un solo uso.
--- Ni los codigos ni las llaves de sesion se guardan en claro, solo su huella.
+-- Identity: log in with an email and a one-time code.
+-- Neither the codes nor the session tokens are stored in clear, only their hash.
 
 create table account (
     id         uuid        primary key,
@@ -7,9 +7,9 @@ create table account (
     created_at timestamptz not null default now()
 );
 
--- Un codigo vivo por email. Pedir otro sustituye al anterior.
--- Pedir codigo no crea cuenta: aqui puede haber emails que nunca lleguen a ser
--- cuenta, y se limpian solos al caducar.
+-- One live code per email. Requesting another replaces the previous one.
+-- Requesting a code does not create an account: there may be emails here that
+-- never become accounts, and they go away on their own when they expire.
 create table login_code (
     email         text        primary key,
     code_hash     text        not null,

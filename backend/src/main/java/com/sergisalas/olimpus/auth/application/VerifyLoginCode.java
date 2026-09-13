@@ -14,14 +14,14 @@ import java.time.Clock;
 import java.time.Instant;
 
 /**
- * Caso de uso: meter el codigo y quedarse dentro.
+ * Use case: enter the code and stay logged in.
  *
- * <p>Aqui nace la cuenta, si no existia. El codigo se gasta al usarlo, acierte
- * o no: sin eso, un codigo valido serviria para siempre.
+ * <p>This is where the account is born, if it did not exist. The code is spent
+ * when used, right or wrong: otherwise a valid code would work forever.
  */
 public class VerifyLoginCode {
 
-    /** Lo que se devuelve al movil: la llave en claro, que solo se ve una vez. */
+    /** What goes back to the phone: the token in clear, which is only seen once. */
     public record StartedSession(String token, Instant expiresAt, Account account, boolean isNew) {}
 
     private final LoginCodeRepository codes;
@@ -52,16 +52,16 @@ public class VerifyLoginCode {
 
         LoginCode stored =
                 codes.findByEmail(email)
-                        .orElseThrow(() -> new InvalidLoginCodeException("no hay codigo pendiente"));
+                        .orElseThrow(() -> new InvalidLoginCodeException("no pending code"));
 
         if (stored.hasExpired(now)) {
             codes.deleteByEmail(email);
-            throw new InvalidLoginCodeException("el codigo ha caducado");
+            throw new InvalidLoginCodeException("code expired");
         }
 
         if (!stored.matches(hasher.hash(rawCode == null ? "" : rawCode.trim()))) {
-            registrarFallo(stored, email);
-            throw new InvalidLoginCodeException("el codigo no coincide");
+            recordFailure(stored, email);
+            throw new InvalidLoginCodeException("code does not match");
         }
 
         codes.deleteByEmail(email);
@@ -77,8 +77,8 @@ public class VerifyLoginCode {
         return new StartedSession(token, session.expiresAt(), account, isNew);
     }
 
-    /** Cuando se agotan los intentos el codigo desaparece: hay que pedir otro. */
-    private void registrarFallo(LoginCode stored, EmailAddress email) {
+    /** When the attempts run out the code disappears: a new one must be requested. */
+    private void recordFailure(LoginCode stored, EmailAddress email) {
         LoginCode after = stored.afterFailedAttempt();
         if (after.outOfAttempts()) {
             codes.deleteByEmail(email);

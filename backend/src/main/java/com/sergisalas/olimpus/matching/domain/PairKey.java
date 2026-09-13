@@ -3,8 +3,8 @@ package com.sergisalas.olimpus.matching.domain;
 import java.util.UUID;
 
 /**
- * Dos personas, sin orden. Sirve para preguntar cosas de una pareja (¿se han
- * bloqueado?, ¿cuando hablaron?) sin tener que mirar las dos direcciones.
+ * Two people, unordered. Used to ask things about a pair (have they blocked
+ * each other? when did they talk?) without checking both directions.
  */
 public record PairKey(UUID first, UUID second) {
 

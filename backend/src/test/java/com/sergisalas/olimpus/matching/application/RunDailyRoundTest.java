@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sergisalas.olimpus.matching.domain.Conversation;
 import com.sergisalas.olimpus.matching.domain.ConversationState;
-import com.sergisalas.olimpus.matching.domain.Gente;
 import com.sergisalas.olimpus.matching.domain.RoundKind;
+import com.sergisalas.olimpus.matching.domain.TestPeople;
 import com.sergisalas.olimpus.profile.domain.Gender;
 import com.sergisalas.olimpus.profile.domain.Profile;
 import java.time.Instant;
@@ -15,144 +15,165 @@ import org.junit.jupiter.api.Test;
 
 class RunDailyRoundTest {
 
-    private static final LocalDate HOY = Gente.HOY;
+    private static final LocalDate TODAY = TestPeople.TODAY;
 
-    private MundoDeRondas mundo;
-    private RunDailyRound ronda;
+    private FakeRoundWorld world;
+    private RunDailyRound round;
 
     @BeforeEach
     void setUp() {
-        mundo = new MundoDeRondas();
-        ronda = mundo.rondaDiaria();
+        world = new FakeRoundWorld();
+        round = world.dailyRound();
     }
 
     @Test
-    void la_ronda_crea_conversaciones_abiertas_que_cierran_a_las_diez_de_la_noche() {
-        mundo.gente.addAll(Gente.poblacion(10, 1));
+    void the_round_creates_open_conversations_that_close_at_ten_at_night() {
+        world.people.addAll(TestPeople.population(10, 1));
 
-        var resultado = ronda.execute(HOY, RoundKind.PRINCIPAL);
+        var result = round.execute(TODAY, RoundKind.MAIN);
 
-        assertThat(resultado.created()).isNotEmpty();
-        for (Conversation c : resultado.created()) {
-            assertThat(c.state()).isEqualTo(ConversationState.ABIERTA);
+        assertThat(result.created()).isNotEmpty();
+        for (Conversation c : result.created()) {
+            assertThat(c.state()).isEqualTo(ConversationState.OPEN);
             assertThat(c.isSilent()).isTrue();
-            // 4:00 y 22:00 en Madrid son 02:00 y 20:00 en UTC (horario de verano).
+            // 4:00 and 22:00 in Madrid are 02:00 and 20:00 UTC (summer time).
             assertThat(c.opensAt()).isEqualTo(Instant.parse("2026-09-12T02:00:00Z"));
             assertThat(c.closesAt()).isEqualTo(Instant.parse("2026-09-12T20:00:00Z"));
         }
     }
 
     @Test
-    void lanzar_la_misma_ronda_dos_veces_no_reparte_dos_veces() {
-        mundo.gente.addAll(Gente.poblacion(10, 2));
+    void running_the_same_round_twice_does_not_match_twice() {
+        world.people.addAll(TestPeople.population(10, 2));
 
-        var primera = ronda.execute(HOY, RoundKind.PRINCIPAL);
-        var segunda = ronda.execute(HOY, RoundKind.PRINCIPAL);
+        var first = round.execute(TODAY, RoundKind.MAIN);
+        var second = round.execute(TODAY, RoundKind.MAIN);
 
-        assertThat(primera.alreadyRan()).isFalse();
-        assertThat(segunda.alreadyRan()).isTrue();
-        assertThat(segunda.created()).isEmpty();
-        assertThat(mundo.guardadas).hasSize(primera.created().size());
+        assertThat(first.alreadyRan()).isFalse();
+        assertThat(second.alreadyRan()).isTrue();
+        assertThat(second.created()).isEmpty();
+        assertThat(world.stored).hasSize(first.created().size());
     }
 
     @Test
-    void nadie_tiene_dos_conversaciones_el_mismo_dia() {
-        mundo.gente.addAll(Gente.poblacion(30, 3));
+    void nobody_has_two_conversations_on_the_same_day() {
+        world.people.addAll(TestPeople.population(30, 3));
 
-        ronda.execute(HOY, RoundKind.PRINCIPAL);
-        var repesca = ronda.execute(HOY, RoundKind.REPESCA);
+        round.execute(TODAY, RoundKind.MAIN);
+        var secondChance = round.execute(TODAY, RoundKind.SECOND_CHANCE);
 
-        // En la repesca, los que ya tienen conversacion viva no entran. Y como en
-        // el paso 4 todavia no hay chat, todas estan en silencio y se cancelan,
-        // asi que vuelven todos al reparto.
-        for (Profile persona : mundo.gente) {
-            long abiertas =
-                    mundo.guardadas.values().stream()
-                            .filter(c -> c.isOpen() && c.involves(persona.accountId()))
+        // In the second chance, whoever already has a live conversation stays
+        // out. Nobody has written in this test, so all of them are silent and
+        // get cancelled, and everyone goes back into the round.
+        for (Profile person : world.people) {
+            long open =
+                    world.stored.values().stream()
+                            .filter(c -> c.isOpen() && c.involves(person.accountId()))
                             .count();
-            assertThat(abiertas).as("%s tiene %d conversaciones abiertas", persona.nickname(), abiertas)
+            assertThat(open).as("%s has %d open conversations", person.nickname(), open)
                     .isLessThanOrEqualTo(1);
         }
-        assertThat(repesca.cancelled()).isNotEmpty();
+        assertThat(secondChance.cancelled()).isNotEmpty();
     }
 
     @Test
-    void la_repesca_cancela_solo_las_que_siguen_en_silencio() {
-        mundo.gente.addAll(Gente.poblacion(20, 4));
-        var principal = ronda.execute(HOY, RoundKind.PRINCIPAL);
+    void the_second_chance_only_cancels_the_ones_still_silent() {
+        world.people.addAll(TestPeople.population(20, 4));
+        var main = round.execute(TODAY, RoundKind.MAIN);
 
-        // Una de ellas arranca: escriben los dos.
-        Conversation hablando = principal.created().get(0);
-        mundo.conversations.save(
-                hablando
-                        .withMessageFrom(hablando.accountA())
-                        .withMessageFrom(hablando.accountB()));
+        // One of them takes off: both write.
+        Conversation talking = main.created().get(0);
+        world.conversations.save(
+                talking
+                        .withMessageFrom(talking.accountA())
+                        .withMessageFrom(talking.accountB()));
 
-        var repesca = ronda.execute(HOY, RoundKind.REPESCA);
+        var secondChance = round.execute(TODAY, RoundKind.SECOND_CHANCE);
 
-        assertThat(repesca.cancelled()).noneMatch(c -> c.id().equals(hablando.id()));
-        assertThat(mundo.guardadas.get(hablando.id()).state()).isEqualTo(ConversationState.ABIERTA);
+        assertThat(secondChance.cancelled()).noneMatch(c -> c.id().equals(talking.id()));
+        assertThat(world.stored.get(talking.id()).state()).isEqualTo(ConversationState.OPEN);
     }
 
     @Test
-    void quien_esta_hablando_no_entra_en_la_repesca() {
-        mundo.gente.addAll(Gente.poblacion(20, 5));
-        var principal = ronda.execute(HOY, RoundKind.PRINCIPAL);
+    void whoever_is_talking_does_not_enter_the_second_chance() {
+        world.people.addAll(TestPeople.population(20, 5));
+        var main = round.execute(TODAY, RoundKind.MAIN);
 
-        Conversation hablando = principal.created().get(0);
-        mundo.conversations.save(
-                hablando
-                        .withMessageFrom(hablando.accountA())
-                        .withMessageFrom(hablando.accountB()));
+        Conversation talking = main.created().get(0);
+        world.conversations.save(
+                talking
+                        .withMessageFrom(talking.accountA())
+                        .withMessageFrom(talking.accountB()));
 
-        var repesca = ronda.execute(HOY, RoundKind.REPESCA);
+        var secondChance = round.execute(TODAY, RoundKind.SECOND_CHANCE);
 
-        assertThat(repesca.created())
+        assertThat(secondChance.created())
                 .noneMatch(
-                        c -> c.involves(hablando.accountA()) || c.involves(hablando.accountB()));
+                        c -> c.involves(talking.accountA()) || c.involves(talking.accountB()));
     }
 
     @Test
-    void la_repesca_da_conversacion_a_quien_se_quedo_fuera() {
-        // Dos mujeres que buscan hombres y un hombre: una se queda sin pareja.
-        Profile ana = Gente.persona().nickname("Ana").gender(Gender.MUJER).busca(Gender.HOMBRE).build();
-        Profile eva = Gente.persona().nickname("Eva").gender(Gender.MUJER).busca(Gender.HOMBRE).build();
-        Profile leo = Gente.persona().nickname("Leo").gender(Gender.HOMBRE).busca(Gender.MUJER).build();
-        mundo.gente.addAll(java.util.List.of(ana, eva, leo));
+    void the_second_chance_gives_a_conversation_to_whoever_was_left_out() {
+        // Two women looking for men and one man: one of them is left without a pair.
+        Profile ana = TestPeople.person().nickname("Ana").gender(Gender.WOMAN).seeking(Gender.MAN).build();
+        Profile eva = TestPeople.person().nickname("Eva").gender(Gender.WOMAN).seeking(Gender.MAN).build();
+        Profile leo = TestPeople.person().nickname("Leo").gender(Gender.MAN).seeking(Gender.WOMAN).build();
+        world.people.addAll(java.util.List.of(ana, eva, leo));
 
-        var principal = ronda.execute(HOY, RoundKind.PRINCIPAL);
-        assertThat(principal.created()).hasSize(1);
-        assertThat(principal.leftOut()).hasSize(1);
+        var main = round.execute(TODAY, RoundKind.MAIN);
+        assertThat(main.created()).hasSize(1);
+        assertThat(main.leftOut()).hasSize(1);
 
-        var repesca = ronda.execute(HOY, RoundKind.REPESCA);
+        var secondChance = round.execute(TODAY, RoundKind.SECOND_CHANCE);
 
-        // La del principal se cancela por silencio, asi que en la repesca vuelven
-        // a entrar los tres y la que se quedo fuera tiene otra oportunidad.
-        assertThat(repesca.cancelled()).hasSize(1);
-        assertThat(repesca.created()).hasSize(1);
+        // The main one is cancelled for silence, so all three are back in the
+        // second chance and the one left out gets another opportunity.
+        assertThat(secondChance.cancelled()).hasSize(1);
+        assertThat(secondChance.created()).hasSize(1);
     }
 
     @Test
-    void sin_nadie_registrado_la_ronda_no_hace_nada() {
-        var resultado = ronda.execute(HOY, RoundKind.PRINCIPAL);
+    void with_nobody_signed_up_the_round_does_nothing() {
+        var result = round.execute(TODAY, RoundKind.MAIN);
 
-        assertThat(resultado.created()).isEmpty();
-        assertThat(resultado.peopleInPool()).isZero();
-        assertThat(mundo.guardadas).isEmpty();
+        assertThat(result.created()).isEmpty();
+        assertThat(result.peopleInPool()).isZero();
+        assertThat(world.stored).isEmpty();
     }
 
     @Test
-    void la_misma_ronda_repartida_dos_dias_distintos_da_parejas_distintas() {
-        mundo.gente.addAll(Gente.poblacion(40, 6));
+    void the_same_round_on_two_different_days_gives_different_pairs() {
+        world.people.addAll(TestPeople.population(40, 6));
 
-        var hoy = ronda.execute(HOY, RoundKind.PRINCIPAL);
-        var manana = ronda.execute(HOY.plusDays(1), RoundKind.PRINCIPAL);
+        var today = round.execute(TODAY, RoundKind.MAIN);
+        var tomorrow = round.execute(TODAY.plusDays(1), RoundKind.MAIN);
 
-        assertThat(parejasDe(hoy)).isNotEqualTo(parejasDe(manana));
+        assertThat(pairsOf(today)).isNotEqualTo(pairsOf(tomorrow));
     }
 
-    private static java.util.Set<String> parejasDe(RunDailyRound.RoundResult resultado) {
-        return resultado.created().stream()
+    @Test
+    void the_opening_interest_is_the_rarest_one_they_share() {
+        Profile ana =
+                TestPeople.person()
+                        .gender(Gender.WOMAN)
+                        .seeking(Gender.MAN)
+                        .interests("travel", "movies", "kendo", "music", "tv-series")
+                        .build();
+        Profile leo =
+                TestPeople.person()
+                        .gender(Gender.MAN)
+                        .seeking(Gender.WOMAN)
+                        .interests("travel", "movies", "kendo", "reading", "running")
+                        .build();
+        world.people.addAll(java.util.List.of(ana, leo));
+
+        var result = round.execute(TODAY, RoundKind.MAIN);
+
+        assertThat(result.created()).singleElement().extracting(Conversation::icebreakerInterest).isEqualTo("kendo");
+    }
+
+    private static java.util.Set<String> pairsOf(RunDailyRound.RoundResult result) {
+        return result.created().stream()
                 .map(c -> c.accountA() + "+" + c.accountB())
                 .collect(java.util.stream.Collectors.toSet());
     }

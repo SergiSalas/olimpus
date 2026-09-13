@@ -1,10 +1,9 @@
--- Primera migracion: solo deja constancia de que el esquema existe y de
--- que Flyway se ejecuta. Las tablas de verdad (personas, rondas, chats)
--- llegan en el paso 2.
+-- First migration: it only records that the schema exists and that Flyway
+-- runs. The real tables (people, rounds, chats) come in later steps.
 create table app_info (
-    clave      text primary key,
-    valor      text        not null,
-    creado_en  timestamptz not null default now()
+    name       text primary key,
+    value      text        not null,
+    created_at timestamptz not null default now()
 );
 
-insert into app_info (clave, valor) values ('esquema', 'v1');
+insert into app_info (name, value) values ('schema', 'v1');

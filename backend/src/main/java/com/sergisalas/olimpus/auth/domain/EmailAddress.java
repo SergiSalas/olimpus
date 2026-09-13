@@ -3,26 +3,26 @@ package com.sergisalas.olimpus.auth.domain;
 import java.util.regex.Pattern;
 
 /**
- * Un email ya normalizado: sin espacios y en minusculas. Existe para que dos
- * personas no puedan tener dos cuentas escribiendo "Ana@x.com" y "ana@x.com".
+ * An already normalised email: trimmed and in lower case. It exists so two
+ * people cannot get two accounts by typing "Ana@x.com" and "ana@x.com".
  */
 public record EmailAddress(String value) {
 
-    /** Deliberadamente permisiva: quien manda de verdad es el codigo que llega al buzon. */
+    /** Deliberately lenient: what really decides is the code reaching the inbox. */
     private static final Pattern SHAPE = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]{2,}$");
 
     private static final int MAX_LENGTH = 254;
 
     public EmailAddress {
         if (value == null || value.isBlank()) {
-            throw new InvalidEmailException("hace falta un email");
+            throw new InvalidEmailException("email.missing");
         }
         value = value.trim().toLowerCase();
         if (value.length() > MAX_LENGTH) {
-            throw new InvalidEmailException("ese email es demasiado largo");
+            throw new InvalidEmailException("email.too-long");
         }
         if (!SHAPE.matcher(value).matches()) {
-            throw new InvalidEmailException("ese email no tiene buena pinta");
+            throw new InvalidEmailException("email.malformed");
         }
     }
 

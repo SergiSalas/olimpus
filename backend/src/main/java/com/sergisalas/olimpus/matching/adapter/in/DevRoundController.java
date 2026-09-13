@@ -14,11 +14,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Lanzar una ronda a mano, para no tener que esperar a las 4:00 mientras se
- * programa.
+ * Run a round by hand, so there is no need to wait until 4:00 while developing.
  *
- * <p>Solo existe si {@code olimpus.dev-endpoints} esta activado, y en la beta
- * tiene que estar apagado.
+ * <p>It only exists when {@code olimpus.dev-endpoints} is on, and it must be off
+ * in the beta.
  */
 @RestController
 @RequestMapping("/api/dev")
@@ -47,19 +46,19 @@ public class DevRoundController {
 
     @PostMapping("/round")
     public RoundResponse run(
-            @RequestParam(defaultValue = "PRINCIPAL") RoundKind kind,
+            @RequestParam(defaultValue = "MAIN") RoundKind kind,
             @RequestParam(required = false) LocalDate date) {
 
-        LocalDate dia = date != null ? date : schedule.dateOf(clock.instant());
-        var resultado = runDailyRound.execute(dia, kind);
+        LocalDate day = date != null ? date : schedule.dateOf(clock.instant());
+        var result = runDailyRound.execute(day, kind);
 
         return new RoundResponse(
-                resultado.date(),
-                resultado.kind(),
-                resultado.peopleInPool(),
-                resultado.created().size(),
-                resultado.leftOut(),
-                resultado.cancelled().size(),
-                resultado.alreadyRan());
+                result.date(),
+                result.kind(),
+                result.peopleInPool(),
+                result.created().size(),
+                result.leftOut(),
+                result.cancelled().size(),
+                result.alreadyRan());
     }
 }

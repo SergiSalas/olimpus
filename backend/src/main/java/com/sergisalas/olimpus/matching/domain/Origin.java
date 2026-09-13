@@ -1,15 +1,15 @@
 package com.sergisalas.olimpus.matching.domain;
 
 /**
- * De donde sale una pareja. Se guarda con cada conversacion, y es lo que
- * permitira responder a la pregunta importante: ¿las parejas que elige el
- * algoritmo funcionan mejor que las del azar?
+ * Where a pair comes from. It is stored with every conversation, and it is what
+ * will answer the important question: do the pairs the algorithm picks work
+ * better than random ones?
  */
 public enum Origin {
-    /** La mejor pareja disponible segun la puntuacion. */
-    MEJOR_PAREJA,
-    /** Buena, pero no la primera: sirve para no encerrar a nadie en lo de siempre. */
-    DESCUBRIMIENTO,
-    /** Al azar entre quienes pasan los filtros. Es la referencia a batir. */
-    AZAR
+    /** The best available pair according to the score. */
+    BEST_MATCH,
+    /** Good, but not the first: keeps anyone from being locked into the usual. */
+    DISCOVERY,
+    /** Random among those who pass the filters. It is the baseline to beat. */
+    RANDOM
 }

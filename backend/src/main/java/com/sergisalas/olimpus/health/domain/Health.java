@@ -3,17 +3,17 @@ package com.sergisalas.olimpus.health.domain;
 import java.time.Instant;
 
 /**
- * Lo que el sistema responde cuando se le pregunta si esta vivo.
- * Es una clase Java normal: no sabe nada de Spring ni de HTTP.
+ * What the system answers when asked whether it is alive.
+ * It is a plain Java class: it knows nothing about Spring or HTTP.
  */
 public record Health(String schemaVersion, Instant databaseTime) {
 
     public Health {
         if (schemaVersion == null || schemaVersion.isBlank()) {
-            throw new IllegalArgumentException("falta la version del esquema");
+            throw new IllegalArgumentException("schema version is missing");
         }
         if (databaseTime == null) {
-            throw new IllegalArgumentException("falta la hora de la base de datos");
+            throw new IllegalArgumentException("database time is missing");
         }
     }
 }

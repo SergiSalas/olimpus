@@ -1,6 +1,7 @@
+import Slider from '@react-native-community/slider';
 import * as Location from 'expo-location';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   ApiError,
   fetchInterests,
@@ -11,83 +12,102 @@ import {
   type LanguageLevel,
   type Profile,
 } from '../api';
-import { Boton, Campo, Escala, Pastilla, Progreso } from '../components';
-import { colors } from '../theme';
+import {
+  Boton,
+  CabeceraPaso,
+  Campo,
+  DosOpciones,
+  Etiqueta,
+  FilaOpcion,
+  PantallaPaso,
+  Pastilla,
+  Tarjeta,
+} from '../components';
+import {
+  CONVERSACIONES,
+  RASGOS,
+  profundidadDe,
+  sociabilidadDe,
+  type Rasgos,
+  type TipoConversacion,
+} from '../mapeo';
+import { colors, fonts, radios, text } from '../theme';
 
-const GENEROS: { valor: Gender; texto: string }[] = [
-  { valor: 'MUJER', texto: 'Mujer' },
-  { valor: 'HOMBRE', texto: 'Hombre' },
-  { valor: 'NO_BINARIO', texto: 'No binario' },
-  { valor: 'OTRO', texto: 'Otro' },
+const GENEROS: { valor: Gender; etiqueta: string }[] = [
+  { valor: 'WOMAN', etiqueta: 'Mujer' },
+  { valor: 'MAN', etiqueta: 'Hombre' },
+  { valor: 'NON_BINARY', etiqueta: 'No binarie' },
+  { valor: 'OTHER', etiqueta: 'Prefiero no decirlo' },
 ];
 
-const INTENCIONES: { valor: Intent; texto: string }[] = [
-  { valor: 'AMISTAD', texto: 'Amistad' },
-  { valor: 'CITAS', texto: 'Citas' },
-  { valor: 'PAREJA', texto: 'Pareja' },
-  { valor: 'CASUAL', texto: 'Algo casual' },
+const BUSCO: { valor: Gender; etiqueta: string }[] = [
+  { valor: 'WOMAN', etiqueta: 'Mujeres' },
+  { valor: 'MAN', etiqueta: 'Hombres' },
+  { valor: 'NON_BINARY', etiqueta: 'Personas no binarias' },
+  { valor: 'OTHER', etiqueta: 'Todo el mundo' },
+];
+
+const INTENCIONES: { valor: Intent; etiqueta: string; pista: string }[] = [
+  { valor: 'FRIENDSHIP', etiqueta: 'Amistad', pista: 'Gente con quien hablar' },
+  { valor: 'DATING', etiqueta: 'Citas', pista: 'Conocer sin prisa' },
+  { valor: 'RELATIONSHIP', etiqueta: 'Pareja', pista: 'Algo que dure' },
+  { valor: 'CASUAL', etiqueta: 'Algo casual', pista: 'Sin planes a futuro' },
 ];
 
 const IDIOMAS = [
-  { code: 'es', texto: 'Español' },
-  { code: 'en', texto: 'Inglés' },
-  { code: 'ca', texto: 'Catalán' },
-  { code: 'fr', texto: 'Francés' },
-  { code: 'de', texto: 'Alemán' },
-  { code: 'it', texto: 'Italiano' },
-  { code: 'pt', texto: 'Portugués' },
-  { code: 'ar', texto: 'Árabe' },
-  { code: 'zh', texto: 'Chino' },
+  { code: 'es', etiqueta: 'Español' },
+  { code: 'en', etiqueta: 'Inglés' },
+  { code: 'ca', etiqueta: 'Catalán' },
+  { code: 'gl', etiqueta: 'Gallego' },
+  { code: 'eu', etiqueta: 'Euskera' },
+  { code: 'fr', etiqueta: 'Francés' },
+  { code: 'pt', etiqueta: 'Portugués' },
+  { code: 'it', etiqueta: 'Italiano' },
+  { code: 'de', etiqueta: 'Alemán' },
+  { code: 'ar', etiqueta: 'Árabe' },
 ];
 
-const NIVELES: { valor: LanguageLevel; texto: string }[] = [
-  { valor: 'BASICO', texto: 'Básico' },
-  { valor: 'MEDIO', texto: 'Medio' },
-  { valor: 'NATIVO', texto: 'Nativo' },
-];
-
-const DISTANCIAS = [5, 15, 30, 50];
-const TOTAL_PASOS = 13;
+/**
+ * Once pantallas en total, contando la de intereses, que es la última y la que
+ * remata el registro. Este número tiene que incluirla: si se queda corto, el
+ * botón deja de avanzar en la penúltima y el registro se atasca sin decir nada.
+ */
+const TOTAL = 11;
 const INTERESES_MIN = 5;
 const INTERESES_MAX = 8;
 
-/** Lo que se va rellenando. Nada se manda al servidor hasta el último paso. */
 type Borrador = {
-  nickname: string;
-  dia: string;
-  mes: string;
-  anio: string;
-  gender: Gender | null;
-  seeking: Gender[];
-  ageMin: string;
-  ageMax: string;
-  maxDistanceKm: number | null;
-  ubicacion: { latitude: number; longitude: number } | null;
-  languages: { code: string; level: LanguageLevel }[];
-  sociability: number;
-  conversationDepth: number;
-  intent: Intent | null;
-  interests: string[];
+  apodo: string;
   bio: string;
+  fecha: string;
+  genero: Gender | null;
+  busco: Gender[];
+  edadMin: number;
+  edadMax: number;
+  distancia: number;
+  ubicacion: { latitude: number; longitude: number } | null;
+  idiomas: string[];
+  rasgos: Rasgos;
+  conversacion: TipoConversacion;
+  intencion: Intent | null;
+  intereses: string[];
 };
 
 const VACIO: Borrador = {
-  nickname: '',
-  dia: '',
-  mes: '',
-  anio: '',
-  gender: null,
-  seeking: [],
-  ageMin: '25',
-  ageMax: '40',
-  maxDistanceKm: null,
-  ubicacion: null,
-  languages: [],
-  sociability: 3,
-  conversationDepth: 3,
-  intent: null,
-  interests: [],
+  apodo: '',
   bio: '',
+  fecha: '',
+  genero: null,
+  busco: [],
+  edadMin: 27,
+  edadMax: 38,
+  distancia: 30,
+  ubicacion: null,
+  idiomas: ['es'],
+  rasgos: { largo: 'Mensajes largos', ritmo: 'Cuando puedo', rol: 'Pregunto mucho' },
+  conversacion: 'A fondo',
+  intencion: null,
+  intereses: [],
 };
 
 export function OnboardingScreen({
@@ -104,15 +124,21 @@ export function OnboardingScreen({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchInterests().then(setCatalogo).catch(() => setCatalogo([]));
+    fetchInterests()
+      .then(setCatalogo)
+      .catch(() => setCatalogo([]));
   }, []);
 
   const cambiar = (cambio: Partial<Borrador>) => setB((actual) => ({ ...actual, ...cambio }));
+  const siguiente = () => setPaso((p) => Math.min(TOTAL, p + 1));
+  const atras = () => setPaso((p) => Math.max(1, p - 1));
 
-  function alterna<T>(lista: T[], valor: T, tope?: number): T[] {
-    if (lista.includes(valor)) return lista.filter((v) => v !== valor);
-    if (tope && lista.length >= tope) return lista;
-    return [...lista, valor];
+  const edad = edadDe(b.fecha);
+
+  function teclear(tecla: string) {
+    cambiar({
+      fecha: tecla === 'del' ? b.fecha.slice(0, -1) : b.fecha.length < 8 ? b.fecha + tecla : b.fecha,
+    });
   }
 
   async function pedirUbicacion() {
@@ -121,19 +147,13 @@ export function OnboardingScreen({
     try {
       const permiso = await Location.requestForegroundPermissionsAsync();
       if (permiso.status !== 'granted') {
-        setError('Sin ubicación no se puede calcular la distancia. Puedes darla en Ajustes.');
+        setError('Sin ubicación no podemos calcular la distancia. Puedes darla en Ajustes.');
         return;
       }
-      const posicion = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Low,
-      });
+      const posicion = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
       cambiar({
-        ubicacion: {
-          latitude: posicion.coords.latitude,
-          longitude: posicion.coords.longitude,
-        },
+        ubicacion: { latitude: posicion.coords.latitude, longitude: posicion.coords.longitude },
       });
-      setPaso(paso + 1);
     } catch {
       setError('No se pudo leer la ubicación.');
     } finally {
@@ -146,21 +166,21 @@ export function OnboardingScreen({
     setError(null);
     try {
       const perfil = await saveProfile(token, {
-        nickname: b.nickname.trim(),
+        nickname: b.apodo.trim(),
         bio: b.bio.trim(),
-        birthDate: `${b.anio}-${b.mes.padStart(2, '0')}-${b.dia.padStart(2, '0')}`,
-        gender: b.gender!,
-        seeking: b.seeking,
-        ageMin: Number(b.ageMin),
-        ageMax: Number(b.ageMax),
-        maxDistanceKm: b.maxDistanceKm!,
+        birthDate: `${b.fecha.slice(4)}-${b.fecha.slice(2, 4)}-${b.fecha.slice(0, 2)}`,
+        gender: b.genero!,
+        seeking: b.busco.length === 4 ? ['WOMAN', 'MAN', 'NON_BINARY', 'OTHER'] : b.busco,
+        ageMin: b.edadMin,
+        ageMax: b.edadMax,
+        maxDistanceKm: b.distancia,
         latitude: b.ubicacion!.latitude,
         longitude: b.ubicacion!.longitude,
-        languages: b.languages,
-        sociability: b.sociability,
-        conversationDepth: b.conversationDepth,
-        intent: b.intent!,
-        interests: b.interests,
+        languages: b.idiomas.map((code) => ({ code, level: 'NATIVE' as LanguageLevel })),
+        sociability: sociabilidadDe(b.rasgos),
+        conversationDepth: profundidadDe(b.conversacion),
+        intent: b.intencion!,
+        interests: b.intereses,
       });
       onTerminado(perfil);
     } catch (e) {
@@ -170,339 +190,397 @@ export function OnboardingScreen({
     }
   }
 
-  const pasos: Record<
-    number,
-    { titulo: string; ayuda?: string; cuerpo: ReactNode; listo: boolean }
-  > = {
-      1: {
-        titulo: '¿Cómo quieres que te llamen?',
-        ayuda: 'Es lo primero que verá la otra persona, en cuanto los dos escribáis algo.',
-        cuerpo: (
-          <Campo
-            valor={b.nickname}
-            onChange={(v) => cambiar({ nickname: v })}
-            placeholder="Tu apodo"
-            maxLength={20}
-          />
-        ),
-        listo: b.nickname.trim().length >= 2,
-      },
-      2: {
-        titulo: '¿Cuándo naciste?',
-        ayuda: 'Olimpus es solo para mayores de 18 años.',
-        cuerpo: (
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Campo
-              valor={b.dia}
-              onChange={(v) => cambiar({ dia: v.replace(/\D/g, '').slice(0, 2) })}
-              placeholder="DD"
-              keyboardType="number-pad"
-              ancho={70}
-            />
-            <Campo
-              valor={b.mes}
-              onChange={(v) => cambiar({ mes: v.replace(/\D/g, '').slice(0, 2) })}
-              placeholder="MM"
-              keyboardType="number-pad"
-              ancho={70}
-            />
-            <Campo
-              valor={b.anio}
-              onChange={(v) => cambiar({ anio: v.replace(/\D/g, '').slice(0, 4) })}
-              placeholder="AAAA"
-              keyboardType="number-pad"
-              ancho={100}
-            />
-          </View>
-        ),
-        listo: fechaValida(b),
-      },
-      3: {
-        titulo: '¿Cuál es tu género?',
-        cuerpo: (
-          <View style={estilos.rejilla}>
-            {GENEROS.map((g) => (
-              <Pastilla
-                key={g.valor}
-                texto={g.texto}
-                elegida={b.gender === g.valor}
-                onPress={() => cambiar({ gender: g.valor })}
-              />
-            ))}
-          </View>
-        ),
-        listo: b.gender !== null,
-      },
-      4: {
-        titulo: '¿Con quién quieres hablar?',
-        ayuda: 'Puedes elegir varios. Esto es un filtro que nunca cede: tiene que encajar por los dos lados.',
-        cuerpo: (
-          <View style={estilos.rejilla}>
-            {GENEROS.map((g) => (
-              <Pastilla
-                key={g.valor}
-                texto={g.texto}
-                elegida={b.seeking.includes(g.valor)}
-                onPress={() => cambiar({ seeking: alterna(b.seeking, g.valor) })}
-              />
-            ))}
-          </View>
-        ),
-        listo: b.seeking.length > 0,
-      },
-      5: {
-        titulo: '¿Qué edades te encajan?',
-        ayuda: 'Si llevas tiempo esperando, el rango se amplía un poco solo, y se te avisa.',
-        cuerpo: (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Campo
-              valor={b.ageMin}
-              onChange={(v) => cambiar({ ageMin: v.replace(/\D/g, '').slice(0, 2) })}
-              keyboardType="number-pad"
-              ancho={80}
-            />
-            <Text style={estilos.ayuda}>hasta</Text>
-            <Campo
-              valor={b.ageMax}
-              onChange={(v) => cambiar({ ageMax: v.replace(/\D/g, '').slice(0, 2) })}
-              keyboardType="number-pad"
-              ancho={80}
-            />
-            <Text style={estilos.ayuda}>años</Text>
-          </View>
-        ),
-        listo:
-          Number(b.ageMin) >= 18 && Number(b.ageMax) <= 99 && Number(b.ageMin) <= Number(b.ageMax),
-      },
-      6: {
-        titulo: '¿Hasta dónde estás dispuesto a moverte?',
-        cuerpo: (
-          <View style={estilos.rejilla}>
-            {DISTANCIAS.map((km) => (
-              <Pastilla
-                key={km}
-                texto={`${km} km`}
-                elegida={b.maxDistanceKm === km}
-                onPress={() => cambiar({ maxDistanceKm: km })}
-              />
-            ))}
-          </View>
-        ),
-        listo: b.maxDistanceKm !== null,
-      },
-      7: {
-        titulo: '¿Dónde estás?',
-        ayuda:
-          'Se pide una vez y se guarda redondeada a más de un kilómetro: sirve para la distancia, pero no señala tu casa. No se sigue tu recorrido.',
-        cuerpo: b.ubicacion ? (
-          <Text style={estilos.ok}>Ubicación tomada.</Text>
-        ) : (
-          <Boton texto="Usar mi ubicación" onPress={pedirUbicacion} ocupado={ocupado} />
-        ),
-        listo: b.ubicacion !== null,
-      },
-      8: {
-        titulo: '¿Qué idiomas hablas?',
-        ayuda: 'Toca un idioma y luego elige tu nivel.',
-        cuerpo: (
-          <View style={{ gap: 14 }}>
-            <View style={estilos.rejilla}>
-              {IDIOMAS.map((idioma) => (
-                <Pastilla
-                  key={idioma.code}
-                  texto={idioma.texto}
-                  elegida={b.languages.some((l) => l.code === idioma.code)}
-                  deshabilitada={b.languages.length >= 5}
-                  onPress={() =>
-                    cambiar({
-                      languages: b.languages.some((l) => l.code === idioma.code)
-                        ? b.languages.filter((l) => l.code !== idioma.code)
-                        : b.languages.length >= 5
-                          ? b.languages
-                          : [...b.languages, { code: idioma.code, level: 'MEDIO' }],
-                    })
-                  }
-                />
-              ))}
-            </View>
-            {b.languages.map((elegido) => (
-              <View key={elegido.code} style={{ gap: 6 }}>
-                <Text style={estilos.ayuda}>
-                  {IDIOMAS.find((i) => i.code === elegido.code)?.texto}
+  const pantallas: Record<number, ReactNode> = {
+    1: (
+      <PantallaPaso
+        titulo="¿Cómo quieres que te llamen?"
+        ayuda="Tu apodo aparece en el nivel 1, en cuanto escribáis los dos. Tu nombre real no hace falta."
+        listo={b.apodo.trim().length >= 2}
+        onSiguiente={siguiente}>
+        <Campo
+          valor={b.apodo}
+          onChange={(v) => cambiar({ apodo: v })}
+          placeholder="Tu apodo"
+          maxLength={20}
+          autoFocus
+        />
+      </PantallaPaso>
+    ),
+
+    2: (
+      <PantallaPaso
+        titulo="Tu fecha de nacimiento"
+        ayuda="Solo para mayores de 18. Antes de la beta verificaremos la edad de verdad, no con una casilla."
+        listo={edad !== null && edad >= 18}
+        onSiguiente={siguiente}>
+        <View style={estilos.fecha}>
+          {['D', 'D', '/', 'M', 'M', '/', 'A', 'A', 'A', 'A'].map((ph, posicion) => {
+            if (ph === '/') {
+              return (
+                <Text key={`sep${posicion}`} style={estilos.separadorFecha}>
+                  /
                 </Text>
-                <View style={estilos.rejilla}>
-                  {NIVELES.map((nivel) => (
-                    <Pastilla
-                      key={nivel.valor}
-                      texto={nivel.texto}
-                      elegida={elegido.level === nivel.valor}
-                      onPress={() =>
-                        cambiar({
-                          languages: b.languages.map((l) =>
-                            l.code === elegido.code ? { ...l, level: nivel.valor } : l,
-                          ),
-                        })
-                      }
-                    />
-                  ))}
-                </View>
+              );
+            }
+            const indice = posicion - (posicion > 5 ? 2 : posicion > 2 ? 1 : 0);
+            const puesto = b.fecha[indice];
+            return (
+              <View
+                key={posicion}
+                style={[estilos.casilla, b.fecha.length === indice && estilos.casillaActiva]}>
+                <Text style={[estilos.casillaTexto, !puesto && { color: '#CDC3B2' }]}>
+                  {puesto ?? ph}
+                </Text>
               </View>
-            ))}
-          </View>
-        ),
-        listo: b.languages.length > 0,
-      },
-      9: {
-        titulo: '¿Cómo te relacionas?',
-        cuerpo: (
-          <Escala
-            valor={b.sociability}
-            onChange={(v) => cambiar({ sociability: v })}
-            izquierda="Me cuesta arrancar"
-            derecha="Hablo con cualquiera"
-          />
-        ),
-        listo: true,
-      },
-      10: {
-        titulo: '¿Qué conversación te gusta?',
-        cuerpo: (
-          <Escala
-            valor={b.conversationDepth}
-            onChange={(v) => cambiar({ conversationDepth: v })}
-            izquierda="Ligera y divertida"
-            derecha="De las que van hondo"
-          />
-        ),
-        listo: true,
-      },
-      11: {
-        titulo: '¿Qué buscas?',
-        cuerpo: (
-          <View style={estilos.rejilla}>
-            {INTENCIONES.map((i) => (
-              <Pastilla
-                key={i.valor}
-                texto={i.texto}
-                elegida={b.intent === i.valor}
-                onPress={() => cambiar({ intent: i.valor })}
-              />
-            ))}
-          </View>
-        ),
-        listo: b.intent !== null,
-      },
-      12: {
-        titulo: 'Elige entre 5 y 8 intereses',
-        ayuda: `De aquí sale la primera pregunta de cada conversación. Llevas ${b.interests.length}.`,
-        cuerpo: (
-          <View style={estilos.rejilla}>
-            {catalogo.map((interes) => (
-              <Pastilla
-                key={interes.name}
-                texto={interes.label}
-                elegida={b.interests.includes(interes.name)}
-                deshabilitada={b.interests.length >= INTERESES_MAX}
-                onPress={() =>
-                  cambiar({ interests: alterna(b.interests, interes.name, INTERESES_MAX) })
+            );
+          })}
+        </View>
+
+        <Text style={[estilos.notaEdad, edad !== null && edad < 18 && { color: colors.error }]}>
+          {edad === null
+            ? 'Escribe día, mes y año'
+            : edad < 18
+              ? 'Olimpus es solo para mayores de 18'
+              : `Tienes ${edad} años`}
+        </Text>
+
+        <View style={{ flex: 1 }} />
+
+        <View style={estilos.teclado}>
+          {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'].map((tecla, i) => (
+            <Pressable
+              key={i}
+              style={[estilos.tecla, tecla === '' && { opacity: 0 }]}
+              disabled={tecla === ''}
+              onPress={() => teclear(tecla)}>
+              <Text style={estilos.teclaTexto}>{tecla === 'del' ? '⌫' : tecla}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </PantallaPaso>
+    ),
+
+    3: (
+      <PantallaPaso
+        titulo="Tu género"
+        ayuda="Se usa para emparejar. En el nivel 0 solo se ve tu edad, dos intereses y tu zona."
+        listo={b.genero !== null}
+        onSiguiente={siguiente}>
+        <View style={{ gap: 10 }}>
+          {GENEROS.map((g) => (
+            <FilaOpcion
+              key={g.valor}
+              etiqueta={g.etiqueta}
+              elegida={b.genero === g.valor}
+              onPress={() => cambiar({ genero: g.valor })}
+            />
+          ))}
+        </View>
+      </PantallaPaso>
+    ),
+
+    4: (
+      <PantallaPaso
+        titulo="¿Con quién quieres hablar?"
+        ayuda="Puedes marcar varias. Solo emparejamos si encaja por los dos lados."
+        listo={b.busco.length > 0}
+        onSiguiente={siguiente}>
+        <View style={{ gap: 10 }}>
+          {BUSCO.map((g) => (
+            <FilaOpcion
+              key={g.valor}
+              etiqueta={g.etiqueta}
+              varias
+              elegida={b.busco.includes(g.valor)}
+              onPress={() =>
+                cambiar({
+                  busco: b.busco.includes(g.valor)
+                    ? b.busco.filter((v) => v !== g.valor)
+                    : [...b.busco, g.valor],
+                })
+              }
+            />
+          ))}
+        </View>
+      </PantallaPaso>
+    ),
+
+    5: (
+      <PantallaPaso
+        titulo="Edad y distancia"
+        ayuda="Si llevas días esperando, ampliamos esto poco a poco y te avisamos."
+        listo
+        onSiguiente={siguiente}>
+        <View style={estilos.filaValor}>
+          <Etiqueta>Rango de edad</Etiqueta>
+          <Text style={estilos.valorGrande}>
+            {b.edadMin} – {b.edadMax}
+          </Text>
+        </View>
+        <Slider
+          minimumValue={18}
+          maximumValue={70}
+          step={1}
+          value={b.edadMin}
+          onValueChange={(v) => cambiar({ edadMin: Math.min(v, b.edadMax) })}
+          minimumTrackTintColor={colors.accent}
+          maximumTrackTintColor={colors.lineFuerte}
+          thumbTintColor={colors.accent}
+        />
+        <Slider
+          minimumValue={18}
+          maximumValue={70}
+          step={1}
+          value={b.edadMax}
+          onValueChange={(v) => cambiar({ edadMax: Math.max(v, b.edadMin) })}
+          minimumTrackTintColor={colors.accent}
+          maximumTrackTintColor={colors.lineFuerte}
+          thumbTintColor={colors.accent}
+        />
+
+        <View style={[estilos.filaValor, { marginTop: 24 }]}>
+          <Etiqueta>Distancia máxima</Etiqueta>
+          <Text style={estilos.valorGrande}>{b.distancia} km</Text>
+        </View>
+        <Slider
+          minimumValue={5}
+          maximumValue={120}
+          step={5}
+          value={b.distancia}
+          onValueChange={(v) => cambiar({ distancia: v })}
+          minimumTrackTintColor={colors.accent}
+          maximumTrackTintColor={colors.lineFuerte}
+          thumbTintColor={colors.accent}
+        />
+
+        <View style={{ marginTop: 18 }}>
+          <Tarjeta>
+            <Text style={estilos.notaTarjeta}>
+              Tu zona nunca se muestra exacta: la otra persona lee «a 3 km de ti».
+            </Text>
+          </Tarjeta>
+        </View>
+      </PantallaPaso>
+    ),
+
+    6: (
+      <PantallaPaso
+        titulo="¿Dónde estás?"
+        ayuda="Se pide una vez y se guarda redondeada a más de un kilómetro. No se sigue tu recorrido."
+        listo={b.ubicacion !== null}
+        onSiguiente={siguiente}>
+        {b.ubicacion ? (
+          <Tarjeta>
+            <Etiqueta tono="accent">Ubicación tomada</Etiqueta>
+            <Text style={estilos.notaTarjeta}>
+              Guardada con poca precisión a propósito: sirve para la distancia, no para encontrarte.
+            </Text>
+          </Tarjeta>
+        ) : (
+          <Boton texto="Usar mi ubicación" onPress={pedirUbicacion} ocupado={ocupado} tono="oscuro" />
+        )}
+      </PantallaPaso>
+    ),
+
+    7: (
+      <PantallaPaso
+        titulo="¿En qué idiomas hablas?"
+        ayuda="Aquí todo pasa por escribir, así que hace falta un idioma en común."
+        listo={b.idiomas.length > 0}
+        onSiguiente={siguiente}
+        desplazable>
+        <View style={estilos.rejilla}>
+          {IDIOMAS.map((idioma) => (
+            <Pastilla
+              key={idioma.code}
+              texto={idioma.etiqueta}
+              elegida={b.idiomas.includes(idioma.code)}
+              deshabilitada={b.idiomas.length >= 5}
+              onPress={() =>
+                cambiar({
+                  idiomas: b.idiomas.includes(idioma.code)
+                    ? b.idiomas.filter((c) => c !== idioma.code)
+                    : b.idiomas.length >= 5
+                      ? b.idiomas
+                      : [...b.idiomas, idioma.code],
+                })
+              }
+            />
+          ))}
+        </View>
+      </PantallaPaso>
+    ),
+
+    8: (
+      <PantallaPaso
+        titulo="Cómo te relacionas"
+        ayuda="Sin respuestas buenas ni malas: sirve para no juntar ritmos incompatibles."
+        listo
+        onSiguiente={siguiente}>
+        <View style={{ gap: 22 }}>
+          {RASGOS.map((rasgo) => (
+            <View key={rasgo.clave} style={{ gap: 9 }}>
+              <Etiqueta>{rasgo.titulo}</Etiqueta>
+              <DosOpciones
+                opciones={rasgo.opciones}
+                elegida={b.rasgos[rasgo.clave]}
+                onElegir={(v) =>
+                  cambiar({ rasgos: { ...b.rasgos, [rasgo.clave]: v } as Rasgos })
                 }
               />
-            ))}
-          </View>
-        ),
-        listo: b.interests.length >= INTERESES_MIN && b.interests.length <= INTERESES_MAX,
-      },
-      13: {
-        titulo: 'Dos líneas sobre ti',
-        ayuda:
-          'Opcional. No se ve al principio: aparece en el nivel 2, cuando la conversación ya va bien.',
-        cuerpo: (
-          <Campo
-            valor={b.bio}
-            onChange={(v) => cambiar({ bio: v })}
-            placeholder="Lo que quieras contar"
-            maxLength={200}
-            multiline
-          />
-        ),
-        listo: true,
-      },
-    };
+            </View>
+          ))}
+        </View>
+      </PantallaPaso>
+    ),
 
-  const actual = pasos[paso];
-  const ultimo = paso === TOTAL_PASOS;
+    9: (
+      <PantallaPaso
+        titulo="¿Qué conversación te gusta?"
+        ayuda="De aquí sale la pregunta con la que arranca tu primer chat."
+        listo
+        onSiguiente={siguiente}>
+        <View style={{ gap: 10 }}>
+          {CONVERSACIONES.map((c) => (
+            <FilaOpcion
+              key={c.valor}
+              etiqueta={c.valor}
+              detalle={c.pista}
+              elegida={b.conversacion === c.valor}
+              onPress={() => cambiar({ conversacion: c.valor })}
+            />
+          ))}
+        </View>
+      </PantallaPaso>
+    ),
+
+    10: (
+      <PantallaPaso
+        titulo="¿Qué buscas ahora?"
+        ayuda="Elige lo que más pese hoy. Se puede cambiar cuando quieras."
+        listo={b.intencion !== null}
+        onSiguiente={siguiente}>
+        <View style={{ gap: 10 }}>
+          {INTENCIONES.map((i) => (
+            <FilaOpcion
+              key={i.valor}
+              etiqueta={i.etiqueta}
+              detalle={i.pista}
+              elegida={b.intencion === i.valor}
+              onPress={() => cambiar({ intencion: i.valor })}
+            />
+          ))}
+        </View>
+      </PantallaPaso>
+    ),
+  };
+
+  // La última es la de intereses, que además remata el registro.
+  const ultima = (
+    <PantallaPaso
+      titulo="Entre 5 y 8 intereses"
+      ayuda={
+        b.intereses.length < INTERESES_MIN
+          ? `Llevas ${b.intereses.length}. De aquí sale la primera pregunta de cada conversación.`
+          : `${b.intereses.length} elegidos. Cuanto más raro, más dice de ti.`
+      }
+      listo={b.intereses.length >= INTERESES_MIN}
+      ocupado={ocupado}
+      botonTexto="Terminar registro"
+      onSiguiente={terminar}
+      desplazable>
+      <View style={estilos.rejilla}>
+        {catalogo.map((interes) => (
+          <Pastilla
+            key={interes.name}
+            texto={interes.label}
+            elegida={b.intereses.includes(interes.name)}
+            deshabilitada={b.intereses.length >= INTERESES_MAX}
+            onPress={() =>
+              cambiar({
+                intereses: b.intereses.includes(interes.name)
+                  ? b.intereses.filter((n) => n !== interes.name)
+                  : b.intereses.length >= INTERESES_MAX
+                    ? b.intereses
+                    : [...b.intereses, interes.name],
+              })
+            }
+          />
+        ))}
+      </View>
+    </PantallaPaso>
+  );
 
   return (
     <View style={estilos.pantalla}>
-      <View style={estilos.cabecera}>
-        <Progreso paso={paso} total={TOTAL_PASOS} />
-        <Text style={estilos.contador}>
-          Pregunta {paso} de {TOTAL_PASOS}
-        </Text>
-      </View>
-
-      <ScrollView contentContainerStyle={estilos.contenido} keyboardShouldPersistTaps="handled">
-        <Text style={estilos.titulo}>{actual.titulo}</Text>
-        {actual.ayuda && <Text style={estilos.ayuda}>{actual.ayuda}</Text>}
-        <View style={{ marginTop: 8 }}>{actual.cuerpo}</View>
-        {error && <Text style={estilos.error}>{error}</Text>}
-      </ScrollView>
-
-      <View style={estilos.pie}>
-        {paso > 1 && (
-          <Pressable onPress={() => setPaso(paso - 1)} style={estilos.atras}>
-            <Text style={estilos.atrasTexto}>Atrás</Text>
-          </Pressable>
-        )}
-        <View style={{ flex: 1 }}>
-          <Boton
-            texto={ultimo ? 'Terminar el registro' : 'Siguiente'}
-            onPress={() => (ultimo ? terminar() : setPaso(paso + 1))}
-            deshabilitado={!actual.listo}
-            ocupado={ocupado && ultimo}
-          />
-        </View>
-      </View>
+      <CabeceraPaso paso={paso} total={TOTAL} onAtras={atras} />
+      {pantallas[paso] ?? ultima}
+      {error && <Text style={estilos.error}>{error}</Text>}
     </View>
   );
 }
 
-/** Fecha real y con 18 años cumplidos. El servidor lo vuelve a comprobar. */
-function fechaValida(b: Borrador): boolean {
-  const dia = Number(b.dia);
-  const mes = Number(b.mes);
-  const anio = Number(b.anio);
-  if (!dia || !mes || !anio || b.anio.length !== 4) return false;
-  const fecha = new Date(anio, mes - 1, dia);
-  if (
-    fecha.getFullYear() !== anio ||
-    fecha.getMonth() !== mes - 1 ||
-    fecha.getDate() !== dia
-  ) {
-    return false;
-  }
+/** Del DDMMAAAA tecleado a la edad de hoy, o null si aún no está completa. */
+function edadDe(fecha: string): number | null {
+  if (fecha.length < 8) return null;
+  const dia = Number(fecha.slice(0, 2));
+  const mes = Number(fecha.slice(2, 4));
+  const anio = Number(fecha.slice(4));
+  if (dia < 1 || dia > 31 || mes < 1 || mes > 12 || anio < 1920) return -1;
+
+  const nacimiento = new Date(anio, mes - 1, dia);
+  if (nacimiento.getDate() !== dia || nacimiento.getMonth() !== mes - 1) return -1;
+
   const hoy = new Date();
-  const decimoctavo = new Date(anio + 18, mes - 1, dia);
-  return decimoctavo <= hoy;
+  let edad = hoy.getFullYear() - anio;
+  const cumpleEsteAno = new Date(hoy.getFullYear(), mes - 1, dia);
+  if (hoy < cumpleEsteAno) edad--;
+  return edad;
 }
 
 const estilos = StyleSheet.create({
-  pantalla: { flex: 1, backgroundColor: colors.bg, paddingTop: 56 },
-  cabecera: { paddingHorizontal: 24, gap: 6 },
-  contador: { fontSize: 12, color: colors.ink3 },
-  contenido: { padding: 24, gap: 10, paddingBottom: 40 },
-  titulo: { fontSize: 24, fontWeight: '700', color: colors.ink },
-  ayuda: { fontSize: 14, color: colors.ink3, lineHeight: 20 },
-  ok: { fontSize: 15, color: colors.ok, fontWeight: '600' },
-  error: { fontSize: 14, color: colors.error, marginTop: 12 },
-  rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pie: {
-    flexDirection: 'row',
+  pantalla: { flex: 1, backgroundColor: colors.bg },
+
+  fecha: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  casilla: {
+    flex: 1,
+    height: 64,
+    borderRadius: 13,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
     alignItems: 'center',
-    gap: 12,
-    padding: 24,
-    paddingTop: 12,
+    justifyContent: 'center',
   },
-  atras: { paddingVertical: 14, paddingHorizontal: 8 },
-  atrasTexto: { color: colors.ink3, fontSize: 15 },
+  casillaActiva: { borderWidth: 1.5, borderColor: colors.accent },
+  casillaTexto: { fontFamily: fonts.sansNegrita, fontSize: 20, color: colors.ink },
+  separadorFecha: { fontFamily: fonts.sans, fontSize: 18, color: colors.ink5 },
+  notaEdad: { fontFamily: fonts.sansMedia, fontSize: 13.5, color: colors.ink3, marginTop: 12 },
+
+  teclado: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tecla: {
+    width: '31.5%',
+    height: 58,
+    borderRadius: radios.campo,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  teclaTexto: { fontFamily: fonts.sansMedia, fontSize: 24, color: colors.ink },
+
+  filaValor: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  valorGrande: { fontFamily: fonts.serif, fontSize: 24, color: colors.ink },
+  notaTarjeta: { fontFamily: fonts.sans, fontSize: 13.5, lineHeight: 20, color: colors.ink2 },
+
+  rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+  error: {
+    fontFamily: fonts.sansMedia,
+    fontSize: 13.5,
+    color: colors.error,
+    textAlign: 'center',
+    paddingHorizontal: 26,
+    paddingBottom: 12,
+  },
 });

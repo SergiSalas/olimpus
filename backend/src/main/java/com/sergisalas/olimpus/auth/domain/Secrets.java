@@ -1,11 +1,11 @@
 package com.sergisalas.olimpus.auth.domain;
 
-/** Puerto: generar cosas imposibles de adivinar. */
+/** Port: generate things that cannot be guessed. */
 public interface Secrets {
 
-    /** Codigo de seis cifras, con ceros por delante si hace falta. */
+    /** Six-digit code, zero-padded when needed. */
     String sixDigitCode();
 
-    /** Llave de sesion larga, la que guarda el movil. */
+    /** Long session token, the one the phone keeps. */
     String sessionToken();
 }

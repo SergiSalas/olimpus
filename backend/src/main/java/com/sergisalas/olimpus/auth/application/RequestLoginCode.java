@@ -9,11 +9,11 @@ import com.sergisalas.olimpus.shared.domain.Hasher;
 import java.time.Clock;
 
 /**
- * Caso de uso: alguien escribe su email y le llega un codigo.
+ * Use case: someone types their email and receives a code.
  *
- * <p>No crea cuenta ni dice si el email ya estaba registrado: responde igual
- * en los dos casos, para que nadie pueda usar la app como lista de quien esta
- * dentro.
+ * <p>It does not create an account nor say whether the email was already
+ * registered: it answers the same in both cases, so nobody can use the app as a
+ * list of who is in.
  */
 public class RequestLoginCode {
 

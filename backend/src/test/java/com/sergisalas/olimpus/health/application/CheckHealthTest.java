@@ -9,30 +9,30 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 /**
- * Prueba del caso de uso sin Spring, sin base de datos y sin red: en
- * milisegundos. Es la ventaja de tener el dominio aislado.
+ * Tests the use case without Spring, without a database and without network: in
+ * milliseconds. That is the upside of an isolated domain.
  */
 class CheckHealthTest {
 
-    private static final Instant UNA_HORA = Instant.parse("2026-09-12T04:00:00Z");
+    private static final Instant SOME_TIME = Instant.parse("2026-09-12T04:00:00Z");
 
     @Test
-    void informa_de_la_version_del_esquema_y_de_la_hora_de_la_base_de_datos() {
-        CheckHealth checkHealth = new CheckHealth(new FakeDatabaseInfo("v1", UNA_HORA));
+    void reports_the_schema_version_and_the_database_time() {
+        CheckHealth checkHealth = new CheckHealth(new FakeDatabaseInfo("v1", SOME_TIME));
 
         Health health = checkHealth.execute();
 
         assertThat(health.schemaVersion()).isEqualTo("v1");
-        assertThat(health.databaseTime()).isEqualTo(UNA_HORA);
+        assertThat(health.databaseTime()).isEqualTo(SOME_TIME);
     }
 
     @Test
-    void se_niega_a_construir_un_estado_sin_version() {
-        CheckHealth checkHealth = new CheckHealth(new FakeDatabaseInfo("  ", UNA_HORA));
+    void refuses_to_build_a_health_without_a_version() {
+        CheckHealth checkHealth = new CheckHealth(new FakeDatabaseInfo("  ", SOME_TIME));
 
         assertThatThrownBy(checkHealth::execute)
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("version del esquema");
+                .hasMessageContaining("schema version");
     }
 
     private record FakeDatabaseInfo(String version, Instant instant) implements DatabaseInfo {

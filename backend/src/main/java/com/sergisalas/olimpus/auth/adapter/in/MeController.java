@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Quien soy. Sirve al movil para saber si la llave que guarda sigue valiendo. */
+/** Who am I. The phone uses it to know whether the token it keeps is still valid. */
 @RestController
 @RequestMapping("/api")
 public class MeController {

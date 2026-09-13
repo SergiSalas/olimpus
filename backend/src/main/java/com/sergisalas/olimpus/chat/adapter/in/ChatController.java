@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/conversations/{id}")
 public class ChatController {
 
-    /** {@code mine} evita que el movil tenga que comparar identificadores. */
+    /** {@code mine} saves the phone from comparing ids. */
     public record MessageResponse(UUID id, boolean mine, String text, Instant sentAt) {}
 
     public record PartnerResponse(int age, List<String> interests, int approxDistanceKm, int level) {}
@@ -39,11 +39,17 @@ public class ChatController {
     private final GetChat getChat;
     private final SendMessage sendMessage;
     private final ChatBroadcaster broadcaster;
+    private final IcebreakerWording icebreakers;
 
-    public ChatController(GetChat getChat, SendMessage sendMessage, ChatBroadcaster broadcaster) {
+    public ChatController(
+            GetChat getChat,
+            SendMessage sendMessage,
+            ChatBroadcaster broadcaster,
+            IcebreakerWording icebreakers) {
         this.getChat = getChat;
         this.sendMessage = sendMessage;
         this.broadcaster = broadcaster;
+        this.icebreakers = icebreakers;
     }
 
     @GetMapping
@@ -55,7 +61,7 @@ public class ChatController {
                 conversation.id(),
                 conversation.state().name(),
                 conversation.closesAt(),
-                conversation.icebreaker(),
+                icebreakers.wordingFor(conversation.icebreakerInterest()),
                 new PartnerResponse(
                         chat.partner().age(),
                         chat.partner().interestsShown(),
@@ -70,13 +76,13 @@ public class ChatController {
     public MessageResponse send(
             @PathVariable UUID id, @CurrentAccount Account account, @RequestBody SendRequest body) {
 
-        var enviado = sendMessage.execute(id, account.id(), body.text());
+        var sent = sendMessage.execute(id, account.id(), body.text());
 
-        // A quien escribe le contesta el propio POST; al otro le llega por la
-        // conexion permanente, si la tiene abierta.
-        broadcaster.newMessage(enviado.conversation(), enviado.message());
+        // The writer gets the answer from the POST itself; the other person gets
+        // it over the long-lived connection, if they have it open.
+        broadcaster.newMessage(sent.conversation(), sent.message());
 
-        return toResponse(enviado.message(), account.id());
+        return toResponse(sent.message(), account.id());
     }
 
     private static MessageResponse toResponse(Message message, UUID viewer) {

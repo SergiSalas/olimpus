@@ -1,128 +1,129 @@
 package com.sergisalas.olimpus.matching.domain;
 
-import static com.sergisalas.olimpus.matching.domain.Gente.HOY;
+import static com.sergisalas.olimpus.matching.domain.TestPeople.TODAY;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.sergisalas.olimpus.profile.domain.Intent;
 import com.sergisalas.olimpus.profile.domain.Profile;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class ScorerTest {
 
-    private final MatchContext ctx = MatchContext.on(HOY).build();
+    private final MatchContext ctx = MatchContext.on(TODAY).build();
 
     @Test
-    void la_pareja_vale_lo_que_vale_para_el_que_sale_peor_parado() {
-        // A Ana le encaja Carlos, pero a Carlos Ana le queda fuera de rango.
-        Profile ana = Gente.persona().edad(30).edades(18, 99).build();
-        Profile carlos = Gente.persona().edad(30).edades(18, 22).build();
+    void a_pair_is_worth_what_it_is_worth_for_whoever_comes_off_worse() {
+        // Carlos suits Ana, but Ana is outside Carlos's range.
+        Profile ana = TestPeople.person().age(30).ageRange(18, 99).build();
+        Profile carlos = TestPeople.person().age(30).ageRange(18, 22).build();
 
-        ScoredPair pareja = Scorer.score(ana, carlos, ctx);
+        ScoredPair pair = Scorer.score(ana, carlos, ctx);
 
-        assertThat(pareja.score()).isEqualTo(Math.min(pareja.sideA(), pareja.sideB()));
-        assertThat(pareja.sideA()).isGreaterThan(pareja.sideB());
+        assertThat(pair.score()).isEqualTo(Math.min(pair.sideA(), pair.sideB()));
+        assertThat(pair.sideA()).isGreaterThan(pair.sideB());
     }
 
     @Test
-    void la_puntuacion_siempre_esta_entre_cero_y_uno() {
-        for (Profile a : Gente.poblacion(20, 7)) {
-            for (Profile b : Gente.poblacion(20, 8)) {
+    void the_score_is_always_between_zero_and_one() {
+        for (Profile a : TestPeople.population(20, 7)) {
+            for (Profile b : TestPeople.population(20, 8)) {
                 assertThat(Scorer.directional(a, b, ctx)).isBetween(0.0, 1.0);
             }
         }
     }
 
     @Test
-    void la_edad_cercana_es_el_factor_que_mas_pesa() {
-        Profile ana = Gente.persona().edad(30).build();
-        Profile suEdad = Gente.persona().edad(31).build();
-        Profile veinte_anos_mas = Gente.persona().edad(51).build();
+    void close_age_is_the_heaviest_factor() {
+        Profile ana = TestPeople.person().age(30).build();
+        Profile sameAge = TestPeople.person().age(31).build();
+        Profile twentyYearsOlder = TestPeople.person().age(51).build();
 
-        assertThat(Scorer.directional(ana, suEdad, ctx))
-                .isGreaterThan(Scorer.directional(ana, veinte_anos_mas, ctx));
+        assertThat(Scorer.directional(ana, sameAge, ctx))
+                .isGreaterThan(Scorer.directional(ana, twentyYearsOlder, ctx));
 
-        assertThat(Scorer.ageClosenessFit(ana, suEdad, ctx)).isGreaterThan(0.8);
-        assertThat(Scorer.ageClosenessFit(ana, veinte_anos_mas, ctx)).isLessThan(0.05);
+        assertThat(Scorer.ageClosenessFit(ana, sameAge, ctx)).isGreaterThan(0.8);
+        assertThat(Scorer.ageClosenessFit(ana, twentyYearsOlder, ctx)).isLessThan(0.05);
     }
 
     @Test
-    void compartir_un_interes_raro_vale_mucho_mas_que_compartir_uno_comun() {
-        // Una poblacion donde "viajar" lo marca todo el mundo y "kendo" casi nadie.
-        List<Profile> poblacion = new java.util.ArrayList<>();
+    void sharing_a_rare_interest_is_worth_much_more_than_sharing_a_common_one() {
+        // A population where everyone picks "travel" and almost nobody "kendo".
+        List<Profile> population = new java.util.ArrayList<>();
         for (int i = 0; i < 30; i++) {
-            poblacion.add(Gente.persona().intereses("viajar", "cine", "leer", "correr", "surf").build());
+            population.add(TestPeople.person().interests("travel", "movies", "reading", "running", "surfing").build());
         }
-        poblacion.add(Gente.persona().intereses("kendo", "cine", "leer", "correr", "surf").build());
+        population.add(TestPeople.person().interests("kendo", "movies", "reading", "running", "surfing").build());
 
-        MatchContext conPesos =
-                MatchContext.on(HOY)
-                        .interestWeights(InterestWeights.fromPopulation(poblacion))
+        MatchContext withWeights =
+                MatchContext.on(TODAY)
+                        .interestWeights(InterestWeights.fromPopulation(population))
                         .build();
 
-        Profile ana = Gente.persona().intereses("viajar", "kendo", "arte", "teatro", "vinos").build();
-        Profile comparteComun =
-                Gente.persona().intereses("viajar", "podcasts", "bailar", "surf", "ciclismo").build();
-        Profile comparteRaro =
-                Gente.persona().intereses("kendo", "podcasts", "bailar", "surf", "ciclismo").build();
+        Profile ana = TestPeople.person().interests("travel", "kendo", "art", "theatre", "wine").build();
+        Profile sharesCommon =
+                TestPeople.person().interests("travel", "podcasts", "dancing", "surfing", "cycling").build();
+        Profile sharesRare =
+                TestPeople.person().interests("kendo", "podcasts", "dancing", "surfing", "cycling").build();
 
-        double comun = conPesos.interestWeights().similarity(ana.interests(), comparteComun.interests());
-        double raro = conPesos.interestWeights().similarity(ana.interests(), comparteRaro.interests());
+        double common = withWeights.interestWeights().similarity(ana.interests(), sharesCommon.interests());
+        double rare = withWeights.interestWeights().similarity(ana.interests(), sharesRare.interests());
 
-        assertThat(raro).isGreaterThan(comun * 2);
+        assertThat(rare).isGreaterThan(common * 2);
     }
 
     @Test
-    void dos_personas_calladas_prometen_menos_que_dos_sociables() {
-        Profile calladaA = Gente.persona().sociabilidad(1).profundidad(3).build();
-        Profile calladaB = Gente.persona().sociabilidad(1).profundidad(3).build();
-        Profile sociableA = Gente.persona().sociabilidad(5).profundidad(3).build();
-        Profile sociableB = Gente.persona().sociabilidad(5).profundidad(3).build();
+    void two_quiet_people_promise_less_than_two_sociable_ones() {
+        Profile quietA = TestPeople.person().sociability(1).conversationDepth(3).build();
+        Profile quietB = TestPeople.person().sociability(1).conversationDepth(3).build();
+        Profile sociableA = TestPeople.person().sociability(5).conversationDepth(3).build();
+        Profile sociableB = TestPeople.person().sociability(5).conversationDepth(3).build();
 
         assertThat(Scorer.sociabilityFit(sociableA, sociableB))
-                .isGreaterThan(Scorer.sociabilityFit(calladaA, calladaB));
+                .isGreaterThan(Scorer.sociabilityFit(quietA, quietB));
     }
 
     @Test
-    void querer_la_misma_clase_de_conversacion_suma() {
-        Profile hondaA = Gente.persona().sociabilidad(3).profundidad(5).build();
-        Profile hondaB = Gente.persona().sociabilidad(3).profundidad(5).build();
-        Profile ligera = Gente.persona().sociabilidad(3).profundidad(1).build();
+    void wanting_the_same_kind_of_conversation_adds_up() {
+        Profile deepA = TestPeople.person().sociability(3).conversationDepth(5).build();
+        Profile deepB = TestPeople.person().sociability(3).conversationDepth(5).build();
+        Profile light = TestPeople.person().sociability(3).conversationDepth(1).build();
 
-        assertThat(Scorer.sociabilityFit(hondaA, hondaB))
-                .isGreaterThan(Scorer.sociabilityFit(hondaA, ligera));
+        assertThat(Scorer.sociabilityFit(deepA, deepB))
+                .isGreaterThan(Scorer.sociabilityFit(deepA, light));
     }
 
     @Test
-    void alguien_con_quien_no_has_hablado_nunca_es_novedad_total() {
-        Profile ana = Gente.cualquiera();
-        Profile desconocido = Gente.cualquiera();
+    void someone_you_have_never_talked_to_is_full_novelty() {
+        Profile ana = TestPeople.anyone();
+        Profile stranger = TestPeople.anyone();
 
-        assertThat(Scorer.noveltyFit(ana, desconocido, ctx)).isEqualTo(1.0);
+        assertThat(Scorer.noveltyFit(ana, stranger, ctx)).isEqualTo(1.0);
     }
 
     @Test
-    void repetir_con_alguien_de_ayer_puntua_casi_cero_y_se_recupera_con_los_dias() {
-        Profile ana = Gente.cualquiera();
-        Profile carlos = Gente.cualquiera();
+    void repeating_with_yesterdays_person_scores_almost_zero_and_recovers_with_the_days() {
+        Profile ana = TestPeople.anyone();
+        Profile carlos = TestPeople.anyone();
 
-        MatchContext ayer =
-                MatchContext.on(HOY).talked(ana.accountId(), carlos.accountId(), HOY.minusDays(1)).build();
-        MatchContext haceUnMes =
-                MatchContext.on(HOY).talked(ana.accountId(), carlos.accountId(), HOY.minusDays(30)).build();
+        MatchContext yesterday =
+                MatchContext.on(TODAY).talked(ana.accountId(), carlos.accountId(), TODAY.minusDays(1)).build();
+        MatchContext aMonthAgo =
+                MatchContext.on(TODAY).talked(ana.accountId(), carlos.accountId(), TODAY.minusDays(30)).build();
 
-        assertThat(Scorer.noveltyFit(ana, carlos, ayer)).isLessThan(0.15);
-        assertThat(Scorer.noveltyFit(ana, carlos, haceUnMes)).isGreaterThan(0.9);
+        assertThat(Scorer.noveltyFit(ana, carlos, yesterday)).isLessThan(0.15);
+        assertThat(Scorer.noveltyFit(ana, carlos, aMonthAgo)).isGreaterThan(0.9);
     }
 
     @Test
-    void los_pesos_suman_uno() {
-        assertThat(Scorer.SUMA_PESOS).isEqualTo(1.0);
+    void the_weights_add_up_to_one() {
+        assertThat(Scorer.WEIGHT_SUM).isEqualTo(1.0);
     }
 
     @Test
-    void la_tabla_de_intenciones_es_simetrica() {
-        for (var a : com.sergisalas.olimpus.profile.domain.Intent.values()) {
-            for (var b : com.sergisalas.olimpus.profile.domain.Intent.values()) {
+    void the_intent_table_is_symmetric() {
+        for (var a : Intent.values()) {
+            for (var b : Intent.values()) {
                 assertThat(IntentFit.between(a, b)).isEqualTo(IntentFit.between(b, a));
             }
         }

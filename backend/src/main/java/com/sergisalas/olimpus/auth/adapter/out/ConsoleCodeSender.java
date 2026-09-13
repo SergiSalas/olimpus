@@ -7,11 +7,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Version de desarrollo: el codigo se escribe en la consola del backend y no
- * se envia ningun correo.
+ * Development version: the code is written to the backend console and no
+ * email is sent.
  *
- * <p>Antes de la beta hay que sustituirla por un envio real (Resend, Brevo,
- * SES o similar). Es cambiar esta clase y nada mas.
+ * <p>Before the beta it must be replaced by real delivery (Resend, Brevo, SES
+ * or similar). That means changing this class and nothing else.
  */
 @Component
 public class ConsoleCodeSender implements CodeSender {
@@ -23,9 +23,9 @@ public class ConsoleCodeSender implements CodeSender {
         log.info("""
 
                 ┌─────────────────────────────────────────────┐
-                │  CODIGO DE ACCESO (solo en desarrollo)      │
-                │  email:  {}
-                │  codigo: {}
+                │  LOGIN CODE (development only)              │
+                │  email: {}
+                │  code:  {}
                 └─────────────────────────────────────────────┘
                 """, email.value(), code);
     }

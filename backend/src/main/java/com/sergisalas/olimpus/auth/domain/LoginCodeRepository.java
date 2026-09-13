@@ -2,7 +2,7 @@ package com.sergisalas.olimpus.auth.domain;
 
 import java.util.Optional;
 
-/** Solo hay un codigo vivo por email: pedir uno nuevo sustituye al anterior. */
+/** There is only one live code per email: requesting a new one replaces the previous one. */
 public interface LoginCodeRepository {
 
     Optional<LoginCode> findByEmail(EmailAddress email);

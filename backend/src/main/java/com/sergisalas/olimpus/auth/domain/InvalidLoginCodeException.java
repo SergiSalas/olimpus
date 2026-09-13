@@ -1,13 +1,25 @@
 package com.sergisalas.olimpus.auth.domain;
 
-/**
- * El codigo no vale: no existe, ha caducado, no coincide o se han agotado los
- * intentos. A quien lo escribe se le dice siempre lo mismo, para no dar pistas
- * a quien este probando codigos a ciegas.
- */
-public class InvalidLoginCodeException extends RuntimeException {
+import com.sergisalas.olimpus.shared.domain.UserFacingError;
 
-    public InvalidLoginCodeException(String motivo) {
-        super(motivo);
+/**
+ * The code is not valid: it does not exist, it expired, it does not match or
+ * the attempts ran out. The reason is kept for logs, but whoever typed it is
+ * always told the same thing, to give no hints to someone guessing codes.
+ */
+public class InvalidLoginCodeException extends RuntimeException implements UserFacingError {
+
+    public InvalidLoginCodeException(String reason) {
+        super(reason);
+    }
+
+    @Override
+    public String messageKey() {
+        return "error.login-code.invalid";
+    }
+
+    @Override
+    public Object[] messageArgs() {
+        return new Object[0];
     }
 }

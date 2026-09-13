@@ -1,9 +1,21 @@
 package com.sergisalas.olimpus.profile.domain;
 
-/** La app es solo para mayores de 18. No es una preferencia: es la puerta. */
-public class UnderageException extends RuntimeException {
+import com.sergisalas.olimpus.shared.domain.UserFacingError;
+
+/** The app is only for people over 18. Not a preference: it is the door. */
+public class UnderageException extends RuntimeException implements UserFacingError {
 
     public UnderageException() {
-        super("Olimpus es solo para mayores de 18 años.");
+        super("underage: Olimpus is only for people aged 18 or over");
+    }
+
+    @Override
+    public String messageKey() {
+        return "error.profile.underage";
+    }
+
+    @Override
+    public Object[] messageArgs() {
+        return new Object[0];
     }
 }

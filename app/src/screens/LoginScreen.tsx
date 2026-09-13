@@ -1,20 +1,18 @@
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError, requestLoginCode, verifyLoginCode, type StartedSession } from '../api';
-import { colors } from '../theme';
+import { Boton, Campo, Etiqueta } from '../components';
+import { colors, fonts, text } from '../theme';
 
 type Paso = 'email' | 'codigo';
 
-export function LoginScreen({ onEntrar }: { onEntrar: (sesion: StartedSession) => void }) {
+export function LoginScreen({
+  onEntrar,
+  onAtras,
+}: {
+  onEntrar: (sesion: StartedSession) => void;
+  onAtras?: () => void;
+}) {
   const [paso, setPaso] = useState<Paso>('email');
   const [email, setEmail] = useState('');
   const [codigo, setCodigo] = useState('');
@@ -49,95 +47,89 @@ export function LoginScreen({ onEntrar }: { onEntrar: (sesion: StartedSession) =
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={estilos.pantalla}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Text style={styles.titulo}>Olimpus</Text>
-      <Text style={styles.lema}>Hablar primero, ver después</Text>
-
-      {paso === 'email' ? (
-        <View style={styles.tarjeta}>
-          <Text style={styles.etiqueta}>Tu email</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="tu@email.com"
-            placeholderTextColor={colors.ink3}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            autoComplete="email"
-            editable={!ocupado}
-            onSubmitEditing={pedirCodigo}
-            returnKeyType="send"
-          />
-          <Text style={styles.ayuda}>
-            Te enviamos un código de 6 cifras. No hay contraseñas que recordar.
-          </Text>
-          <Boton texto="Enviarme el código" onPress={pedirCodigo} ocupado={ocupado} />
-        </View>
-      ) : (
-        <View style={styles.tarjeta}>
-          <Text style={styles.etiqueta}>El código que te hemos enviado</Text>
-          <TextInput
-            style={[styles.input, styles.inputCodigo]}
-            value={codigo}
-            onChangeText={(texto) => setCodigo(texto.replace(/\D/g, '').slice(0, 6))}
-            placeholder="000000"
-            placeholderTextColor={colors.ink3}
-            keyboardType="number-pad"
-            autoComplete="one-time-code"
-            maxLength={6}
-            editable={!ocupado}
-            autoFocus
-            onSubmitEditing={entrar}
-          />
-          <Text style={styles.ayuda}>Enviado a {email}. Caduca en 10 minutos.</Text>
-          <Boton
-            texto="Entrar"
-            onPress={entrar}
-            ocupado={ocupado}
-            deshabilitado={codigo.length < 6}
-          />
-          <Pressable
-            onPress={() => {
-              setPaso('email');
-              setCodigo('');
-              setError(null);
-            }}>
-            <Text style={styles.enlace}>Cambiar de email o pedir otro código</Text>
-          </Pressable>
-        </View>
+      {onAtras && (
+        <Pressable style={estilos.redondo} onPress={onAtras}>
+          <Text style={estilos.flecha}>←</Text>
+        </Pressable>
       )}
 
-      {error && <Text style={styles.error}>{error}</Text>}
+      <View style={estilos.centro}>
+        <Text style={estilos.marca}>Olimpus</Text>
+
+        {paso === 'email' ? (
+          <>
+            <Text style={[text.titulo, { marginBottom: 8 }]}>Tu email</Text>
+            <Text style={[text.ayuda, { marginBottom: 18 }]}>
+              Te mandamos un código de seis cifras. No hay contraseñas que recordar ni que perder.
+            </Text>
+            <Campo
+              valor={email}
+              onChange={setEmail}
+              placeholder="tu@email.com"
+              keyboardType="email-address"
+              onSubmit={pedirCodigo}
+            />
+            <View style={{ height: 16 }} />
+            <Boton
+              texto="Enviarme el código"
+              onPress={pedirCodigo}
+              ocupado={ocupado}
+              deshabilitado={!email.includes('@')}
+            />
+          </>
+        ) : (
+          <>
+            <Text style={[text.titulo, { marginBottom: 8 }]}>El código que te hemos enviado</Text>
+            <Text style={[text.ayuda, { marginBottom: 18 }]}>
+              A {email}. Caduca en diez minutos.
+            </Text>
+            <View style={estilos.casillas}>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <View
+                  key={i}
+                  style={[estilos.casilla, codigo.length === i && estilos.casillaActiva]}>
+                  <Text style={estilos.casillaTexto}>{codigo[i] ?? ''}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={estilos.campoInvisible}>
+              <Campo
+                valor={codigo}
+                onChange={(v) => setCodigo(v.replace(/\D/g, '').slice(0, 6))}
+                keyboardType="number-pad"
+                maxLength={6}
+                autoFocus
+                onSubmit={entrar}
+              />
+            </View>
+            <View style={{ height: 16 }} />
+            <Boton
+              texto="Entrar"
+              onPress={entrar}
+              ocupado={ocupado}
+              deshabilitado={codigo.length < 6}
+            />
+            <Pressable
+              style={{ paddingVertical: 14 }}
+              onPress={() => {
+                setPaso('email');
+                setCodigo('');
+                setError(null);
+              }}>
+              <Text style={estilos.enlace}>Cambiar de email o pedir otro código</Text>
+            </Pressable>
+          </>
+        )}
+
+        {error && <Text style={estilos.error}>{error}</Text>}
+      </View>
+
+      <View style={estilos.pie}>
+        <Etiqueta>Hablar primero, ver después</Etiqueta>
+      </View>
     </KeyboardAvoidingView>
-  );
-}
-
-function Boton({
-  texto,
-  onPress,
-  ocupado,
-  deshabilitado,
-}: {
-  texto: string;
-  onPress: () => void;
-  ocupado: boolean;
-  deshabilitado?: boolean;
-}) {
-  const apagado = ocupado || deshabilitado;
-  return (
-    <Pressable
-      style={[styles.boton, apagado && styles.botonApagado]}
-      onPress={onPress}
-      disabled={apagado}>
-      {ocupado ? (
-        <ActivityIndicator color={colors.surface} />
-      ) : (
-        <Text style={styles.botonTexto}>{texto}</Text>
-      )}
-    </Pressable>
   );
 }
 
@@ -146,51 +138,51 @@ function mensaje(e: unknown): string {
   return 'No se pudo conectar con el servidor.';
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  titulo: {
-    fontSize: 34,
-    fontWeight: '700',
-    color: colors.ink,
-    textAlign: 'center',
-    letterSpacing: 1,
-  },
-  lema: { fontSize: 16, color: colors.ink2, textAlign: 'center', marginBottom: 16 },
-  tarjeta: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 20,
-    gap: 12,
-  },
-  etiqueta: { fontSize: 13, color: colors.ink3, fontWeight: '600' },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 17,
-    color: colors.ink,
-    backgroundColor: colors.bg,
-  },
-  inputCodigo: { fontSize: 26, letterSpacing: 8, textAlign: 'center' },
-  ayuda: { fontSize: 13, color: colors.ink3 },
-  boton: {
-    backgroundColor: colors.accent,
-    borderRadius: 8,
-    paddingVertical: 14,
+const estilos = StyleSheet.create({
+  pantalla: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 26, paddingTop: 58 },
+  redondo: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    backgroundColor: colors.surface2,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  botonApagado: { opacity: 0.45 },
-  botonTexto: { color: colors.surface, fontWeight: '600', fontSize: 16 },
-  enlace: { color: colors.accent, fontSize: 13, textAlign: 'center' },
-  error: { color: colors.error, textAlign: 'center', fontSize: 14 },
+  flecha: { fontFamily: fonts.sansNegrita, fontSize: 17, color: colors.ink2 },
+  centro: { flex: 1, justifyContent: 'center' },
+  marca: {
+    fontFamily: fonts.serif,
+    fontSize: 26,
+    color: colors.accent,
+    marginBottom: 18,
+  },
+  casillas: { flexDirection: 'row', gap: 8 },
+  casilla: {
+    flex: 1,
+    height: 64,
+    borderRadius: 13,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  casillaActiva: { borderWidth: 1.5, borderColor: colors.accent },
+  casillaTexto: { fontFamily: fonts.sansNegrita, fontSize: 22, color: colors.ink },
+  /** El campo real: invisible, pero es quien abre el teclado y recibe las cifras. */
+  campoInvisible: { height: 0, opacity: 0, overflow: 'hidden' },
+  enlace: {
+    fontFamily: fonts.sansMedia,
+    fontSize: 14,
+    color: colors.accent,
+    textAlign: 'center',
+  },
+  error: {
+    fontFamily: fonts.sansMedia,
+    fontSize: 13.5,
+    color: colors.error,
+    textAlign: 'center',
+    marginTop: 14,
+  },
+  pie: { paddingBottom: 38, alignItems: 'center' },
 });

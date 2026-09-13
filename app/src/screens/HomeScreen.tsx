@@ -1,22 +1,45 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { type Me, type Profile } from '../api';
-import { colors } from '../theme';
+import { Boton, Etiqueta, Pastilla, Tarjeta } from '../components';
+import { useNombreInteres } from '../interests';
+import { tipoDeProfundidad } from '../mapeo';
+import { colors, fonts, text } from '../theme';
 
 const GENEROS: Record<string, string> = {
-  MUJER: 'Mujer',
-  HOMBRE: 'Hombre',
-  NO_BINARIO: 'No binario',
-  OTRO: 'Otro',
+  WOMAN: 'Mujer',
+  MAN: 'Hombre',
+  NON_BINARY: 'No binarie',
+  OTHER: 'Prefiero no decirlo',
+};
+
+const BUSCA: Record<string, string> = {
+  WOMAN: 'mujeres',
+  MAN: 'hombres',
+  NON_BINARY: 'personas no binarias',
+  OTHER: 'todo el mundo',
 };
 
 const INTENCIONES: Record<string, string> = {
-  AMISTAD: 'Amistad',
-  CITAS: 'Citas',
-  PAREJA: 'Pareja',
+  FRIENDSHIP: 'Amistad',
+  DATING: 'Citas',
+  RELATIONSHIP: 'Pareja',
   CASUAL: 'Algo casual',
 };
 
-const ESCALA_SOCIAL = [
+const IDIOMAS: Record<string, string> = {
+  es: 'Español',
+  en: 'Inglés',
+  ca: 'Catalán',
+  gl: 'Gallego',
+  eu: 'Euskera',
+  fr: 'Francés',
+  pt: 'Portugués',
+  it: 'Italiano',
+  de: 'Alemán',
+  ar: 'Árabe',
+};
+
+const SOCIABILIDAD = [
   'Me cuesta arrancar',
   'Más bien reservado',
   'Según el día',
@@ -24,18 +47,7 @@ const ESCALA_SOCIAL = [
   'Hablo con cualquiera',
 ];
 
-const ESCALA_CHARLA = [
-  'Ligera y divertida',
-  'Más bien ligera',
-  'De todo un poco',
-  'Más bien honda',
-  'De las que van hondo',
-];
-
-/**
- * Pantalla de "ya estás dentro". En el paso 4 la sustituye la conversación
- * del día; por ahora resume lo que el registro ha guardado.
- */
+/** Lo que se guardó en el registro, para poder repasarlo y cambiarlo. */
 export function HomeScreen({
   me,
   perfil,
@@ -49,108 +61,104 @@ export function HomeScreen({
   onEditar: () => void;
   onSalir: () => void;
 }) {
+  const nombreInteres = useNombreInteres();
+
   return (
     <ScrollView style={estilos.pantalla} contentContainerStyle={estilos.contenido}>
-      <Pressable onPress={onVolver}>
-        <Text style={estilos.volver}>‹ Hoy</Text>
+      <Pressable style={estilos.redondo} onPress={onVolver}>
+        <Text style={estilos.flecha}>←</Text>
       </Pressable>
-      <Text style={estilos.titulo}>Mi registro</Text>
-      <Text style={estilos.saludo}>{perfil.nickname}</Text>
 
-      <View style={estilos.tarjeta}>
-        <Text style={estilos.seccion}>Tu registro</Text>
-        <Fila etiqueta="Edad" valor={`${perfil.age} años`} />
-        <Fila etiqueta="Género" valor={GENEROS[perfil.gender] ?? perfil.gender} />
-        <Fila
-          etiqueta="Quieres hablar con"
-          valor={perfil.seeking.map((g) => GENEROS[g] ?? g).join(', ')}
-        />
-        <Fila etiqueta="Edades" valor={`${perfil.ageMin} a ${perfil.ageMax} años`} />
-        <Fila etiqueta="Distancia" valor={`hasta ${perfil.maxDistanceKm} km`} />
-        <Fila
-          etiqueta="Idiomas"
-          valor={perfil.languages.map((l) => `${l.code.toUpperCase()} (${l.level.toLowerCase()})`).join(', ')}
-        />
-        <Fila etiqueta="Cómo te relacionas" valor={ESCALA_SOCIAL[perfil.sociability - 1]} />
-        <Fila etiqueta="Conversación" valor={ESCALA_CHARLA[perfil.conversationDepth - 1]} />
-        <Fila etiqueta="Buscas" valor={INTENCIONES[perfil.intent] ?? perfil.intent} />
-      </View>
+      <Text style={text.titulo}>Tu registro</Text>
+      <Text style={[text.ayuda, { marginBottom: 4 }]}>
+        Es solo el punto de partida: después pesa más con quién sigues hablando de verdad.
+      </Text>
 
-      <View style={estilos.tarjeta}>
-        <Text style={estilos.seccion}>Tus intereses</Text>
+      <Tarjeta>
+        <Etiqueta>Lo básico</Etiqueta>
+        <Fila clave="Apodo" valor={perfil.nickname} />
+        <Fila clave="Edad" valor={`${perfil.age} años`} />
+        <Fila clave="Género" valor={GENEROS[perfil.gender] ?? perfil.gender} />
+        <Fila
+          clave="Quieres hablar con"
+          valor={perfil.seeking.map((g) => BUSCA[g] ?? g).join(', ')}
+        />
+        <Fila clave="Edades" valor={`${perfil.ageMin} – ${perfil.ageMax} años`} />
+        <Fila clave="Distancia" valor={`hasta ${perfil.maxDistanceKm} km`} />
+      </Tarjeta>
+
+      <Tarjeta>
+        <Etiqueta>Compatibilidad</Etiqueta>
+        <Fila
+          clave="Idiomas"
+          valor={perfil.languages.map((l) => IDIOMAS[l.code] ?? l.code).join(', ')}
+        />
+        <Fila clave="Cómo te relacionas" valor={SOCIABILIDAD[perfil.sociability - 1]} />
+        <Fila clave="Conversación" valor={tipoDeProfundidad(perfil.conversationDepth)} />
+        <Fila clave="Buscas" valor={INTENCIONES[perfil.intent] ?? perfil.intent} />
+      </Tarjeta>
+
+      <Tarjeta>
+        <Etiqueta>Tus intereses</Etiqueta>
         <View style={estilos.rejilla}>
           {perfil.interests.map((interes) => (
-            <View key={interes} style={estilos.chip}>
-              <Text style={estilos.chipTexto}>{interes.replace(/-/g, ' ')}</Text>
-            </View>
+            <Pastilla key={interes} texto={nombreInteres(interes)} elegida tono="suave" />
           ))}
         </View>
         {perfil.bio.length > 0 && (
           <>
-            <Text style={[estilos.seccion, { marginTop: 10 }]}>Tu bio (se ve en el nivel 2)</Text>
+            <Etiqueta>Tu bio · se ve en el nivel 2</Etiqueta>
             <Text style={estilos.bio}>{perfil.bio}</Text>
           </>
         )}
-      </View>
+      </Tarjeta>
 
-      <Pressable style={estilos.botonSecundario} onPress={onEditar}>
-        <Text style={estilos.botonSecundarioTexto}>Cambiar mis respuestas</Text>
-      </Pressable>
-      <Pressable style={estilos.botonSecundario} onPress={onSalir}>
-        <Text style={estilos.botonSecundarioTexto}>Cerrar sesión ({me.email})</Text>
+      <Boton texto="Cambiar mis respuestas" onPress={onEditar} tono="oscuro" />
+
+      <Pressable style={{ paddingVertical: 14 }} onPress={onSalir}>
+        <Text style={estilos.enlaceFlojo}>Cerrar sesión ({me.email})</Text>
       </Pressable>
     </ScrollView>
   );
 }
 
-function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
+function Fila({ clave, valor }: { clave: string; valor: string }) {
   return (
     <View style={estilos.fila}>
-      <Text style={estilos.etiqueta}>{etiqueta}</Text>
-      <Text style={estilos.valor}>{valor}</Text>
+      <Text style={estilos.claveTexto}>{clave}</Text>
+      <Text style={estilos.valorTexto}>{valor}</Text>
     </View>
   );
 }
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.bg },
-  contenido: { padding: 24, paddingTop: 60, gap: 14, paddingBottom: 48 },
-  titulo: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.ink,
-    textAlign: 'center',
-    letterSpacing: 1,
-  },
-  saludo: { fontSize: 18, color: colors.ink2, textAlign: 'center' },
-  volver: { fontSize: 16, color: colors.accent, marginBottom: 4 },
-  tarjeta: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 18,
-    gap: 8,
-  },
-  seccion: { fontSize: 12, fontWeight: '700', color: colors.ink3, textTransform: 'uppercase' },
-  fila: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  etiqueta: { fontSize: 13, color: colors.ink3, flexShrink: 0 },
-  valor: { fontSize: 13, color: colors.ink, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
-  rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: {
-    backgroundColor: colors.bg,
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  chipTexto: { fontSize: 13, color: colors.ink2 },
-  bio: { fontSize: 14, color: colors.ink2, lineHeight: 20 },
-  botonSecundario: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 8,
-    paddingVertical: 12,
+  contenido: { paddingHorizontal: 26, paddingTop: 58, paddingBottom: 40, gap: 14 },
+  redondo: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    backgroundColor: colors.surface2,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
-  botonSecundarioTexto: { color: colors.ink2, fontWeight: '600', fontSize: 14 },
+  flecha: { fontFamily: fonts.sansNegrita, fontSize: 17, color: colors.ink2 },
+  fila: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14 },
+  claveTexto: { fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink3 },
+  valorTexto: {
+    fontFamily: fonts.sansNegrita,
+    fontSize: 14.5,
+    color: colors.ink,
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  bio: { fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 21, color: colors.ink2 },
+  enlaceFlojo: {
+    fontFamily: fonts.sansMedia,
+    fontSize: 13.5,
+    color: colors.ink4,
+    textAlign: 'center',
+  },
 });

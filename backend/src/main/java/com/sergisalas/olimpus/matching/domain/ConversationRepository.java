@@ -11,7 +11,7 @@ public interface ConversationRepository {
 
     List<Conversation> byDate(LocalDate date);
 
-    /** La conversacion viva de alguien hoy, si tiene alguna. */
+    /** Someone's live conversation on that day, if they have one. */
     Optional<Conversation> openFor(UUID accountId, LocalDate date);
 
     Optional<Conversation> byId(UUID id);

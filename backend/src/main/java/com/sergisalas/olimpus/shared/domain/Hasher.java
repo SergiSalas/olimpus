@@ -1,11 +1,10 @@
 package com.sergisalas.olimpus.shared.domain;
 
 /**
- * Puerto: convertir un secreto en algo que se puede guardar sin peligro.
+ * Port: turn a secret into something that is safe to store.
  *
- * <p>Ni los codigos del email ni las llaves de sesion se guardan tal cual: si
- * alguien llegara a leer la base de datos, no podria entrar con lo que hay
- * dentro.
+ * <p>Neither the email codes nor the session tokens are stored as they are: if
+ * someone ever read the database, nothing inside would let them log in.
  */
 public interface Hasher {
 

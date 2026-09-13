@@ -6,7 +6,7 @@ import java.time.OffsetDateTime;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/** Adaptador de salida: cumple el puerto preguntandole a PostgreSQL. */
+/** Outbound adapter: fulfils the port by asking PostgreSQL. */
 @Repository
 public class JdbcDatabaseInfo implements DatabaseInfo {
 
@@ -19,7 +19,7 @@ public class JdbcDatabaseInfo implements DatabaseInfo {
     @Override
     public String schemaVersion() {
         return jdbc.queryForObject(
-                "select valor from app_info where clave = 'esquema'", String.class);
+                "select value from app_info where name = 'schema'", String.class);
     }
 
     @Override

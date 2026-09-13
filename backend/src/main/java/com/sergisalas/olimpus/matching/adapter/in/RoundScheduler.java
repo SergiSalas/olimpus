@@ -10,9 +10,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Las dos tareas del dia. Es el unico sitio que sabe de relojes de sistema: el
- * caso de uso recibe la fecha, asi que en los tests no hay que esperar a las
- * 4 de la manana.
+ * The two tasks of the day. It is the only place that knows about system
+ * clocks: the use case receives the date, so tests do not have to wait until
+ * 4 in the morning.
  */
 @Component
 public class RoundScheduler {
@@ -29,29 +29,29 @@ public class RoundScheduler {
         this.clock = clock;
     }
 
-    @Scheduled(cron = "${olimpus.rondas.principal:0 0 4 * * *}", zone = "${olimpus.zona:Europe/Madrid}")
-    public void rondaPrincipal() {
-        lanzar(RoundKind.PRINCIPAL);
+    @Scheduled(cron = "${olimpus.rounds.main:0 0 4 * * *}", zone = "${olimpus.zone:Europe/Madrid}")
+    public void mainRound() {
+        run(RoundKind.MAIN);
     }
 
-    @Scheduled(cron = "${olimpus.rondas.repesca:0 0 14 * * *}", zone = "${olimpus.zona:Europe/Madrid}")
-    public void repesca() {
-        lanzar(RoundKind.REPESCA);
+    @Scheduled(cron = "${olimpus.rounds.second-chance:0 0 14 * * *}", zone = "${olimpus.zone:Europe/Madrid}")
+    public void secondChanceRound() {
+        run(RoundKind.SECOND_CHANCE);
     }
 
-    private void lanzar(RoundKind kind) {
-        var resultado = runDailyRound.execute(schedule.dateOf(clock.instant()), kind);
-        if (resultado.alreadyRan()) {
-            log.info("Ronda {} del {}: ya se habia repartido, no se toca nada.", kind, resultado.date());
+    private void run(RoundKind kind) {
+        var result = runDailyRound.execute(schedule.dateOf(clock.instant()), kind);
+        if (result.alreadyRan()) {
+            log.info("Round {} on {}: already ran, nothing touched.", kind, result.date());
             return;
         }
         log.info(
-                "Ronda {} del {}: {} personas, {} conversaciones, {} sin pareja, {} canceladas por silencio.",
+                "Round {} on {}: {} people, {} conversations, {} left out, {} cancelled for silence.",
                 kind,
-                resultado.date(),
-                resultado.peopleInPool(),
-                resultado.created().size(),
-                resultado.leftOut().size(),
-                resultado.cancelled().size());
+                result.date(),
+                result.peopleInPool(),
+                result.created().size(),
+                result.leftOut().size(),
+                result.cancelled().size());
     }
 }

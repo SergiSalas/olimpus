@@ -1,11 +1,11 @@
 package com.sergisalas.olimpus.auth.domain;
 
 /**
- * Puerto: llevarle el codigo a su dueno.
+ * Port: get the code to its owner.
  *
- * <p>Es una de las piezas intercambiables del proyecto. Mientras se programa,
- * el codigo se escribe en la consola; el dia que haya presupuesto se enchufa
- * un servicio de correo de verdad sin tocar nada mas.
+ * <p>It is one of the swappable pieces of the project. While developing, the
+ * code is written to the console; once there is budget, a real email service is
+ * plugged in without touching anything else.
  */
 public interface CodeSender {
 

@@ -8,11 +8,10 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 
 /**
- * Caso de uso: guardar el registro. Sirve para crearlo y para cambiarlo.
+ * Use case: save the sign-up. It serves both to create it and to change it.
  *
- * <p>La edad se calcula con el reloj del servidor, no con lo que diga el
- * movil. Mas adelante habra tambien verificacion de edad real; esto es solo la
- * primera barrera.
+ * <p>Age is computed with the server clock, not with whatever the phone says.
+ * Real age verification will come later; this is only the first barrier.
  */
 public class SaveProfile {
 

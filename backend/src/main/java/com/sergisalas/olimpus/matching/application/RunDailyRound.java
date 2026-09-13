@@ -21,18 +21,18 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Caso de uso: la ronda del dia.
+ * Use case: the round of the day.
  *
- * <p>A las 4:00 reparte a todo el mundo. A las 14:00 hace la repesca: primero
- * cancela las conversaciones que siguen en silencio (nadie ha escrito nada) y
- * despues vuelve a repartir a quien se haya quedado sin nada.
+ * <p>At 4:00 it matches everyone. At 14:00 it runs the second chance: first it
+ * cancels the conversations that are still silent (nobody has written anything)
+ * and then it matches again whoever is left with nothing.
  *
- * <p>Es repetible a proposito: la semilla del azar sale del dia y del tipo de
- * ronda, asi que la misma ronda se puede volver a calcular igual para revisarla.
+ * <p>It is replayable on purpose: the random seed comes from the day and the
+ * round kind, so the same round can be recomputed identically to review it.
  */
 public class RunDailyRound {
 
-    /** Lo que ha hecho una ronda. Sirve para el log y para los avisos. */
+    /** What a round did. Used for the log and for notifications. */
     public record RoundResult(
             LocalDate date,
             RoundKind kind,
@@ -64,28 +64,28 @@ public class RunDailyRound {
     }
 
     public RoundResult execute(LocalDate date, RoundKind kind) {
-        List<Conversation> deHoy = conversations.byDate(date);
+        List<Conversation> ofTheDay = conversations.byDate(date);
 
-        // Que la ronda se lance dos veces (un reinicio, una tarea repetida) no
-        // puede repartir dos veces.
-        boolean yaCorrio = deHoy.stream().anyMatch(c -> c.roundKind() == kind);
-        if (yaCorrio) {
+        // Launching the round twice (a restart, a repeated task) must not match
+        // twice.
+        boolean alreadyRan = ofTheDay.stream().anyMatch(c -> c.roundKind() == kind);
+        if (alreadyRan) {
             return RoundResult.skipped(date, kind);
         }
 
-        List<Conversation> canceladas = new ArrayList<>();
-        if (kind == RoundKind.REPESCA) {
-            for (Conversation conversation : deHoy) {
+        List<Conversation> cancelled = new ArrayList<>();
+        if (kind == RoundKind.SECOND_CHANCE) {
+            for (Conversation conversation : ofTheDay) {
                 if (conversation.isOpen() && conversation.isSilent()) {
-                    Conversation cancelada = conversation.cancelled();
-                    conversations.save(cancelada);
-                    canceladas.add(cancelada);
+                    Conversation cancelledOne = conversation.cancelled();
+                    conversations.save(cancelledOne);
+                    cancelled.add(cancelledOne);
                 }
             }
         }
 
-        // Quien ya tiene conversacion viva hoy no entra: una nueva al dia.
-        Set<UUID> ocupados =
+        // Whoever already has a live conversation today stays out: one new a day.
+        Set<UUID> busy =
                 conversations.byDate(date).stream()
                         .filter(Conversation::isOpen)
                         .flatMap(c -> List.of(c.accountA(), c.accountB()).stream())
@@ -93,42 +93,43 @@ public class RunDailyRound {
 
         List<Profile> pool =
                 profiles.everyoneWithProfile().stream()
-                        .filter(p -> !ocupados.contains(p.accountId()))
+                        .filter(p -> !busy.contains(p.accountId()))
                         .toList();
 
         MatchContext ctx = contexts.forRound(date, pool);
-        List<Match> matches = DailyRound.plan(pool, ctx, semillaDe(date, kind));
+        List<Match> matches = DailyRound.plan(pool, ctx, seedFor(date, kind));
 
-        Instant abre = schedule.opensAt(date, kind);
-        Instant cierra = schedule.closesAt(date);
+        Instant opens = schedule.opensAt(date, kind);
+        Instant closes = schedule.closesAt(date);
 
-        List<Conversation> creadas = new ArrayList<>();
+        List<Conversation> created = new ArrayList<>();
         for (Match match : matches) {
-            // La pregunta inicial se calcula ahora y se guarda: asi los dos ven
-            // exactamente la misma, y no cambia si el perfil cambia despues.
-            String pregunta =
-                    Icebreakers.forPair(
-                            buscar(pool, match.accountA()), buscar(pool, match.accountB()));
+            // The opening interest is chosen now and stored: both people see
+            // exactly the same one, and it does not change if a profile changes
+            // later.
+            String icebreakerInterest =
+                    Icebreakers.rarestShared(find(pool, match.accountA()), find(pool, match.accountB()))
+                            .orElse(null);
 
             Conversation conversation =
-                    Conversation.opened(match, date, kind, abre, cierra, pregunta);
+                    Conversation.opened(match, date, kind, opens, closes, icebreakerInterest);
             conversations.save(conversation);
-            creadas.add(conversation);
+            created.add(conversation);
         }
 
         return new RoundResult(
-                date, kind, pool.size(), creadas, DailyRound.leftOut(pool, matches), canceladas, false);
+                date, kind, pool.size(), created, DailyRound.leftOut(pool, matches), cancelled, false);
     }
 
-    /** Misma fecha y mismo tipo de ronda, mismo reparto. */
-    private static Random semillaDe(LocalDate date, RoundKind kind) {
+    /** Same date and same round kind, same matching. */
+    private static Random seedFor(LocalDate date, RoundKind kind) {
         return new Random(date.toEpochDay() * 31 + kind.ordinal());
     }
 
-    private static Profile buscar(List<Profile> pool, UUID accountId) {
+    private static Profile find(List<Profile> pool, UUID accountId) {
         return pool.stream()
                 .filter(p -> p.accountId().equals(accountId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("emparejado alguien que no estaba"));
+                .orElseThrow(() -> new IllegalStateException("matched someone who was not in the pool"));
     }
 }

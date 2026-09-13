@@ -2,8 +2,8 @@ package com.sergisalas.olimpus.matching.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.sergisalas.olimpus.matching.domain.Gente;
 import com.sergisalas.olimpus.matching.domain.RoundKind;
+import com.sergisalas.olimpus.matching.domain.TestPeople;
 import com.sergisalas.olimpus.profile.domain.Gender;
 import com.sergisalas.olimpus.profile.domain.Profile;
 import java.time.Instant;
@@ -13,87 +13,87 @@ import org.junit.jupiter.api.Test;
 
 class GetTodaysConversationTest {
 
-    private MundoDeRondas mundo;
+    private FakeRoundWorld world;
 
     @BeforeEach
     void setUp() {
-        mundo = new MundoDeRondas();
+        world = new FakeRoundWorld();
     }
 
     @Test
-    void sin_conversacion_no_devuelve_nada_pero_tampoco_falla() {
-        mundo.gente.addAll(Gente.poblacion(4, 1));
+    void without_a_conversation_it_returns_nothing_but_does_not_fail() {
+        world.people.addAll(TestPeople.population(4, 1));
 
-        var hoy = mundo.conversacionDeHoy().execute(mundo.gente.get(0).accountId());
+        var today = world.todaysConversation().execute(world.people.get(0).accountId());
 
-        assertThat(hoy.conversation()).isEmpty();
-        assertThat(hoy.partner()).isEmpty();
+        assertThat(today.conversation()).isEmpty();
+        assertThat(today.partner()).isEmpty();
     }
 
     @Test
-    void del_otro_solo_se_ve_edad_dos_intereses_y_la_distancia() {
+    void of_the_other_person_only_age_two_interests_and_distance_are_visible() {
         Profile ana =
-                Gente.persona()
+                TestPeople.person()
                         .nickname("Ana")
-                        .gender(Gender.MUJER)
-                        .busca(Gender.HOMBRE)
-                        .edad(30)
-                        .en(41.3874, 2.1686)
-                        .intereses("cine", "escalada", "vinos", "teatro", "correr")
+                        .gender(Gender.WOMAN)
+                        .seeking(Gender.MAN)
+                        .age(30)
+                        .at(41.3874, 2.1686)
+                        .interests("movies", "climbing", "wine", "theatre", "running")
                         .build();
         Profile leo =
-                Gente.persona()
+                TestPeople.person()
                         .nickname("Leo")
-                        .gender(Gender.HOMBRE)
-                        .busca(Gender.MUJER)
-                        .edad(33)
-                        .en(41.4036, 2.1744)
-                        .intereses("escalada", "cine", "podcasts", "surf", "ajedrez")
+                        .gender(Gender.MAN)
+                        .seeking(Gender.WOMAN)
+                        .age(33)
+                        .at(41.4036, 2.1744)
+                        .interests("climbing", "movies", "podcasts", "surfing", "chess")
                         .build();
-        mundo.gente.addAll(List.of(ana, leo));
-        mundo.rondaDiaria().execute(Gente.HOY, RoundKind.PRINCIPAL);
-        mundo.ahora = Instant.parse("2026-09-12T08:00:00Z");
+        world.people.addAll(List.of(ana, leo));
+        world.dailyRound().execute(TestPeople.TODAY, RoundKind.MAIN);
+        world.now = Instant.parse("2026-09-12T08:00:00Z");
 
-        var hoy = mundo.conversacionDeHoy().execute(ana.accountId());
+        var today = world.todaysConversation().execute(ana.accountId());
 
-        assertThat(hoy.conversation()).isPresent();
-        var vista = hoy.partner().orElseThrow();
-        assertThat(vista.age()).isEqualTo(33);
-        assertThat(vista.level()).isZero();
-        assertThat(vista.interestsShown()).hasSize(2);
-        assertThat(vista.approxDistanceKm()).isBetween(1, 4);
+        assertThat(today.conversation()).isPresent();
+        var view = today.partner().orElseThrow();
+        assertThat(view.age()).isEqualTo(33);
+        assertThat(view.level()).isZero();
+        assertThat(view.interestsShown()).hasSize(2);
+        assertThat(view.approxDistanceKm()).isBetween(1, 4);
 
-        // Los dos intereses que se ven son de los que tienen en comun: son los
-        // que dan de que hablar.
-        assertThat(hoy.sharedInterests()).contains("cine", "escalada");
-        assertThat(vista.interestsShown()).allMatch(hoy.sharedInterests()::contains);
+        // The two visible interests are among the shared ones: they are what
+        // gives them something to talk about.
+        assertThat(today.sharedInterests()).contains("movies", "climbing");
+        assertThat(view.interestsShown()).allMatch(today.sharedInterests()::contains);
     }
 
     @Test
-    void la_vista_del_nivel_cero_no_deja_escapar_el_apodo_ni_la_bio() {
-        // Comprobacion de forma: la vista solo tiene cuatro campos, y ninguno es
-        // el perfil. Si alguien añadiera el apodo aqui, este test se lo recuerda.
-        var campos =
+    void the_level_zero_view_does_not_leak_nickname_or_bio() {
+        // Shape check: the view only has four fields, and none of them is the
+        // profile. If someone added the nickname here, this test reminds them.
+        var fields =
                 java.util.Arrays.stream(
                                 com.sergisalas.olimpus.matching.domain.PartnerView.class
                                         .getRecordComponents())
                         .map(java.lang.reflect.RecordComponent::getName)
                         .toList();
 
-        assertThat(campos).containsExactly("age", "interestsShown", "approxDistanceKm", "level");
+        assertThat(fields).containsExactly("age", "interestsShown", "approxDistanceKm", "level");
     }
 
     @Test
-    void cada_uno_ve_al_otro_no_a_si_mismo() {
-        Profile ana = Gente.persona().nickname("Ana").gender(Gender.MUJER).busca(Gender.HOMBRE).edad(30).build();
-        Profile leo = Gente.persona().nickname("Leo").gender(Gender.HOMBRE).busca(Gender.MUJER).edad(44).build();
-        mundo.gente.addAll(List.of(ana, leo));
-        mundo.rondaDiaria().execute(Gente.HOY, RoundKind.PRINCIPAL);
+    void each_one_sees_the_other_not_themselves() {
+        Profile ana = TestPeople.person().nickname("Ana").gender(Gender.WOMAN).seeking(Gender.MAN).age(30).build();
+        Profile leo = TestPeople.person().nickname("Leo").gender(Gender.MAN).seeking(Gender.WOMAN).age(44).build();
+        world.people.addAll(List.of(ana, leo));
+        world.dailyRound().execute(TestPeople.TODAY, RoundKind.MAIN);
 
-        var deAna = mundo.conversacionDeHoy().execute(ana.accountId());
-        var deLeo = mundo.conversacionDeHoy().execute(leo.accountId());
+        var anasView = world.todaysConversation().execute(ana.accountId());
+        var leosView = world.todaysConversation().execute(leo.accountId());
 
-        assertThat(deAna.partner().orElseThrow().age()).isEqualTo(44);
-        assertThat(deLeo.partner().orElseThrow().age()).isEqualTo(30);
+        assertThat(anasView.partner().orElseThrow().age()).isEqualTo(44);
+        assertThat(leosView.partner().orElseThrow().age()).isEqualTo(30);
     }
 }

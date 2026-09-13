@@ -12,49 +12,49 @@ import org.junit.jupiter.api.Test;
 
 class AuthenticateSessionTest {
 
-    private FakeAuthWorld mundo;
-    private AuthenticateSession quienEres;
+    private FakeAuthWorld world;
+    private AuthenticateSession whoAreYou;
     private Account ana;
 
     @BeforeEach
     void setUp() {
-        mundo = new FakeAuthWorld();
-        quienEres =
-                new AuthenticateSession(mundo.sessions, mundo.accounts, mundo.hasher, mundo.clock);
-        ana = mundo.accounts.save(Account.created(EmailAddress.of("ana@example.com"), mundo.now));
-        mundo.sessions.save(Session.started(mundo.hasher.hash("mi-llave"), ana.id(), mundo.now));
+        world = new FakeAuthWorld();
+        whoAreYou =
+                new AuthenticateSession(world.sessions, world.accounts, world.hasher, world.clock);
+        ana = world.accounts.save(Account.created(EmailAddress.of("ana@example.com"), world.now));
+        world.sessions.save(Session.started(world.hasher.hash("my-token"), ana.id(), world.now));
     }
 
     @Test
-    void con_la_llave_buena_sabe_quien_eres() {
-        assertThat(quienEres.execute("mi-llave")).contains(ana);
+    void with_the_right_token_it_knows_who_you_are() {
+        assertThat(whoAreYou.execute("my-token")).contains(ana);
     }
 
     @Test
-    void una_llave_inventada_no_es_nadie() {
-        assertThat(quienEres.execute("llave-inventada")).isEmpty();
+    void a_made_up_token_is_nobody() {
+        assertThat(whoAreYou.execute("made-up-token")).isEmpty();
     }
 
     @Test
-    void sin_llave_no_es_nadie() {
-        assertThat(quienEres.execute(null)).isEmpty();
-        assertThat(quienEres.execute("   ")).isEmpty();
+    void no_token_is_nobody() {
+        assertThat(whoAreYou.execute(null)).isEmpty();
+        assertThat(whoAreYou.execute("   ")).isEmpty();
     }
 
     @Test
-    void a_los_noventa_dias_la_sesion_ya_no_vale() {
-        mundo.now = mundo.now.plus(Duration.ofDays(90));
+    void after_ninety_days_the_session_is_no_longer_valid() {
+        world.now = world.now.plus(Duration.ofDays(90));
 
-        assertThat(quienEres.execute("mi-llave")).isEmpty();
+        assertThat(whoAreYou.execute("my-token")).isEmpty();
     }
 
     @Test
-    void una_sesion_anulada_deja_de_valer_al_momento() {
-        Session viva = mundo.sessions.findByTokenHash(mundo.hasher.hash("mi-llave")).orElseThrow();
-        mundo.sessions.save(
+    void a_revoked_session_stops_working_immediately() {
+        Session live = world.sessions.findByTokenHash(world.hasher.hash("my-token")).orElseThrow();
+        world.sessions.save(
                 new Session(
-                        viva.tokenHash(), viva.accountId(), viva.createdAt(), viva.expiresAt(), mundo.now));
+                        live.tokenHash(), live.accountId(), live.createdAt(), live.expiresAt(), world.now));
 
-        assertThat(quienEres.execute("mi-llave")).isEmpty();
+        assertThat(whoAreYou.execute("my-token")).isEmpty();
     }
 }

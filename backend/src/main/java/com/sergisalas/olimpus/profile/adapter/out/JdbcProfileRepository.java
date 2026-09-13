@@ -66,7 +66,7 @@ public class JdbcProfileRepository implements ProfileRepository {
                 .findFirst();
     }
 
-    /** Perfil e idiomas se guardan juntos o no se guardan: una sola transaccion. */
+    /** Profile and languages are saved together or not at all: one single transaction. */
     @Override
     @Transactional
     public void save(Profile profile) {

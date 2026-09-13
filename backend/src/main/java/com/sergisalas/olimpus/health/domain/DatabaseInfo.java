@@ -3,9 +3,9 @@ package com.sergisalas.olimpus.health.domain;
 import java.time.Instant;
 
 /**
- * Puerto de salida: lo que el dominio necesita de la base de datos, dicho
- * con sus palabras. Quien lo cumpla (PostgreSQL hoy, una version falsa en
- * los tests) es asunto de los adaptadores.
+ * Outbound port: what the domain needs from the database, in its own words.
+ * Whoever fulfils it (PostgreSQL today, a fake in tests) is the adapters'
+ * business.
  */
 public interface DatabaseInfo {
 

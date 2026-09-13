@@ -8,127 +8,126 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
- * El reparto de una ronda: quien habla con quien hoy.
+ * The matching of one round: who talks to whom today.
  *
- * <p>La puntuacion dice <i>que</i> parejas son buenas; esto decide <i>quien se
- * lleva a quien</i>, que es otra pregunta. Cada persona sale en una sola pareja:
- * en Olimpus hay una conversacion nueva al dia.
+ * <p>The score says <i>which</i> pairs are good; this decides <i>who gets
+ * whom</i>, which is a different question. Each person appears in a single pair:
+ * in Olimpus there is one new conversation a day.
  *
- * <p>El reparto se divide en tres partes, y cada pareja recuerda de cual salio:
+ * <p>The round is split in three parts, and each pair remembers which one it
+ * came from:
  *
  * <ul>
- *   <li><b>80% mejor pareja</b>: se puntuan todas las parejas validas y se van
- *       cogiendo de mayor a menor.
- *   <li><b>10% descubrimiento</b>: buena, pero no la primera, para no encerrar a
- *       nadie en lo de siempre.
- *   <li><b>10% azar puro</b>: al azar entre quienes pasan los filtros. Es la
- *       referencia contra la que hay que batir.
+ *   <li><b>80% best match</b>: every valid pair is scored and they are taken
+ *       from highest to lowest.
+ *   <li><b>10% discovery</b>: good, but not the first, so nobody gets locked
+ *       into the usual.
+ *   <li><b>10% pure random</b>: random among those who pass the filters. It is
+ *       the baseline to beat.
  * </ul>
  *
- * <p>Los filtros duros se aplican <b>tambien</b> a la parte del azar: el azar es
- * de con quien hablas, nunca de la seguridad.
+ * <p>Hard filters apply to the random part <b>too</b>: randomness is about who
+ * you talk to, never about safety.
  */
 public final class DailyRound {
 
     private DailyRound() {}
 
-    public static final double FRACCION_AZAR = 0.10;
-    public static final double FRACCION_DESCUBRIMIENTO = 0.10;
+    public static final double RANDOM_SHARE = 0.10;
+    public static final double DISCOVERY_SHARE = 0.10;
 
     /**
-     * En descubrimiento se coge de la cabeza de la lista, pero nunca el primero:
-     * de la posicion 1 hasta el 15% mejor.
+     * Discovery picks from the top of the list, but never the first: from
+     * position 1 up to the best 15%.
      *
-     * <p>Si se cogiera de la zona media, descubrir seria casi lo mismo que el
-     * azar, y entonces habria dos partes del reparto midiendo lo mismo.
+     * <p>If it picked from the middle, discovery would be almost the same as
+     * random, and two parts of the round would be measuring the same thing.
      */
-    private static final double ZONA_DESCUBRIMIENTO_HASTA = 0.15;
+    private static final double DISCOVERY_ZONE_UP_TO = 0.15;
 
     /**
-     * @param rng con la misma semilla, el mismo reparto: una ronda se puede
-     *     repetir y revisar
+     * @param rng same seed, same matching: a round can be replayed and reviewed
      */
     public static List<Match> plan(List<Profile> pool, MatchContext ctx, Random rng) {
         if (pool.size() < 2) return List.of();
 
-        List<Profile> orden = new ArrayList<>(pool);
-        Collections.shuffle(orden, rng);
+        List<Profile> order = new ArrayList<>(pool);
+        Collections.shuffle(order, rng);
 
-        // Se eligen "cabezas de serie", y cada una se lleva a su pareja. Por eso
-        // se divide entre dos: con 200 personas salen unas 100 parejas, y 10
-        // cabezas de azar producen las 10 parejas de azar que buscamos.
-        int cuantosAzar = (int) Math.round(pool.size() * FRACCION_AZAR / 2);
-        int cuantosDescubrimiento = (int) Math.round(pool.size() * FRACCION_DESCUBRIMIENTO / 2);
+        // "Seeds" are chosen, and each one takes a partner. That is why it is
+        // divided by two: 200 people make about 100 pairs, and 10 random seeds
+        // produce the 10 random pairs we are after.
+        int randomCount = (int) Math.round(pool.size() * RANDOM_SHARE / 2);
+        int discoveryCount = (int) Math.round(pool.size() * DISCOVERY_SHARE / 2);
 
-        Set<UUID> paraAzar = idsDe(orden.subList(0, Math.min(cuantosAzar, orden.size())));
-        Set<UUID> paraDescubrimiento =
-                idsDe(
-                        orden.subList(
-                                Math.min(cuantosAzar, orden.size()),
-                                Math.min(cuantosAzar + cuantosDescubrimiento, orden.size())));
+        Set<UUID> forRandom = idsOf(order.subList(0, Math.min(randomCount, order.size())));
+        Set<UUID> forDiscovery =
+                idsOf(
+                        order.subList(
+                                Math.min(randomCount, order.size()),
+                                Math.min(randomCount + discoveryCount, order.size())));
 
-        Set<UUID> emparejados = new HashSet<>();
-        List<Match> resultado = new ArrayList<>();
+        Set<UUID> matched = new HashSet<>();
+        List<Match> result = new ArrayList<>();
 
-        // 1. El azar primero, para que se lleve de verdad su parte y no las
-        //    sobras de lo demas.
-        for (Profile persona : orden) {
-            if (!paraAzar.contains(persona.accountId()) || emparejados.contains(persona.accountId())) {
+        // 1. Random first, so it really gets its share and not the leftovers
+        //    of everything else.
+        for (Profile person : order) {
+            if (!forRandom.contains(person.accountId()) || matched.contains(person.accountId())) {
                 continue;
             }
-            List<ScoredPair> candidatos = candidatosDe(persona, pool, ctx, emparejados);
-            if (candidatos.isEmpty()) continue;
+            List<ScoredPair> candidates = candidatesOf(person, pool, ctx, matched);
+            if (candidates.isEmpty()) continue;
 
-            ScoredPair elegida = candidatos.get(rng.nextInt(candidatos.size()));
-            apuntar(resultado, emparejados, elegida, Origin.AZAR);
+            ScoredPair chosen = candidates.get(rng.nextInt(candidates.size()));
+            addPair(result, matched, chosen, Origin.RANDOM);
         }
 
-        // 2. Descubrimiento: de la zona media de su lista.
-        for (Profile persona : orden) {
-            if (!paraDescubrimiento.contains(persona.accountId())
-                    || emparejados.contains(persona.accountId())) {
+        // 2. Discovery: from near the top of their list, never the first.
+        for (Profile person : order) {
+            if (!forDiscovery.contains(person.accountId()) || matched.contains(person.accountId())) {
                 continue;
             }
-            List<ScoredPair> candidatos = candidatosDe(persona, pool, ctx, emparejados);
-            if (candidatos.isEmpty()) continue;
+            List<ScoredPair> candidates = candidatesOf(person, pool, ctx, matched);
+            if (candidates.isEmpty()) continue;
 
-            candidatos.sort((p, q) -> Double.compare(q.score(), p.score()));
-            apuntar(resultado, emparejados, casiElMejor(candidatos, rng), Origin.DESCUBRIMIENTO);
+            candidates.sort((p, q) -> Double.compare(q.score(), p.score()));
+            addPair(result, matched, almostTheBest(candidates, rng), Origin.DISCOVERY);
         }
 
-        // 3. El resto: todas las parejas validas, de mayor a menor.
+        // 3. The rest: every valid pair, from highest to lowest.
         //
-        //    Es un "greedy" sobre el peso, no Gale-Shapley: aqui cualquiera puede
-        //    emparejarse con cualquiera (no hay dos lados), y ese problema no
-        //    siempre tiene solucion estable. A la escala de una ciudad esto sobra.
-        List<ScoredPair> todas = new ArrayList<>();
+        //    It is a greedy pass over the weight, not Gale-Shapley: here anyone
+        //    can be paired with anyone (there are no two sides), and that problem
+        //    does not always have a stable solution. At city scale this is plenty.
+        List<ScoredPair> all = new ArrayList<>();
         for (int i = 0; i < pool.size(); i++) {
             for (int j = i + 1; j < pool.size(); j++) {
                 Profile a = pool.get(i);
                 Profile b = pool.get(j);
-                if (emparejados.contains(a.accountId()) || emparejados.contains(b.accountId())) {
+                if (matched.contains(a.accountId()) || matched.contains(b.accountId())) {
                     continue;
                 }
-                if (!valida(a, b, ctx)) continue;
-                todas.add(Scorer.score(a, b, ctx));
+                if (!isValid(a, b, ctx)) continue;
+                all.add(Scorer.score(a, b, ctx));
             }
         }
-        todas.sort((p, q) -> Double.compare(q.score(), p.score()));
+        all.sort((p, q) -> Double.compare(q.score(), p.score()));
 
-        for (ScoredPair pareja : todas) {
-            if (emparejados.contains(pareja.a().accountId())
-                    || emparejados.contains(pareja.b().accountId())) {
+        for (ScoredPair pair : all) {
+            if (matched.contains(pair.a().accountId()) || matched.contains(pair.b().accountId())) {
                 continue;
             }
-            apuntar(resultado, emparejados, pareja, Origin.MEJOR_PAREJA);
+            addPair(result, matched, pair, Origin.BEST_MATCH);
         }
 
-        return resultado;
+        return result;
     }
 
-    /** Quien se ha quedado sin pareja. Es la lista que alimenta la repesca. */
+    /** Who was left without a pair. It is the list that feeds the second-chance round. */
     public static List<UUID> leftOut(List<Profile> pool, List<Match> matches) {
         return pool.stream()
                 .map(Profile::accountId)
@@ -136,42 +135,42 @@ public final class DailyRound {
                 .toList();
     }
 
-    private static boolean valida(Profile a, Profile b, MatchContext ctx) {
+    private static boolean isValid(Profile a, Profile b, MatchContext ctx) {
         return Filters.passesHard(a, b, ctx)
                 && Filters.passesSoft(a, b, ctx, Filters.relaxationFor(a, b, ctx));
     }
 
-    private static List<ScoredPair> candidatosDe(
-            Profile persona, List<Profile> pool, MatchContext ctx, Set<UUID> emparejados) {
-        List<ScoredPair> candidatos = new ArrayList<>();
-        for (Profile otro : pool) {
-            if (emparejados.contains(otro.accountId())) continue;
-            if (!valida(persona, otro, ctx)) continue;
-            candidatos.add(Scorer.score(persona, otro, ctx));
+    private static List<ScoredPair> candidatesOf(
+            Profile person, List<Profile> pool, MatchContext ctx, Set<UUID> matched) {
+        List<ScoredPair> candidates = new ArrayList<>();
+        for (Profile other : pool) {
+            if (matched.contains(other.accountId())) continue;
+            if (!isValid(person, other, ctx)) continue;
+            candidates.add(Scorer.score(person, other, ctx));
         }
-        return candidatos;
+        return candidates;
     }
 
     /**
-     * Coge a alguien bueno de la lista ya ordenada, pero no al primero. Si solo
-     * hay una opcion, se queda con ella: descubrir no puede costarle a nadie
-     * quedarse sin conversacion.
+     * Picks someone good from the already sorted list, but not the first. If
+     * there is only one option it takes it: discovery must never leave anyone
+     * without a conversation.
      */
-    private static ScoredPair casiElMejor(List<ScoredPair> ordenados, Random rng) {
-        if (ordenados.size() == 1) return ordenados.get(0);
-        int hasta =
-                Math.min(ordenados.size(), Math.max(2, (int) Math.ceil(ordenados.size() * ZONA_DESCUBRIMIENTO_HASTA)));
-        return ordenados.get(1 + rng.nextInt(hasta - 1));
+    private static ScoredPair almostTheBest(List<ScoredPair> sorted, Random rng) {
+        if (sorted.size() == 1) return sorted.get(0);
+        int upTo =
+                Math.min(sorted.size(), Math.max(2, (int) Math.ceil(sorted.size() * DISCOVERY_ZONE_UP_TO)));
+        return sorted.get(1 + rng.nextInt(upTo - 1));
     }
 
-    private static void apuntar(
-            List<Match> resultado, Set<UUID> emparejados, ScoredPair pareja, Origin origin) {
-        resultado.add(Match.from(pareja, origin));
-        emparejados.add(pareja.a().accountId());
-        emparejados.add(pareja.b().accountId());
+    private static void addPair(
+            List<Match> result, Set<UUID> matched, ScoredPair pair, Origin origin) {
+        result.add(Match.from(pair, origin));
+        matched.add(pair.a().accountId());
+        matched.add(pair.b().accountId());
     }
 
-    private static Set<UUID> idsDe(List<Profile> perfiles) {
-        return perfiles.stream().map(Profile::accountId).collect(java.util.stream.Collectors.toSet());
+    private static Set<UUID> idsOf(List<Profile> profiles) {
+        return profiles.stream().map(Profile::accountId).collect(Collectors.toSet());
     }
 }

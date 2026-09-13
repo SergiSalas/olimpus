@@ -13,7 +13,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
 
-/** Caso de uso: abrir el chat. Devuelve los mensajes y lo poco que se ve del otro. */
+/** Use case: open the chat. Returns the messages and the little that is visible of the other person. */
 public class GetChat {
 
     public record Chat(
@@ -49,16 +49,16 @@ public class GetChat {
             throw new NotYourConversationException();
         }
 
-        Profile yo = profiles.byAccountId(viewer).orElseThrow(NotYourConversationException::new);
-        Profile otro =
+        Profile me = profiles.byAccountId(viewer).orElseThrow(NotYourConversationException::new);
+        Profile partner =
                 profiles
                         .byAccountId(conversation.partnerOf(viewer))
                         .orElseThrow(NotYourConversationException::new);
 
-        List<String> comunes = PartnerView.sharedInterests(yo, otro);
-        PartnerView vista =
-                PartnerView.levelZero(otro, yo, schedule.dateOf(clock.instant()), comunes);
+        List<String> shared = PartnerView.sharedInterests(me, partner);
+        PartnerView view =
+                PartnerView.levelZero(partner, me, schedule.dateOf(clock.instant()), shared);
 
-        return new Chat(conversation, vista, comunes, messages.byConversation(conversationId));
+        return new Chat(conversation, view, shared, messages.byConversation(conversationId));
     }
 }

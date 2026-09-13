@@ -15,53 +15,52 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 /**
- * Quien esta ahora mismo con el chat abierto, y como se le hace llegar un
- * mensaje al instante.
+ * Who has the chat open right now, and how a message reaches them instantly.
  *
- * <p>Vive en memoria a proposito: si el servidor se reinicia, los moviles se
- * reconectan y vuelven a pedir la conversacion. Lo que hay que guardar de
- * verdad son los mensajes, y esos estan en la base de datos.
+ * <p>It lives in memory on purpose: if the server restarts, phones reconnect
+ * and fetch the conversation again. What really has to be kept is the messages,
+ * and those are in the database.
  */
 @Component
 public class ChatBroadcaster {
 
     private static final Logger log = LoggerFactory.getLogger(ChatBroadcaster.class);
 
-    /** Cuenta -> sesiones abiertas (puede tener la app en dos sitios). */
-    private final Map<UUID, Set<WebSocketSession>> abiertas = new ConcurrentHashMap<>();
+    /** Account -> open sessions (the app may be open in two places). */
+    private final Map<UUID, Set<WebSocketSession>> open = new ConcurrentHashMap<>();
 
     public void register(UUID accountId, WebSocketSession session) {
-        abiertas.computeIfAbsent(accountId, id -> ConcurrentHashMap.newKeySet()).add(session);
+        open.computeIfAbsent(accountId, id -> ConcurrentHashMap.newKeySet()).add(session);
     }
 
     public void unregister(UUID accountId, WebSocketSession session) {
-        Set<WebSocketSession> sesiones = abiertas.get(accountId);
-        if (sesiones == null) return;
-        sesiones.remove(session);
-        if (sesiones.isEmpty()) abiertas.remove(accountId);
+        Set<WebSocketSession> sessions = open.get(accountId);
+        if (sessions == null) return;
+        sessions.remove(session);
+        if (sessions.isEmpty()) open.remove(accountId);
     }
 
     public void newMessage(Conversation conversation, Message message) {
-        for (UUID destinatario : List.of(conversation.accountA(), conversation.accountB())) {
-            boolean suyo = destinatario.equals(message.senderAccountId());
-            enviar(
-                    destinatario,
+        for (UUID recipient : List.of(conversation.accountA(), conversation.accountB())) {
+            boolean mine = recipient.equals(message.senderAccountId());
+            send(
+                    recipient,
                     """
                     {"type":"message","conversationId":"%s","id":"%s","mine":%s,"text":%s,"sentAt":"%s"}"""
                             .formatted(
                                     conversation.id(),
                                     message.id(),
-                                    suyo,
-                                    comoJson(message.text()),
+                                    mine,
+                                    asJson(message.text()),
                                     message.sentAt()));
         }
     }
 
-    private void enviar(UUID accountId, String payload) {
-        Set<WebSocketSession> sesiones = abiertas.get(accountId);
-        if (sesiones == null) return;
+    private void send(UUID accountId, String payload) {
+        Set<WebSocketSession> sessions = open.get(accountId);
+        if (sessions == null) return;
 
-        for (WebSocketSession session : sesiones) {
+        for (WebSocketSession session : sessions) {
             try {
                 if (session.isOpen()) {
                     synchronized (session) {
@@ -69,16 +68,16 @@ public class ChatBroadcaster {
                     }
                 }
             } catch (IOException e) {
-                // Que un movil se haya ido no puede tumbar el envio al otro.
-                log.debug("No se pudo avisar a una sesion: {}", e.getMessage());
+                // One phone going away must not break delivery to the other.
+                log.debug("Could not notify a session: {}", e.getMessage());
             }
         }
     }
 
-    /** Escapado minimo, suficiente porque solo metemos texto de mensajes. */
-    private static String comoJson(String texto) {
+    /** Minimal escaping, enough because only message text goes in. */
+    private static String asJson(String text) {
         StringBuilder sb = new StringBuilder("\"");
-        for (char c : texto.toCharArray()) {
+        for (char c : text.toCharArray()) {
             switch (c) {
                 case '"' -> sb.append("\\\"");
                 case '\\' -> sb.append("\\\\");

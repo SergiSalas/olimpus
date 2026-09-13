@@ -31,13 +31,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Aqui se montan a mano los casos de uso. Es el unico sitio donde Spring
- * y el dominio se tocan: asi el dominio sigue sin depender de nada.
+ * Use cases are wired by hand here. It is the only place where Spring and the
+ * domain touch: that way the domain keeps depending on nothing.
  */
 @Configuration
 public class DomainBeans {
 
-    /** Todo el proyecto trabaja en UTC. Un solo reloj, y en los tests se sustituye. */
+    /** The whole project works in UTC. One single clock, replaced in tests. */
     @Bean
     Clock clock() {
         return Clock.systemUTC();
@@ -79,10 +79,10 @@ public class DomainBeans {
         return new GetProfile(profiles);
     }
 
-    /** La zona de la comunidad. Con ella se calculan las 4:00, las 14:00 y las 22:00. */
+    /** The community's time zone. The 4:00, 14:00 and 22:00 are computed in it. */
     @Bean
-    RoundSchedule roundSchedule(@Value("${olimpus.zona:Europe/Madrid}") String zona) {
-        return RoundSchedule.of(ZoneId.of(zona));
+    RoundSchedule roundSchedule(@Value("${olimpus.zone:Europe/Madrid}") String zone) {
+        return RoundSchedule.of(ZoneId.of(zone));
     }
 
     @Bean

@@ -4,8 +4,8 @@ import com.sergisalas.olimpus.health.domain.DatabaseInfo;
 import com.sergisalas.olimpus.health.domain.Health;
 
 /**
- * Caso de uso: comprobar que la aplicacion y su base de datos se hablan.
- * Sin anotaciones: se construye a mano en {@code config.DomainBeans}.
+ * Use case: check that the application and its database can talk to each other.
+ * No annotations: it is built by hand in {@code config.DomainBeans}.
  */
 public class CheckHealth {
 

@@ -6,8 +6,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marca un parametro que debe rellenarse con la cuenta de quien llama.
- * Si no hay sesion valida, la peticion se corta con un 401.
+ * Marks a parameter that must be filled with the caller's account.
+ * Without a valid session, the request is cut short with a 401.
  */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)

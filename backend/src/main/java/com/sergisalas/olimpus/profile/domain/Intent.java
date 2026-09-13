@@ -1,9 +1,9 @@
 package com.sergisalas.olimpus.profile.domain;
 
-/** Que busca cada uno. Es una preferencia que cede con la espera, no un filtro duro. */
+/** What each person is looking for. A preference that gives way with waiting, not a hard filter. */
 public enum Intent {
-    AMISTAD,
-    CITAS,
-    PAREJA,
+    FRIENDSHIP,
+    DATING,
+    RELATIONSHIP,
     CASUAL
 }

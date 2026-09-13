@@ -32,8 +32,8 @@ public class AuthController {
             String token, Instant expiresAt, UUID accountId, String email, boolean isNewAccount) {}
 
     /**
-     * Responde 204 siempre, exista o no la cuenta: asi la app no sirve para
-     * averiguar quien esta registrado.
+     * Always answers 204, whether the account exists or not: that way the app
+     * cannot be used to find out who is registered.
      */
     @PostMapping("/code")
     @ResponseStatus(HttpStatus.NO_CONTENT)

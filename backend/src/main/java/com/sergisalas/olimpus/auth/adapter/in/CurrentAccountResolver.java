@@ -11,8 +11,8 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 /**
- * Traduce la cabecera {@code Authorization: Bearer <llave>} en una cuenta.
- * Es el unico sitio que sabe como viaja la sesion por HTTP.
+ * Turns the {@code Authorization: Bearer <token>} header into an account.
+ * It is the only place that knows how the session travels over HTTP.
  */
 @Component
 public class CurrentAccountResolver implements HandlerMethodArgumentResolver {
@@ -42,8 +42,6 @@ public class CurrentAccountResolver implements HandlerMethodArgumentResolver {
         String header = request == null ? null : request.getHeader("Authorization");
         String token = header != null && header.startsWith(PREFIX) ? header.substring(PREFIX.length()) : null;
 
-        return authenticateSession
-                .execute(token)
-                .orElseThrow(() -> new NotAuthenticatedException("hace falta iniciar sesion"));
+        return authenticateSession.execute(token).orElseThrow(NotAuthenticatedException::new);
     }
 }

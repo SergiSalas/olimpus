@@ -19,65 +19,66 @@ import org.junit.jupiter.api.Test;
 
 class SaveProfileTest {
 
-    /** 12 de septiembre de 2026, el mismo dia que usa TestProfiles. */
-    private final Clock reloj = Clock.fixed(Instant.parse("2026-09-12T08:00:00Z"), ZoneOffset.UTC);
+    /** 12 September 2026, the same day TestProfiles uses. */
+    private final Clock clock = Clock.fixed(Instant.parse("2026-09-12T08:00:00Z"), ZoneOffset.UTC);
 
-    private Map<UUID, Profile> guardados;
-    private SaveProfile guardarPerfil;
-    private GetProfile leerPerfil;
+    private Map<UUID, Profile> stored;
+    private SaveProfile saveProfile;
+    private GetProfile getProfile;
 
     @BeforeEach
     void setUp() {
-        guardados = new HashMap<>();
+        stored = new HashMap<>();
         ProfileRepository repo =
                 new ProfileRepository() {
                     @Override
                     public Optional<Profile> findByAccountId(UUID accountId) {
-                        return Optional.ofNullable(guardados.get(accountId));
+                        return Optional.ofNullable(stored.get(accountId));
                     }
 
                     @Override
                     public void save(Profile profile) {
-                        guardados.put(profile.accountId(), profile);
+                        stored.put(profile.accountId(), profile);
                     }
                 };
-        guardarPerfil = new SaveProfile(repo, reloj);
-        leerPerfil = new GetProfile(repo);
+        saveProfile = new SaveProfile(repo, clock);
+        getProfile = new GetProfile(repo);
     }
 
     @Test
-    void guarda_el_registro_y_se_puede_volver_a_leer() {
-        guardarPerfil.execute(TestProfiles.valido().build());
+    void saves_the_sign_up_and_it_can_be_read_back() {
+        saveProfile.execute(TestProfiles.valid().build());
 
-        assertThat(leerPerfil.execute(TestProfiles.CUENTA))
+        assertThat(getProfile.execute(TestProfiles.ACCOUNT))
                 .get()
                 .extracting(Profile::nickname)
                 .isEqualTo("Sergi");
     }
 
     @Test
-    void volver_a_guardar_sustituye_el_anterior() {
-        guardarPerfil.execute(TestProfiles.valido().build());
-        guardarPerfil.execute(TestProfiles.valido().nickname("Sergio").build());
+    void saving_again_replaces_the_previous_one() {
+        saveProfile.execute(TestProfiles.valid().build());
+        saveProfile.execute(TestProfiles.valid().nickname("Sergio").build());
 
-        assertThat(guardados).hasSize(1);
-        assertThat(leerPerfil.execute(TestProfiles.CUENTA).orElseThrow().nickname())
+        assertThat(stored).hasSize(1);
+        assertThat(getProfile.execute(TestProfiles.ACCOUNT).orElseThrow().nickname())
                 .isEqualTo("Sergio");
     }
 
     @Test
-    void un_menor_de_edad_no_entra_aunque_el_movil_diga_otra_cosa() {
-        Profile menor = TestProfiles.valido().birthDate(TestProfiles.HOY.minusYears(17)).build();
+    void a_minor_does_not_get_in_whatever_the_phone_says() {
+        Profile minor = TestProfiles.valid().birthDate(TestProfiles.TODAY.minusYears(17)).build();
 
-        assertThatThrownBy(() -> guardarPerfil.execute(menor))
-                .isInstanceOf(UnderageException.class)
-                .hasMessageContaining("mayores de 18");
+        assertThatThrownBy(() -> saveProfile.execute(minor))
+                .isInstanceOfSatisfying(
+                        UnderageException.class,
+                        e -> assertThat(e.messageKey()).isEqualTo("error.profile.underage"));
 
-        assertThat(guardados).isEmpty();
+        assertThat(stored).isEmpty();
     }
 
     @Test
-    void quien_no_ha_hecho_el_registro_no_tiene_perfil() {
-        assertThat(leerPerfil.execute(UUID.randomUUID())).isEmpty();
+    void someone_who_has_not_signed_up_has_no_profile() {
+        assertThat(getProfile.execute(UUID.randomUUID())).isEmpty();
     }
 }

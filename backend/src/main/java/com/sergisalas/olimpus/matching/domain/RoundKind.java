@@ -1,13 +1,13 @@
 package com.sergisalas.olimpus.matching.domain;
 
-/** Las dos rondas del dia. */
+/** The two rounds of the day. */
 public enum RoundKind {
-    /** La de las 4:00: reparte a todo el mundo. */
-    PRINCIPAL,
+    /** The 4:00 one: matches everyone. */
+    MAIN,
     /**
-     * La de las 14:00: solo para quien se quedo sin pareja o cuya conversacion
-     * sigue en silencio a mediodia. Evita que quien probo la app un dia se vaya
-     * con la sensacion de que no pasa nada.
+     * The 14:00 one: only for whoever was left without a pair or whose
+     * conversation is still silent at midday. It keeps someone who tried the app
+     * for a day from leaving with the feeling that nothing happens.
      */
-    REPESCA
+    SECOND_CHANCE
 }

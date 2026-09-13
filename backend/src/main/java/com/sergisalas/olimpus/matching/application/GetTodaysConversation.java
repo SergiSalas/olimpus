@@ -13,11 +13,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Caso de uso: ¿con quien hablo hoy?
+ * Use case: who am I talking to today?
  *
- * <p>Devuelve solo lo que el nivel de desbloqueo permite ver. Si todavia no hay
- * conversacion, dice a que hora llega la siguiente, que es justo lo que evita
- * que la espera se viva como que la app no funciona.
+ * <p>It only returns what the unlock level allows to be seen. If there is no
+ * conversation yet, it says when the next one arrives, which is exactly what
+ * keeps the wait from feeling like the app is broken.
  */
 public class GetTodaysConversation {
 
@@ -51,21 +51,21 @@ public class GetTodaysConversation {
     public Today execute(UUID accountId) {
         LocalDate today = schedule.dateOf(clock.instant());
 
-        Optional<Conversation> abierta = conversations.openFor(accountId, today);
-        if (abierta.isEmpty()) {
+        Optional<Conversation> open = conversations.openFor(accountId, today);
+        if (open.isEmpty()) {
             return Today.nothing(today);
         }
 
-        Conversation conversation = abierta.get();
-        Optional<Profile> yo = profiles.byAccountId(accountId);
-        Optional<Profile> otro = profiles.byAccountId(conversation.partnerOf(accountId));
-        if (yo.isEmpty() || otro.isEmpty()) {
+        Conversation conversation = open.get();
+        Optional<Profile> me = profiles.byAccountId(accountId);
+        Optional<Profile> partner = profiles.byAccountId(conversation.partnerOf(accountId));
+        if (me.isEmpty() || partner.isEmpty()) {
             return Today.nothing(today);
         }
 
-        List<String> comunes = PartnerView.sharedInterests(yo.get(), otro.get());
-        PartnerView vista = PartnerView.levelZero(otro.get(), yo.get(), today, comunes);
+        List<String> shared = PartnerView.sharedInterests(me.get(), partner.get());
+        PartnerView view = PartnerView.levelZero(partner.get(), me.get(), today, shared);
 
-        return new Today(Optional.of(conversation), Optional.of(vista), comunes, today);
+        return new Today(Optional.of(conversation), Optional.of(view), shared, today);
     }
 }

@@ -1,8 +1,8 @@
--- La ronda diaria: una conversacion nueva al dia por persona.
+-- The daily round: one new conversation a day per person.
 --
--- Se guarda de donde salio cada pareja (origin) y cuanto prometia (score).
--- Esos dos campos son los que permitiran comprobar, con datos de la beta, si
--- las parejas que elige el algoritmo funcionan mejor que las del azar.
+-- Each pair stores where it came from (origin) and how promising it looked
+-- (score). Those two fields are what will let us check, with beta data, whether
+-- the pairs the algorithm picks do better than random ones.
 
 create table conversation (
     id              uuid        primary key,
@@ -19,15 +19,15 @@ create table conversation (
     messages_from_b int         not null default 0,
     created_at      timestamptz not null default now(),
 
-    constraint conversation_distintos check (account_a <> account_b)
+    constraint conversation_distinct_accounts check (account_a <> account_b)
 );
 
 create index conversation_a_idx on conversation (account_a, round_date);
 create index conversation_b_idx on conversation (account_b, round_date);
 create index conversation_date_idx on conversation (round_date);
 
--- Bloqueos y reportes. Existe desde ya, aunque la pantalla para usarlo llegue
--- despues, porque el filtro duro del reparto lo consulta en cada ronda.
+-- Blocks and reports. It exists already, even though the screen to use it
+-- comes later, because the hard filter of every round reads it.
 create table block (
     blocker    uuid        not null references account (id) on delete cascade,
     blocked    uuid        not null references account (id) on delete cascade,
@@ -35,5 +35,5 @@ create table block (
     created_at timestamptz not null default now(),
 
     primary key (blocker, blocked),
-    constraint block_distintos check (blocker <> blocked)
+    constraint block_distinct_accounts check (blocker <> blocked)
 );

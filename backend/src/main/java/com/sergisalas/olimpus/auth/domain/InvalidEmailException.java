@@ -1,8 +1,10 @@
 package com.sergisalas.olimpus.auth.domain;
 
-public class InvalidEmailException extends RuntimeException {
+import com.sergisalas.olimpus.shared.domain.RuleViolationException;
 
-    public InvalidEmailException(String message) {
-        super(message);
+public class InvalidEmailException extends RuleViolationException {
+
+    public InvalidEmailException(String messageKey) {
+        super(messageKey);
     }
 }

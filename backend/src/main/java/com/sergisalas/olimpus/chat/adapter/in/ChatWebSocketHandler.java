@@ -3,6 +3,8 @@ package com.sergisalas.olimpus.chat.adapter.in;
 import com.sergisalas.olimpus.auth.application.AuthenticateSession;
 import com.sergisalas.olimpus.auth.domain.Account;
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
@@ -11,16 +13,16 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 /**
- * La conexion permanente del chat. Es de <b>solo recibir</b>: los mensajes se
- * envian por HTTP, que ya tiene resueltos los errores y los reintentos, y por
- * aqui solo bajan los del otro.
+ * The chat's long-lived connection. It is <b>receive only</b>: messages are sent
+ * over HTTP, which already handles errors and retries, and only the other
+ * person's messages come down here.
  *
- * <p>Asi hay un unico sitio donde se comprueban las reglas de escribir.
+ * <p>That way there is a single place where the rules for writing are checked.
  */
 @Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
 
-    private static final String CUENTA = "cuenta";
+    private static final String ACCOUNT = "account";
 
     private final AuthenticateSession authenticateSession;
     private final ChatBroadcaster broadcaster;
@@ -33,39 +35,37 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        Optional<Account> cuenta = autenticar(session);
-        if (cuenta.isEmpty()) {
-            session.close(CloseStatus.POLICY_VIOLATION.withReason("sesion no valida"));
+        Optional<Account> account = authenticate(session);
+        if (account.isEmpty()) {
+            session.close(CloseStatus.POLICY_VIOLATION.withReason("invalid session"));
             return;
         }
-        UUID accountId = cuenta.get().id();
-        session.getAttributes().put(CUENTA, accountId);
+        UUID accountId = account.get().id();
+        session.getAttributes().put(ACCOUNT, accountId);
         broadcaster.register(accountId, session);
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        Object accountId = session.getAttributes().get(CUENTA);
+        Object accountId = session.getAttributes().get(ACCOUNT);
         if (accountId instanceof UUID id) {
             broadcaster.unregister(id, session);
         }
     }
 
     /**
-     * La llave viaja en la direccion porque los WebSocket del movil no permiten
-     * poner cabeceras. Al ir todo por TLS en produccion, no queda escrita en
-     * ningun sitio salvo en los logs del propio servidor.
+     * The token travels in the URL because WebSockets on the phone cannot set
+     * headers. Since everything goes over TLS in production, it is not written
+     * anywhere except in the server's own logs.
      */
-    private Optional<Account> autenticar(WebSocketSession session) {
+    private Optional<Account> authenticate(WebSocketSession session) {
         URI uri = session.getUri();
         if (uri == null || uri.getQuery() == null) return Optional.empty();
 
-        for (String parte : uri.getQuery().split("&")) {
-            if (parte.startsWith("token=")) {
+        for (String part : uri.getQuery().split("&")) {
+            if (part.startsWith("token=")) {
                 return authenticateSession.execute(
-                        java.net.URLDecoder.decode(
-                                parte.substring("token=".length()),
-                                java.nio.charset.StandardCharsets.UTF_8));
+                        URLDecoder.decode(part.substring("token=".length()), StandardCharsets.UTF_8));
             }
         }
         return Optional.empty();

@@ -5,12 +5,12 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * La conversacion de un dia entre dos personas.
+ * One day's conversation between two people.
  *
- * <p>Tiene hora de cierre fija, la misma para todo el mundo, y lleva la cuenta
- * de cuantos mensajes ha escrito cada lado. Esa cuenta es la que decide dos
- * cosas: si a mediodia esto esta en silencio (y se cancela) y, mas adelante, si
- * la conversacion se ha ganado el siguiente nivel de desbloqueo.
+ * <p>It has a fixed closing time, the same for everyone, and keeps count of how
+ * many messages each side has written. That count decides two things: whether
+ * it is still silent at midday (and gets cancelled) and, later on, whether the
+ * conversation has earned the next unlock level.
  */
 public record Conversation(
         UUID id,
@@ -25,25 +25,28 @@ public record Conversation(
         ConversationState state,
         int messagesFromA,
         int messagesFromB,
-        /** La pregunta con la que arranca, sacada de un interes que comparten. */
-        String icebreaker) {
+        /**
+         * The shared interest the opening question is about, or null when they
+         * share none. Only the interest is kept: the wording depends on the reader.
+         */
+        String icebreakerInterest) {
 
     public Conversation {
-        if (id == null) throw new IllegalArgumentException("falta el id");
+        if (id == null) throw new IllegalArgumentException("id is missing");
         if (accountA == null || accountB == null) {
-            throw new IllegalArgumentException("faltan las dos personas");
+            throw new IllegalArgumentException("both people are required");
         }
         if (accountA.equals(accountB)) {
-            throw new IllegalArgumentException("nadie habla consigo mismo");
+            throw new IllegalArgumentException("nobody talks to themselves");
         }
         if (opensAt == null || closesAt == null) {
-            throw new IllegalArgumentException("faltan las horas de la conversacion");
+            throw new IllegalArgumentException("conversation times are missing");
         }
         if (!closesAt.isAfter(opensAt)) {
-            throw new IllegalArgumentException("la conversacion cerraria antes de abrirse");
+            throw new IllegalArgumentException("the conversation would close before opening");
         }
         if (messagesFromA < 0 || messagesFromB < 0) {
-            throw new IllegalArgumentException("los mensajes no pueden ser negativos");
+            throw new IllegalArgumentException("message counts cannot be negative");
         }
     }
 
@@ -53,7 +56,7 @@ public record Conversation(
             RoundKind kind,
             Instant opensAt,
             Instant closesAt,
-            String icebreaker) {
+            String icebreakerInterest) {
         return new Conversation(
                 UUID.randomUUID(),
                 roundDate,
@@ -64,10 +67,10 @@ public record Conversation(
                 match.score(),
                 opensAt,
                 closesAt,
-                ConversationState.ABIERTA,
+                ConversationState.OPEN,
                 0,
                 0,
-                icebreaker);
+                icebreakerInterest);
     }
 
     public boolean involves(UUID accountId) {
@@ -77,51 +80,51 @@ public record Conversation(
     public UUID partnerOf(UUID accountId) {
         if (accountA.equals(accountId)) return accountB;
         if (accountB.equals(accountId)) return accountA;
-        throw new IllegalArgumentException("esa cuenta no esta en esta conversacion");
+        throw new IllegalArgumentException("that account is not in this conversation");
     }
 
-    /** Nadie ha dicho nada todavia: ni uno ni el otro. */
+    /** Nobody has said anything yet: neither one nor the other. */
     public boolean isSilent() {
         return messagesFromA == 0 && messagesFromB == 0;
     }
 
-    /** Han escrito los dos: es lo minimo para que empiece a contar. */
+    /** Both have written: the minimum for it to start counting. */
     public boolean bothHaveWritten() {
         return messagesFromA > 0 && messagesFromB > 0;
     }
 
     public boolean isOpen() {
-        return state == ConversationState.ABIERTA;
+        return state == ConversationState.OPEN;
     }
 
-    /** Se puede escribir mientras este abierta y no hayan dado las 22:00. */
+    /** Messages are accepted while it is open and 22:00 has not arrived. */
     public boolean acceptsMessagesAt(Instant now) {
         return isOpen() && now.isBefore(closesAt);
     }
 
     /**
-     * Suma uno a la cuenta del lado que escribe. Esa cuenta es la que decide si
-     * la conversacion arranco (los dos han escrito) y, mas adelante, si se ha
-     * ganado el siguiente nivel de desbloqueo.
+     * Adds one to the count of the side that writes. That count decides whether
+     * the conversation took off (both have written) and, later on, whether it
+     * has earned the next unlock level.
      */
     public Conversation withMessageFrom(UUID sender) {
         if (!involves(sender)) {
-            throw new IllegalArgumentException("esa cuenta no esta en esta conversacion");
+            throw new IllegalArgumentException("that account is not in this conversation");
         }
-        boolean esA = accountA.equals(sender);
-        return conEstadoYMensajes(
-                state, messagesFromA + (esA ? 1 : 0), messagesFromB + (esA ? 0 : 1));
+        boolean isA = accountA.equals(sender);
+        return withStateAndCounts(
+                state, messagesFromA + (isA ? 1 : 0), messagesFromB + (isA ? 0 : 1));
     }
 
     public Conversation cancelled() {
-        return conEstadoYMensajes(ConversationState.CANCELADA, messagesFromA, messagesFromB);
+        return withStateAndCounts(ConversationState.CANCELLED, messagesFromA, messagesFromB);
     }
 
     public Conversation closed() {
-        return conEstadoYMensajes(ConversationState.CERRADA, messagesFromA, messagesFromB);
+        return withStateAndCounts(ConversationState.CLOSED, messagesFromA, messagesFromB);
     }
 
-    private Conversation conEstadoYMensajes(ConversationState nuevo, int deA, int deB) {
+    private Conversation withStateAndCounts(ConversationState newState, int fromA, int fromB) {
         return new Conversation(
                 id,
                 roundDate,
@@ -132,9 +135,9 @@ public record Conversation(
                 score,
                 opensAt,
                 closesAt,
-                nuevo,
-                deA,
-                deB,
-                icebreaker);
+                newState,
+                fromA,
+                fromB,
+                icebreakerInterest);
     }
 }

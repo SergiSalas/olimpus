@@ -11,6 +11,7 @@ import com.sergisalas.olimpus.profile.domain.LanguageSkill;
 import com.sergisalas.olimpus.profile.domain.Location;
 import com.sergisalas.olimpus.profile.domain.Profile;
 import com.sergisalas.olimpus.profile.domain.ProfileNotFoundException;
+import com.sergisalas.olimpus.shared.adapter.Messages;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -26,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class ProfileController {
 
-    /** Lo que manda el movil al terminar el registro. */
+    /** What the phone sends when the sign-up is finished. */
     public record ProfileRequest(
             String nickname,
             String bio,
@@ -64,23 +65,26 @@ public class ProfileController {
             Intent intent,
             Set<String> interests) {}
 
-    /** Un interes con su nombre ya presentable, para pintarlo en la app. */
+    /** An interest with its label in the user's language, ready to show in the app. */
     public record InterestResponse(String name, String label) {}
 
     private final SaveProfile saveProfile;
     private final GetProfile getProfile;
+    private final Messages messages;
     private final Clock clock;
 
-    public ProfileController(SaveProfile saveProfile, GetProfile getProfile, Clock clock) {
+    public ProfileController(
+            SaveProfile saveProfile, GetProfile getProfile, Messages messages, Clock clock) {
         this.saveProfile = saveProfile;
         this.getProfile = getProfile;
+        this.messages = messages;
         this.clock = clock;
     }
 
     @GetMapping("/interests")
     public List<InterestResponse> interests() {
         return InterestCatalog.ENTRIES.stream()
-                .map(entry -> new InterestResponse(entry.name(), label(entry.name())))
+                .map(entry -> new InterestResponse(entry.name(), messages.interestLabel(entry.name())))
                 .toList();
     }
 
@@ -105,8 +109,8 @@ public class ProfileController {
                         body.ageMin(),
                         body.ageMax(),
                         body.maxDistanceKm(),
-                        // Siempre redondeada: el backend no guarda el punto exacto ni
-                        // aunque el movil lo mande.
+                        // Always rounded: the backend does not store the exact point
+                        // even if the phone sends it.
                         Location.rounded(body.latitude(), body.longitude()),
                         body.languages() == null
                                 ? List.of()
@@ -141,11 +145,5 @@ public class ProfileController {
                 profile.conversationDepth(),
                 profile.intent(),
                 profile.interests());
-    }
-
-    /** "escalada-en-hielo" -> "Escalada en hielo". */
-    private static String label(String name) {
-        String conEspacios = name.replace('-', ' ');
-        return Character.toUpperCase(conEspacios.charAt(0)) + conEspacios.substring(1);
     }
 }

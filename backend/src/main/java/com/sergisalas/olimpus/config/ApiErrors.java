@@ -1,69 +1,82 @@
 package com.sergisalas.olimpus.config;
 
 import com.sergisalas.olimpus.auth.adapter.in.NotAuthenticatedException;
-import com.sergisalas.olimpus.auth.domain.InvalidEmailException;
 import com.sergisalas.olimpus.auth.domain.InvalidLoginCodeException;
 import com.sergisalas.olimpus.chat.domain.ChatClosedException;
 import com.sergisalas.olimpus.chat.domain.NotYourConversationException;
 import com.sergisalas.olimpus.profile.domain.ProfileNotFoundException;
 import com.sergisalas.olimpus.profile.domain.UnderageException;
+import com.sergisalas.olimpus.shared.adapter.Messages;
+import com.sergisalas.olimpus.shared.domain.UserFacingError;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
- * Traduce los errores del dominio a respuestas HTTP con un mensaje en claro
- * que el movil puede ensenar tal cual.
+ * Turns domain errors into HTTP responses with a plain message, in the user's
+ * language, that the phone can show as it is.
  */
 @RestControllerAdvice
 public class ApiErrors {
 
     public record ApiError(String error) {}
 
-    @ExceptionHandler(InvalidEmailException.class)
-    public ResponseEntity<ApiError> email(InvalidEmailException e) {
-        return ResponseEntity.badRequest().body(new ApiError(e.getMessage()));
+    private final Messages messages;
+
+    public ApiErrors(Messages messages) {
+        this.messages = messages;
     }
 
     /**
-     * Siempre el mismo mensaje, sin decir si el codigo no existia, si caduco o
-     * si simplemente no coincide: dar detalles ayudaria a quien prueba codigos.
+     * Always the same message, without saying whether the code did not exist,
+     * expired or simply did not match: details would help whoever is guessing.
      */
     @ExceptionHandler(InvalidLoginCodeException.class)
     public ResponseEntity<ApiError> code(InvalidLoginCodeException e) {
-        return ResponseEntity.badRequest()
-                .body(new ApiError("El código no es válido o ha caducado. Pide uno nuevo."));
+        return respond(HttpStatus.BAD_REQUEST, e);
     }
 
     @ExceptionHandler(NotAuthenticatedException.class)
     public ResponseEntity<ApiError> auth(NotAuthenticatedException e) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiError(e.getMessage()));
+        return respond(HttpStatus.UNAUTHORIZED, e);
     }
 
-    /** Se responde 404 y no 403: no se confirma siquiera que esa conversacion exista. */
+    /** 404 and not 403: it does not even confirm that the conversation exists. */
     @ExceptionHandler(NotYourConversationException.class)
     public ResponseEntity<ApiError> notYours(NotYourConversationException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError(e.getMessage()));
+        return respond(HttpStatus.NOT_FOUND, e);
     }
 
     @ExceptionHandler(ChatClosedException.class)
     public ResponseEntity<ApiError> closed(ChatClosedException e) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(e.getMessage()));
+        return respond(HttpStatus.CONFLICT, e);
     }
 
     @ExceptionHandler(ProfileNotFoundException.class)
     public ResponseEntity<ApiError> noProfile(ProfileNotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError(e.getMessage()));
+        return respond(HttpStatus.NOT_FOUND, e);
     }
 
     @ExceptionHandler(UnderageException.class)
     public ResponseEntity<ApiError> underage(UnderageException e) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiError(e.getMessage()));
+        return respond(HttpStatus.FORBIDDEN, e);
     }
 
+    /**
+     * Broken rules the person can fix get their own message. Anything else is a
+     * bug-level invariant whose details are no use to the user.
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> illegal(IllegalArgumentException e) {
-        return ResponseEntity.badRequest().body(new ApiError(e.getMessage()));
+        String text =
+                e instanceof UserFacingError error
+                        ? messages.of(error)
+                        : messages.get("error.invalid-request");
+        return ResponseEntity.badRequest().body(new ApiError(text));
+    }
+
+    private ResponseEntity<ApiError> respond(HttpStatus status, UserFacingError error) {
+        return ResponseEntity.status(status).body(new ApiError(messages.of(error)));
     }
 }

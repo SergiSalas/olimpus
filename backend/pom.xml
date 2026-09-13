@@ -15,7 +15,7 @@
     <artifactId>olimpus-backend</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <name>olimpus-backend</name>
-    <description>Project Olimpus: backend de "Hablar primero, ver despues"</description>
+    <description>Project Olimpus: backend for "Talk first, see later"</description>
 
     <properties>
         <java.version>21</java.version>
@@ -31,7 +31,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
-        <!-- El chat: los mensajes bajan al movil por conexion permanente. -->
+        <!-- Chat: messages reach the phone over a long-lived connection. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
