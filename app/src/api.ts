@@ -153,3 +153,55 @@ export type Today = {
 };
 
 export const fetchToday = (token: string) => request<Today>('/api/today', {}, token);
+
+// ---------- el chat ----------
+
+export type ChatMessage = {
+  id: string;
+  /** true si lo escribiste tú: el móvil no necesita comparar identificadores. */
+  mine: boolean;
+  text: string;
+  sentAt: string;
+};
+
+export type Chat = {
+  conversationId: string;
+  state: 'ABIERTA' | 'CANCELADA' | 'CERRADA';
+  closesAt: string;
+  /** La pregunta con la que arranca, sacada de un interés que compartís. */
+  icebreaker: string;
+  partner: Partner;
+  sharedInterests: string[];
+  bothHaveWritten: boolean;
+  messages: ChatMessage[];
+};
+
+export const fetchChat = (token: string, conversationId: string) =>
+  request<Chat>(`/api/conversations/${conversationId}`, {}, token);
+
+export const sendMessage = (token: string, conversationId: string, text: string) =>
+  request<ChatMessage>(
+    `/api/conversations/${conversationId}/messages`,
+    { method: 'POST', body: JSON.stringify({ text }) },
+    token,
+  );
+
+/**
+ * Conexión permanente para recibir lo que escribe el otro al instante.
+ * Solo baja mensajes: enviar se hace por HTTP, donde ya están las reglas.
+ */
+export function openChatSocket(token: string, onMessage: (m: ChatMessage & { conversationId: string }) => void) {
+  const url = `${backendUrl().replace(/^http/, 'ws')}/ws/chat?token=${encodeURIComponent(token)}`;
+  const socket = new WebSocket(url);
+
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(String(event.data));
+      if (data.type === 'message') onMessage(data);
+    } catch {
+      // Un mensaje que no se entiende no puede tumbar el chat.
+    }
+  };
+
+  return socket;
+}

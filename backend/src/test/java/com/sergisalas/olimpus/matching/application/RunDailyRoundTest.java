@@ -84,19 +84,9 @@ class RunDailyRoundTest {
         // Una de ellas arranca: escriben los dos.
         Conversation hablando = principal.created().get(0);
         mundo.conversations.save(
-                new Conversation(
-                        hablando.id(),
-                        hablando.roundDate(),
-                        hablando.roundKind(),
-                        hablando.accountA(),
-                        hablando.accountB(),
-                        hablando.origin(),
-                        hablando.score(),
-                        hablando.opensAt(),
-                        hablando.closesAt(),
-                        ConversationState.ABIERTA,
-                        3,
-                        2));
+                hablando
+                        .withMessageFrom(hablando.accountA())
+                        .withMessageFrom(hablando.accountB()));
 
         var repesca = ronda.execute(HOY, RoundKind.REPESCA);
 
@@ -111,19 +101,9 @@ class RunDailyRoundTest {
 
         Conversation hablando = principal.created().get(0);
         mundo.conversations.save(
-                new Conversation(
-                        hablando.id(),
-                        hablando.roundDate(),
-                        hablando.roundKind(),
-                        hablando.accountA(),
-                        hablando.accountB(),
-                        hablando.origin(),
-                        hablando.score(),
-                        hablando.opensAt(),
-                        hablando.closesAt(),
-                        ConversationState.ABIERTA,
-                        1,
-                        1));
+                hablando
+                        .withMessageFrom(hablando.accountA())
+                        .withMessageFrom(hablando.accountB()));
 
         var repesca = ronda.execute(HOY, RoundKind.REPESCA);
 

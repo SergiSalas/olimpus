@@ -22,7 +22,7 @@ public class JdbcConversationRepository implements ConversationRepository {
     private static final String COLUMNAS =
             """
             id, round_date, round_kind, account_a, account_b, origin, score,
-            opens_at, closes_at, state, messages_from_a, messages_from_b
+            opens_at, closes_at, state, messages_from_a, messages_from_b, icebreaker
             """;
 
     private static final RowMapper<Conversation> MAPPER = JdbcConversationRepository::toConversation;
@@ -39,8 +39,8 @@ public class JdbcConversationRepository implements ConversationRepository {
                 """
                 insert into conversation (
                     id, round_date, round_kind, account_a, account_b, origin, score,
-                    opens_at, closes_at, state, messages_from_a, messages_from_b)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    opens_at, closes_at, state, messages_from_a, messages_from_b, icebreaker)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict (id) do update set
                     state = excluded.state,
                     messages_from_a = excluded.messages_from_a,
@@ -57,7 +57,8 @@ public class JdbcConversationRepository implements ConversationRepository {
                 Timestamp.from(c.closesAt()),
                 c.state().name(),
                 c.messagesFromA(),
-                c.messagesFromB());
+                c.messagesFromB(),
+                c.icebreaker());
     }
 
     @Override
@@ -109,6 +110,7 @@ public class JdbcConversationRepository implements ConversationRepository {
                 rs.getTimestamp("closes_at").toInstant(),
                 ConversationState.valueOf(rs.getString("state")),
                 rs.getInt("messages_from_a"),
-                rs.getInt("messages_from_b"));
+                rs.getInt("messages_from_b"),
+                rs.getString("icebreaker"));
     }
 }

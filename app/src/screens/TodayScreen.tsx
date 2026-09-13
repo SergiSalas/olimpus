@@ -21,11 +21,13 @@ import { colors } from '../theme';
 export function TodayScreen({
   token,
   perfil,
+  onAbrirChat,
   onPerfil,
   onSalir,
 }: {
   token: string;
   perfil: Profile;
+  onAbrirChat: (conversationId: string) => void;
   onPerfil: () => void;
   onSalir: () => void;
 }) {
@@ -92,11 +94,11 @@ export function TodayScreen({
             A las 21:30 os preguntaremos a cada uno, en privado, si queréis seguir.
           </Text>
 
-          <View style={estilos.pendiente}>
-            <Text style={estilos.pendienteTexto}>
-              El chat llega en el paso 5. Por ahora esto es solo el reparto.
-            </Text>
-          </View>
+          <Pressable
+            style={estilos.botonPrincipal}
+            onPress={() => today.conversationId && onAbrirChat(today.conversationId)}>
+            <Text style={estilos.botonPrincipalTexto}>Abrir la conversación</Text>
+          </Pressable>
         </View>
       )}
 
@@ -170,13 +172,14 @@ const estilos = StyleSheet.create({
   chipTexto: { fontSize: 13, color: colors.ink2 },
   separador: { height: 1, backgroundColor: colors.line, marginVertical: 4 },
   cierre: { fontSize: 15, color: colors.ink, fontWeight: '600' },
-  pendiente: {
-    backgroundColor: colors.bg,
+  botonPrincipal: {
+    backgroundColor: colors.accent,
     borderRadius: 8,
-    padding: 12,
-    marginTop: 4,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 6,
   },
-  pendienteTexto: { fontSize: 12, color: colors.ink3 },
+  botonPrincipalTexto: { color: colors.surface, fontWeight: '600', fontSize: 16 },
   error: { fontSize: 14, color: colors.error, textAlign: 'center' },
   botonSecundario: {
     borderWidth: 1,

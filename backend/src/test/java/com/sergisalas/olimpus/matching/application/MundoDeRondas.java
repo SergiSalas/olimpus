@@ -19,15 +19,15 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /** Mundo de juguete para probar las rondas sin base de datos. */
-class MundoDeRondas {
+public class MundoDeRondas {
 
-    final List<Profile> gente = new ArrayList<>();
-    final Map<UUID, Conversation> guardadas = new LinkedHashMap<>();
-    final RoundSchedule schedule = RoundSchedule.of(java.time.ZoneId.of("Europe/Madrid"));
+    public final List<Profile> gente = new ArrayList<>();
+    public final Map<UUID, Conversation> guardadas = new LinkedHashMap<>();
+    public final RoundSchedule schedule = RoundSchedule.of(java.time.ZoneId.of("Europe/Madrid"));
 
-    Instant ahora = Instant.parse("2026-09-12T06:00:00Z");
+    public Instant ahora = Instant.parse("2026-09-12T06:00:00Z");
 
-    final Clock clock =
+    public final Clock clock =
             new Clock() {
                 @Override
                 public java.time.ZoneId getZone() {
@@ -45,7 +45,7 @@ class MundoDeRondas {
                 }
             };
 
-    final ProfileDirectory profiles =
+    public final ProfileDirectory profiles =
             new ProfileDirectory() {
                 @Override
                 public List<Profile> everyoneWithProfile() {
@@ -58,7 +58,7 @@ class MundoDeRondas {
                 }
             };
 
-    final ConversationRepository conversations =
+    public final ConversationRepository conversations =
             new ConversationRepository() {
                 @Override
                 public void save(Conversation conversation) {
@@ -85,17 +85,17 @@ class MundoDeRondas {
                 }
             };
 
-    final MatchContextFactory contexts =
+    public final MatchContextFactory contexts =
             (today, pool) ->
                     MatchContext.on(today)
                             .interestWeights(InterestWeights.fromPopulation(pool))
                             .build();
 
-    RunDailyRound rondaDiaria() {
+    public RunDailyRound rondaDiaria() {
         return new RunDailyRound(profiles, conversations, contexts, schedule);
     }
 
-    GetTodaysConversation conversacionDeHoy() {
+    public GetTodaysConversation conversacionDeHoy() {
         return new GetTodaysConversation(conversations, profiles, schedule, clock);
     }
 }

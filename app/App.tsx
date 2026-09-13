@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { fetchMe, fetchProfile, type Me, type Profile, type StartedSession } from './src/api';
+import { ChatScreen } from './src/screens/ChatScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
@@ -15,6 +16,7 @@ type State =
   /** Con sesión pero sin registro hecho: el único camino es terminarlo. */
   | { kind: 'registro'; token: string; me: Me }
   | { kind: 'hoy'; token: string; me: Me; perfil: Profile }
+  | { kind: 'chat'; token: string; me: Me; perfil: Profile; conversationId: string }
   | { kind: 'miRegistro'; token: string; me: Me; perfil: Profile };
 
 export default function App() {
@@ -82,8 +84,19 @@ export default function App() {
         <TodayScreen
           token={state.token}
           perfil={state.perfil}
+          onAbrirChat={(conversationId) => setState({ ...state, kind: 'chat', conversationId })}
           onPerfil={() => setState({ ...state, kind: 'miRegistro' })}
           onSalir={salir}
+        />
+      )}
+
+      {state.kind === 'chat' && (
+        <ChatScreen
+          token={state.token}
+          conversationId={state.conversationId}
+          onVolver={() =>
+            setState({ kind: 'hoy', token: state.token, me: state.me, perfil: state.perfil })
+          }
         />
       )}
 

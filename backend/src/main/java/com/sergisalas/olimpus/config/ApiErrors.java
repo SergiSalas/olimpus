@@ -3,6 +3,8 @@ package com.sergisalas.olimpus.config;
 import com.sergisalas.olimpus.auth.adapter.in.NotAuthenticatedException;
 import com.sergisalas.olimpus.auth.domain.InvalidEmailException;
 import com.sergisalas.olimpus.auth.domain.InvalidLoginCodeException;
+import com.sergisalas.olimpus.chat.domain.ChatClosedException;
+import com.sergisalas.olimpus.chat.domain.NotYourConversationException;
 import com.sergisalas.olimpus.profile.domain.ProfileNotFoundException;
 import com.sergisalas.olimpus.profile.domain.UnderageException;
 import org.springframework.http.HttpStatus;
@@ -37,6 +39,17 @@ public class ApiErrors {
     @ExceptionHandler(NotAuthenticatedException.class)
     public ResponseEntity<ApiError> auth(NotAuthenticatedException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiError(e.getMessage()));
+    }
+
+    /** Se responde 404 y no 403: no se confirma siquiera que esa conversacion exista. */
+    @ExceptionHandler(NotYourConversationException.class)
+    public ResponseEntity<ApiError> notYours(NotYourConversationException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError(e.getMessage()));
+    }
+
+    @ExceptionHandler(ChatClosedException.class)
+    public ResponseEntity<ApiError> closed(ChatClosedException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(e.getMessage()));
     }
 
     @ExceptionHandler(ProfileNotFoundException.class)

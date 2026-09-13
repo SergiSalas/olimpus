@@ -1,5 +1,6 @@
 package com.sergisalas.olimpus.matching.application;
 
+import com.sergisalas.olimpus.chat.domain.Icebreakers;
 import com.sergisalas.olimpus.matching.domain.Conversation;
 import com.sergisalas.olimpus.matching.domain.ConversationRepository;
 import com.sergisalas.olimpus.matching.domain.DailyRound;
@@ -103,7 +104,14 @@ public class RunDailyRound {
 
         List<Conversation> creadas = new ArrayList<>();
         for (Match match : matches) {
-            Conversation conversation = Conversation.opened(match, date, kind, abre, cierra);
+            // La pregunta inicial se calcula ahora y se guarda: asi los dos ven
+            // exactamente la misma, y no cambia si el perfil cambia despues.
+            String pregunta =
+                    Icebreakers.forPair(
+                            buscar(pool, match.accountA()), buscar(pool, match.accountB()));
+
+            Conversation conversation =
+                    Conversation.opened(match, date, kind, abre, cierra, pregunta);
             conversations.save(conversation);
             creadas.add(conversation);
         }
@@ -115,5 +123,12 @@ public class RunDailyRound {
     /** Misma fecha y mismo tipo de ronda, mismo reparto. */
     private static Random semillaDe(LocalDate date, RoundKind kind) {
         return new Random(date.toEpochDay() * 31 + kind.ordinal());
+    }
+
+    private static Profile buscar(List<Profile> pool, UUID accountId) {
+        return pool.stream()
+                .filter(p -> p.accountId().equals(accountId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("emparejado alguien que no estaba"));
     }
 }

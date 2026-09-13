@@ -70,6 +70,15 @@ public final class InterestCatalog {
         return POR_NOMBRE.containsKey(name);
     }
 
+    /**
+     * Que parte de la gente se espera que marque ese interes. Un interes que no
+     * este en el catalogo se trata como comun, para no premiar por error algo
+     * desconocido.
+     */
+    public static double popularityOf(String name) {
+        return POR_NOMBRE.getOrDefault(name, 1.0);
+    }
+
     public static int size() {
         return ENTRIES.size();
     }

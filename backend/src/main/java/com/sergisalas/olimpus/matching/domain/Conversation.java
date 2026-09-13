@@ -24,7 +24,9 @@ public record Conversation(
         Instant closesAt,
         ConversationState state,
         int messagesFromA,
-        int messagesFromB) {
+        int messagesFromB,
+        /** La pregunta con la que arranca, sacada de un interes que comparten. */
+        String icebreaker) {
 
     public Conversation {
         if (id == null) throw new IllegalArgumentException("falta el id");
@@ -46,7 +48,12 @@ public record Conversation(
     }
 
     public static Conversation opened(
-            Match match, LocalDate roundDate, RoundKind kind, Instant opensAt, Instant closesAt) {
+            Match match,
+            LocalDate roundDate,
+            RoundKind kind,
+            Instant opensAt,
+            Instant closesAt,
+            String icebreaker) {
         return new Conversation(
                 UUID.randomUUID(),
                 roundDate,
@@ -59,7 +66,8 @@ public record Conversation(
                 closesAt,
                 ConversationState.ABIERTA,
                 0,
-                0);
+                0,
+                icebreaker);
     }
 
     public boolean involves(UUID accountId) {
@@ -86,23 +94,34 @@ public record Conversation(
         return state == ConversationState.ABIERTA;
     }
 
+    /** Se puede escribir mientras este abierta y no hayan dado las 22:00. */
+    public boolean acceptsMessagesAt(Instant now) {
+        return isOpen() && now.isBefore(closesAt);
+    }
+
+    /**
+     * Suma uno a la cuenta del lado que escribe. Esa cuenta es la que decide si
+     * la conversacion arranco (los dos han escrito) y, mas adelante, si se ha
+     * ganado el siguiente nivel de desbloqueo.
+     */
+    public Conversation withMessageFrom(UUID sender) {
+        if (!involves(sender)) {
+            throw new IllegalArgumentException("esa cuenta no esta en esta conversacion");
+        }
+        boolean esA = accountA.equals(sender);
+        return conEstadoYMensajes(
+                state, messagesFromA + (esA ? 1 : 0), messagesFromB + (esA ? 0 : 1));
+    }
+
     public Conversation cancelled() {
-        return new Conversation(
-                id,
-                roundDate,
-                roundKind,
-                accountA,
-                accountB,
-                origin,
-                score,
-                opensAt,
-                closesAt,
-                ConversationState.CANCELADA,
-                messagesFromA,
-                messagesFromB);
+        return conEstadoYMensajes(ConversationState.CANCELADA, messagesFromA, messagesFromB);
     }
 
     public Conversation closed() {
+        return conEstadoYMensajes(ConversationState.CERRADA, messagesFromA, messagesFromB);
+    }
+
+    private Conversation conEstadoYMensajes(ConversationState nuevo, int deA, int deB) {
         return new Conversation(
                 id,
                 roundDate,
@@ -113,8 +132,9 @@ public record Conversation(
                 score,
                 opensAt,
                 closesAt,
-                ConversationState.CERRADA,
-                messagesFromA,
-                messagesFromB);
+                nuevo,
+                deA,
+                deB,
+                icebreaker);
     }
 }

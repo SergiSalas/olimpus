@@ -8,6 +8,10 @@ import com.sergisalas.olimpus.auth.domain.CodeSender;
 import com.sergisalas.olimpus.auth.domain.LoginCodeRepository;
 import com.sergisalas.olimpus.auth.domain.Secrets;
 import com.sergisalas.olimpus.auth.domain.SessionRepository;
+import com.sergisalas.olimpus.chat.application.CloseFinishedConversations;
+import com.sergisalas.olimpus.chat.application.GetChat;
+import com.sergisalas.olimpus.chat.application.SendMessage;
+import com.sergisalas.olimpus.chat.domain.MessageRepository;
 import com.sergisalas.olimpus.health.application.CheckHealth;
 import com.sergisalas.olimpus.health.domain.DatabaseInfo;
 import com.sergisalas.olimpus.matching.application.GetTodaysConversation;
@@ -97,6 +101,28 @@ public class DomainBeans {
             RoundSchedule schedule,
             Clock clock) {
         return new GetTodaysConversation(conversations, profiles, schedule, clock);
+    }
+
+    @Bean
+    SendMessage sendMessage(
+            ConversationRepository conversations, MessageRepository messages, Clock clock) {
+        return new SendMessage(conversations, messages, clock);
+    }
+
+    @Bean
+    GetChat getChat(
+            ConversationRepository conversations,
+            MessageRepository messages,
+            ProfileDirectory profiles,
+            RoundSchedule schedule,
+            Clock clock) {
+        return new GetChat(conversations, messages, profiles, schedule, clock);
+    }
+
+    @Bean
+    CloseFinishedConversations closeFinishedConversations(
+            ConversationRepository conversations, RoundSchedule schedule, Clock clock) {
+        return new CloseFinishedConversations(conversations, schedule, clock);
     }
 
     @Bean
