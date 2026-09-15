@@ -35,6 +35,8 @@ import com.sergisalas.olimpus.profile.domain.PhotoModerator;
 import com.sergisalas.olimpus.profile.domain.PhotoRepository;
 import com.sergisalas.olimpus.profile.domain.PhotoStorage;
 import com.sergisalas.olimpus.profile.domain.ProfileRepository;
+import com.sergisalas.olimpus.insights.application.MeasureOutcomes;
+import com.sergisalas.olimpus.insights.domain.InsightsQueries;
 import com.sergisalas.olimpus.notifications.application.Announce;
 import com.sergisalas.olimpus.notifications.domain.Notifier;
 import com.sergisalas.olimpus.shared.adapter.Messages;
@@ -161,6 +163,12 @@ public class DomainBeans {
     @Bean
     Announce announce(Notifier notifier, Messages messages) {
         return new Announce(notifier, messages::get);
+    }
+
+    @Bean
+    MeasureOutcomes measureOutcomes(
+            InsightsQueries queries, RoundSchedule schedule, Clock clock) {
+        return new MeasureOutcomes(queries, schedule, clock);
     }
 
     @Bean
