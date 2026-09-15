@@ -4,6 +4,10 @@ import com.sergisalas.olimpus.auth.adapter.in.CurrentAccount;
 import com.sergisalas.olimpus.auth.domain.Account;
 import com.sergisalas.olimpus.chat.application.GetChat;
 import com.sergisalas.olimpus.matching.application.AskToSeePhoto;
+import com.sergisalas.olimpus.matching.application.DecideOnPartner;
+import com.sergisalas.olimpus.matching.domain.Decision;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import com.sergisalas.olimpus.matching.application.ViewPartnerPhoto;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -52,9 +56,16 @@ public class ChatController {
             boolean bothHaveWritten,
             boolean canAskForPhoto,
             boolean alreadyAskedForPhoto,
+            /** Whether the end-of-day question is on screen right now. */
+            boolean decisionTime,
+            /** What you answered, if you did. The other one's answer never travels. */
+            String yourDecision,
+            boolean connected,
             List<MessageResponse> messages) {}
 
     public record PhotoAnswer(boolean bothAccepted, int level) {}
+
+    public record DecisionRequest(Decision answer) {}
 
     public record SendRequest(String text) {}
 
@@ -64,6 +75,7 @@ public class ChatController {
     private final IcebreakerWording icebreakers;
     private final AskToSeePhoto askToSeePhoto;
     private final ViewPartnerPhoto viewPartnerPhoto;
+    private final DecideOnPartner decideOnPartner;
 
     public ChatController(
             GetChat getChat,
@@ -71,13 +83,15 @@ public class ChatController {
             ChatBroadcaster broadcaster,
             IcebreakerWording icebreakers,
             AskToSeePhoto askToSeePhoto,
-            ViewPartnerPhoto viewPartnerPhoto) {
+            ViewPartnerPhoto viewPartnerPhoto,
+            DecideOnPartner decideOnPartner) {
         this.getChat = getChat;
         this.sendMessage = sendMessage;
         this.broadcaster = broadcaster;
         this.icebreakers = icebreakers;
         this.askToSeePhoto = askToSeePhoto;
         this.viewPartnerPhoto = viewPartnerPhoto;
+        this.decideOnPartner = decideOnPartner;
     }
 
     @GetMapping
@@ -104,6 +118,9 @@ public class ChatController {
                 conversation.bothHaveWritten(),
                 chat.canAskForPhoto(),
                 chat.alreadyAsked(),
+                chat.decisionTime(),
+                chat.yourDecision() == null ? null : chat.yourDecision().name(),
+                conversation.isConnected(),
                 chat.messages().stream().map(m -> toResponse(m, account.id())).toList());
     }
 
@@ -143,6 +160,19 @@ public class ChatController {
                 .contentType(MediaType.parseMediaType(photo.contentType()))
                 .cacheControl(CacheControl.noStore().cachePrivate())
                 .body(photo.content());
+    }
+
+    /**
+     * The end-of-day answer. It returns nothing: the result is put together at
+     * 22:00, so not even the timing of this call can leak it.
+     */
+    @PostMapping("/decision")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void decide(
+            @PathVariable UUID id,
+            @CurrentAccount Account account,
+            @RequestBody DecisionRequest body) {
+        decideOnPartner.execute(id, account.id(), body.answer());
     }
 
     private static MessageResponse toResponse(Message message, UUID viewer) {

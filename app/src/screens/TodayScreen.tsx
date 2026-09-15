@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { fetchToday, type Profile, type Today } from '../api';
+import { fetchConnections, fetchToday, type Connection, type Profile, type Today } from '../api';
 import { Boton, Etiqueta, Pastilla, Tarjeta } from '../components';
 import { useNombreInteres } from '../interests';
 import { colors, fonts, text } from '../theme';
@@ -37,6 +37,7 @@ export function TodayScreen({
   onSalir: () => void;
 }) {
   const [today, setToday] = useState<Today | null>(null);
+  const [conexiones, setConexiones] = useState<Connection[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const nombreInteres = useNombreInteres();
@@ -44,7 +45,12 @@ export function TodayScreen({
   const cargar = useCallback(async () => {
     setError(null);
     try {
-      setToday(await fetchToday(token));
+      const [hoy, misConexiones] = await Promise.all([
+        fetchToday(token),
+        fetchConnections(token),
+      ]);
+      setToday(hoy);
+      setConexiones(misConexiones);
     } catch {
       setError('No se pudo hablar con el servidor.');
     } finally {
@@ -118,6 +124,38 @@ export function TodayScreen({
       )}
 
       {today && !today.hasConversation && <Buscando today={today} />}
+
+      {conexiones.length > 0 && (
+        <View style={{ gap: 10, marginTop: 8 }}>
+          <Etiqueta>
+            {conexiones.length === 1 ? 'Tu conexión' : `Tus ${conexiones.length} conexiones`}
+          </Etiqueta>
+          {conexiones.map((conexion) => (
+            <Pressable key={conexion.conversationId} onPress={() => onAbrirChat(conexion.conversationId)}>
+              <Tarjeta>
+                <View style={estilos.filaConexion}>
+                  <View style={estilos.circuloConexion}>
+                    <Text style={estilos.inicial}>
+                      {(conexion.nickname ?? '?').charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={{ flexShrink: 1, gap: 2 }}>
+                    <Text style={estilos.persona}>
+                      {conexion.nickname}, {conexion.age}
+                    </Text>
+                    <Text style={estilos.pistaPersona} numberOfLines={1}>
+                      {conexion.lastMessage ?? 'Sin mensajes todavía'}
+                    </Text>
+                  </View>
+                </View>
+              </Tarjeta>
+            </Pressable>
+          ))}
+          <Text style={estilos.cierre}>
+            Las conexiones no caducan ni ocupan tu conversación del día.
+          </Text>
+        </View>
+      )}
 
       <View style={{ flex: 1 }} />
       <Pressable style={{ paddingVertical: 14 }} onPress={onSalir}>
@@ -222,6 +260,18 @@ const estilos = StyleSheet.create({
   pistaPersona: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 19, color: colors.ink3 },
   separador: { height: 1, backgroundColor: colors.lineSuave },
   rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  filaConexion: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  circuloConexion: {
+    width: 46,
+    height: 46,
+    borderRadius: 999,
+    backgroundColor: colors.accentWash,
+    borderWidth: 1,
+    borderColor: colors.accentBorde,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inicial: { fontFamily: fonts.serif, fontSize: 20, color: colors.accent },
   cierre: {
     fontFamily: fonts.sans,
     fontSize: 13,

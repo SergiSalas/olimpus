@@ -31,4 +31,9 @@ public class ChatClosedException extends RuntimeException implements UserFacingE
     public Object[] messageArgs() {
         return new Object[0];
     }
+
+    @Override
+    public Kind kind() {
+        return Kind.WRONG_MOMENT;
+    }
 }

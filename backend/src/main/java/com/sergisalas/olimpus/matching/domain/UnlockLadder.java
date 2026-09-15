@@ -59,6 +59,11 @@ public final class UnlockLadder {
     public static UnlockLevel levelOf(
             Conversation conversation, List<Message> messages, Instant now) {
 
+        // A connection is a yes from both at the end of the day, which says more
+        // than asking to see a photo. So it carries everything the lower levels
+        // showed, photo included.
+        if (conversation.isConnected()) return UnlockLevel.TRUST;
+
         if (messages.isEmpty()) return UnlockLevel.MATCH;
 
         boolean bothWrote =

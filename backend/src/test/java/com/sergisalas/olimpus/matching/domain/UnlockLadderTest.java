@@ -34,6 +34,8 @@ class UnlockLadderTest {
                     0,
                     "climbing",
                     null,
+                    null,
+                    null,
                     null);
 
     /** Messages one minute apart, taking turns as the pattern says: "AABA". */

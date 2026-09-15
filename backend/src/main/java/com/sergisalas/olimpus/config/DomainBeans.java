@@ -15,7 +15,9 @@ import com.sergisalas.olimpus.chat.domain.MessageRepository;
 import com.sergisalas.olimpus.health.application.CheckHealth;
 import com.sergisalas.olimpus.health.domain.DatabaseInfo;
 import com.sergisalas.olimpus.matching.application.AskToSeePhoto;
+import com.sergisalas.olimpus.matching.application.DecideOnPartner;
 import com.sergisalas.olimpus.matching.application.GetTodaysConversation;
+import com.sergisalas.olimpus.matching.application.ListConnections;
 import com.sergisalas.olimpus.matching.application.ViewPartnerPhoto;
 import com.sergisalas.olimpus.matching.application.RunDailyRound;
 import com.sergisalas.olimpus.matching.domain.ConversationRepository;
@@ -151,6 +153,21 @@ public class DomainBeans {
             RoundSchedule schedule,
             Clock clock) {
         return new GetChat(conversations, messages, profiles, schedule, clock);
+    }
+
+    @Bean
+    DecideOnPartner decideOnPartner(ConversationRepository conversations, Clock clock) {
+        return new DecideOnPartner(conversations, clock);
+    }
+
+    @Bean
+    ListConnections listConnections(
+            ConversationRepository conversations,
+            MessageRepository messages,
+            ProfileDirectory profiles,
+            RoundSchedule schedule,
+            Clock clock) {
+        return new ListConnections(conversations, messages, profiles, schedule, clock);
     }
 
     @Bean

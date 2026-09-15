@@ -3,6 +3,7 @@ package com.sergisalas.olimpus.matching.adapter.out;
 import com.sergisalas.olimpus.matching.domain.Conversation;
 import com.sergisalas.olimpus.matching.domain.ConversationRepository;
 import com.sergisalas.olimpus.matching.domain.ConversationState;
+import com.sergisalas.olimpus.matching.domain.Decision;
 import com.sergisalas.olimpus.matching.domain.Origin;
 import com.sergisalas.olimpus.matching.domain.RoundKind;
 import java.sql.ResultSet;
@@ -23,7 +24,7 @@ public class JdbcConversationRepository implements ConversationRepository {
             """
             id, round_date, round_kind, account_a, account_b, origin, score,
             opens_at, closes_at, state, messages_from_a, messages_from_b, icebreaker_interest,
-            photo_wanted_by_a, photo_wanted_by_b
+            photo_wanted_by_a, photo_wanted_by_b, decision_by_a, decision_by_b
             """;
 
     private static final RowMapper<Conversation> MAPPER = JdbcConversationRepository::toConversation;
@@ -35,20 +36,37 @@ public class JdbcConversationRepository implements ConversationRepository {
     }
 
     @Override
+    public List<Conversation> connectionsOf(UUID accountId) {
+        return jdbc.query(
+                "select "
+                        + COLUMNS
+                        + """
+                        from conversation
+                        where state = 'CONNECTED' and (account_a = ? or account_b = ?)
+                        order by closes_at desc
+                        """,
+                MAPPER,
+                accountId,
+                accountId);
+    }
+
+    @Override
     public void save(Conversation c) {
         jdbc.update(
                 """
                 insert into conversation (
                     id, round_date, round_kind, account_a, account_b, origin, score,
                     opens_at, closes_at, state, messages_from_a, messages_from_b, icebreaker_interest,
-                    photo_wanted_by_a, photo_wanted_by_b)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    photo_wanted_by_a, photo_wanted_by_b, decision_by_a, decision_by_b)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict (id) do update set
                     state = excluded.state,
                     messages_from_a = excluded.messages_from_a,
                     messages_from_b = excluded.messages_from_b,
                     photo_wanted_by_a = excluded.photo_wanted_by_a,
-                    photo_wanted_by_b = excluded.photo_wanted_by_b
+                    photo_wanted_by_b = excluded.photo_wanted_by_b,
+                    decision_by_a = excluded.decision_by_a,
+                    decision_by_b = excluded.decision_by_b
                 """,
                 c.id(),
                 java.sql.Date.valueOf(c.roundDate()),
@@ -64,7 +82,9 @@ public class JdbcConversationRepository implements ConversationRepository {
                 c.messagesFromB(),
                 c.icebreakerInterest(),
                 c.photoWantedByA() == null ? null : Timestamp.from(c.photoWantedByA()),
-                c.photoWantedByB() == null ? null : Timestamp.from(c.photoWantedByB()));
+                c.photoWantedByB() == null ? null : Timestamp.from(c.photoWantedByB()),
+                c.decisionByA() == null ? null : c.decisionByA().name(),
+                c.decisionByB() == null ? null : c.decisionByB().name());
     }
 
     @Override
@@ -119,7 +139,14 @@ public class JdbcConversationRepository implements ConversationRepository {
                 rs.getInt("messages_from_b"),
                 rs.getString("icebreaker_interest"),
                 instantOrNull(rs, "photo_wanted_by_a"),
-                instantOrNull(rs, "photo_wanted_by_b"));
+                instantOrNull(rs, "photo_wanted_by_b"),
+                decisionOrNull(rs, "decision_by_a"),
+                decisionOrNull(rs, "decision_by_b"));
+    }
+
+    private static Decision decisionOrNull(ResultSet rs, String column) throws SQLException {
+        String value = rs.getString(column);
+        return value == null ? null : Decision.valueOf(value);
     }
 
     private static java.time.Instant instantOrNull(ResultSet rs, String column) throws SQLException {

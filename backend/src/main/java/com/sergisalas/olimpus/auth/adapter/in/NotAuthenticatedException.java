@@ -17,4 +17,9 @@ public class NotAuthenticatedException extends RuntimeException implements UserF
     public Object[] messageArgs() {
         return new Object[0];
     }
+
+    @Override
+    public Kind kind() {
+        return Kind.NOT_AUTHENTICATED;
+    }
 }

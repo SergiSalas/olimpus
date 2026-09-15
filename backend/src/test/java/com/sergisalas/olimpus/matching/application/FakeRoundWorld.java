@@ -99,6 +99,13 @@ public class FakeRoundWorld {
                 }
 
                 @Override
+                public List<Conversation> connectionsOf(UUID accountId) {
+                    return stored.values().stream()
+                            .filter(c -> c.isConnected() && c.involves(accountId))
+                            .toList();
+                }
+
+                @Override
                 public Optional<Conversation> byId(UUID id) {
                     return Optional.ofNullable(stored.get(id));
                 }

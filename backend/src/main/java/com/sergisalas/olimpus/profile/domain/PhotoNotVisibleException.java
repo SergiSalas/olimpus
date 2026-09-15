@@ -18,4 +18,9 @@ public class PhotoNotVisibleException extends RuntimeException implements UserFa
     public Object[] messageArgs() {
         return new Object[0];
     }
+
+    @Override
+    public Kind kind() {
+        return Kind.NOT_FOUND;
+    }
 }

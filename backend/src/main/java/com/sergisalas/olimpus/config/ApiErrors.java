@@ -1,15 +1,9 @@
 package com.sergisalas.olimpus.config;
 
-import com.sergisalas.olimpus.auth.adapter.in.NotAuthenticatedException;
-import com.sergisalas.olimpus.auth.domain.InvalidLoginCodeException;
-import com.sergisalas.olimpus.chat.domain.ChatClosedException;
-import com.sergisalas.olimpus.chat.domain.NotYourConversationException;
-import com.sergisalas.olimpus.matching.domain.TooSoonForPhotoException;
-import com.sergisalas.olimpus.profile.domain.PhotoNotVisibleException;
-import com.sergisalas.olimpus.profile.domain.ProfileNotFoundException;
-import com.sergisalas.olimpus.profile.domain.UnderageException;
 import com.sergisalas.olimpus.shared.adapter.Messages;
 import com.sergisalas.olimpus.shared.domain.UserFacingError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,9 +12,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 /**
  * Turns domain errors into HTTP responses with a plain message, in the user's
  * language, that the phone can show as it is.
+ *
+ * <p>There is <b>one</b> handler for everything a person can cause, and it reads
+ * the kind off the error itself. The previous version had one handler per
+ * exception class, and twice a new error shipped without its line here and came
+ * out as a 500 in front of a person. A list you have to remember to update is a
+ * bug waiting to happen; this cannot forget.
  */
 @RestControllerAdvice
 public class ApiErrors {
+
+    private static final Logger log = LoggerFactory.getLogger(ApiErrors.class);
 
     public record ApiError(String error) {}
 
@@ -31,66 +33,36 @@ public class ApiErrors {
     }
 
     /**
-     * Always the same message, without saying whether the code did not exist,
-     * expired or simply did not match: details would help whoever is guessing.
+     * Anything that implements {@link UserFacingError}, whatever its class and
+     * wherever it was thrown from.
      */
-    @ExceptionHandler(InvalidLoginCodeException.class)
-    public ResponseEntity<ApiError> code(InvalidLoginCodeException e) {
-        return respond(HttpStatus.BAD_REQUEST, e);
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ApiError> handle(RuntimeException e) {
+        if (e instanceof UserFacingError error) {
+            return ResponseEntity.status(statusFor(error.kind()))
+                    .body(new ApiError(messages.of(error)));
+        }
+
+        if (e instanceof IllegalArgumentException) {
+            // An invariant only a bug could break. Its details are no use to the
+            // person, but they are to us.
+            log.warn("Invalid request: {}", e.toString());
+            return ResponseEntity.badRequest()
+                    .body(new ApiError(messages.get("error.invalid-request")));
+        }
+
+        // Not ours to explain: let Spring answer 500 and log the stack trace.
+        throw e;
     }
 
-    @ExceptionHandler(NotAuthenticatedException.class)
-    public ResponseEntity<ApiError> auth(NotAuthenticatedException e) {
-        return respond(HttpStatus.UNAUTHORIZED, e);
-    }
-
-    /** 404 and not 403: it does not even confirm that the conversation exists. */
-    @ExceptionHandler(NotYourConversationException.class)
-    public ResponseEntity<ApiError> notYours(NotYourConversationException e) {
-        return respond(HttpStatus.NOT_FOUND, e);
-    }
-
-    @ExceptionHandler(ChatClosedException.class)
-    public ResponseEntity<ApiError> closed(ChatClosedException e) {
-        return respond(HttpStatus.CONFLICT, e);
-    }
-
-    @ExceptionHandler(ProfileNotFoundException.class)
-    public ResponseEntity<ApiError> noProfile(ProfileNotFoundException e) {
-        return respond(HttpStatus.NOT_FOUND, e);
-    }
-
-    @ExceptionHandler(UnderageException.class)
-    public ResponseEntity<ApiError> underage(UnderageException e) {
-        return respond(HttpStatus.FORBIDDEN, e);
-    }
-
-    /** Asking for the photo before the conversation has earned it. */
-    @ExceptionHandler(TooSoonForPhotoException.class)
-    public ResponseEntity<ApiError> tooSoon(TooSoonForPhotoException e) {
-        return respond(HttpStatus.CONFLICT, e);
-    }
-
-    /** Never uploaded, not approved, or not earned yet: all three answer alike. */
-    @ExceptionHandler(PhotoNotVisibleException.class)
-    public ResponseEntity<ApiError> noPhoto(PhotoNotVisibleException e) {
-        return respond(HttpStatus.NOT_FOUND, e);
-    }
-
-    /**
-     * Broken rules the person can fix get their own message. Anything else is a
-     * bug-level invariant whose details are no use to the user.
-     */
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiError> illegal(IllegalArgumentException e) {
-        String text =
-                e instanceof UserFacingError error
-                        ? messages.of(error)
-                        : messages.get("error.invalid-request");
-        return ResponseEntity.badRequest().body(new ApiError(text));
-    }
-
-    private ResponseEntity<ApiError> respond(HttpStatus status, UserFacingError error) {
-        return ResponseEntity.status(status).body(new ApiError(messages.of(error)));
+    private static HttpStatus statusFor(UserFacingError.Kind kind) {
+        return switch (kind) {
+            case INVALID_INPUT -> HttpStatus.BAD_REQUEST;
+            case NOT_AUTHENTICATED -> HttpStatus.UNAUTHORIZED;
+            case NOT_ALLOWED -> HttpStatus.FORBIDDEN;
+                // 404 and not 403: it does not even confirm that the thing exists.
+            case NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case WRONG_MOMENT -> HttpStatus.CONFLICT;
+        };
     }
 }

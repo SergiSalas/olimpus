@@ -5,6 +5,7 @@ import com.sergisalas.olimpus.chat.domain.MessageRepository;
 import com.sergisalas.olimpus.chat.domain.NotYourConversationException;
 import com.sergisalas.olimpus.matching.domain.Conversation;
 import com.sergisalas.olimpus.matching.domain.ConversationRepository;
+import com.sergisalas.olimpus.matching.domain.Decision;
 import com.sergisalas.olimpus.matching.domain.PartnerView;
 import com.sergisalas.olimpus.matching.domain.UnlockLadder;
 import com.sergisalas.olimpus.matching.domain.UnlockLevel;
@@ -26,7 +27,9 @@ public class GetChat {
             /** Whether the "I want to see you" button belongs on the screen yet. */
             boolean canAskForPhoto,
             /** Whether this viewer already asked. The other one's answer is never told. */
-            boolean alreadyAsked) {}
+            boolean alreadyAsked,
+            boolean decisionTime,
+            Decision yourDecision) {}
 
     private final ConversationRepository conversations;
     private final MessageRepository messages;
@@ -75,6 +78,8 @@ public class GetChat {
                 shared,
                 written,
                 UnlockLadder.canAskForPhoto(conversation, written, now),
-                conversation.photoWantedBy(viewer));
+                conversation.photoWantedBy(viewer),
+                conversation.acceptsDecisionAt(now),
+                conversation.decisionBy(viewer));
     }
 }

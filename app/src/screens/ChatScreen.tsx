@@ -13,12 +13,14 @@ import {
 import {
   ApiError,
   askToSeePhoto,
+  decide,
   fetchChat,
   openChatSocket,
   sendMessage,
   type Chat,
   type ChatMessage,
 } from '../api';
+import { PreguntaFinal } from '../components/Decision';
 import { Escalones, LoQueSeVe } from '../components/Escalera';
 import { Etiqueta } from '../components';
 import { colors, fonts, radios } from '../theme';
@@ -42,6 +44,7 @@ export function ChatScreen({
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pidiendoFoto, setPidiendoFoto] = useState(false);
+  const [respondiendo, setRespondiendo] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const lista = useRef<FlatList<ChatMessage>>(null);
 
@@ -108,6 +111,19 @@ export function ChatScreen({
     }
   }
 
+  async function responder(respuesta: 'YES' | 'NO') {
+    setRespondiendo(true);
+    setError(null);
+    try {
+      await decide(token, conversationId, respuesta);
+      await cargar();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No se pudo responder.');
+    } finally {
+      setRespondiendo(false);
+    }
+  }
+
   if (!chat) {
     return (
       <View style={estilos.centrado}>
@@ -147,8 +163,10 @@ export function ChatScreen({
           </Text>
           <Escalones nivel={chat.partner.level} />
         </View>
-        <View style={estilos.pastillaCierre}>
-          <Text style={estilos.pastillaCierreTexto}>Cierra {hora(chat.closesAt)}</Text>
+        <View style={[estilos.pastillaCierre, chat.connected && estilos.pastillaConexion]}>
+          <Text style={estilos.pastillaCierreTexto}>
+            {chat.connected ? 'Conexión' : `Cierra ${hora(chat.closesAt)}`}
+          </Text>
         </View>
       </View>
 
@@ -160,6 +178,13 @@ export function ChatScreen({
         onContentSizeChange={() => lista.current?.scrollToEnd({ animated: true })}
         ListHeaderComponent={
           <View style={{ gap: 12, marginBottom: 10 }}>
+            {chat.decisionTime && (
+              <PreguntaFinal
+                respondido={chat.yourDecision}
+                ocupado={respondiendo}
+                onResponder={responder}
+              />
+            )}
             <LoQueSeVe
               chat={chat}
               token={token}
@@ -190,7 +215,7 @@ export function ChatScreen({
       {cerrada ? (
         <View style={estilos.barra}>
           <Text style={estilos.cerradoTexto}>
-            Esta conversación está cerrada. Mañana a las 4:00 hay reparto nuevo.
+            Esta conversación se cerró a las 22:00. Mañana a las 4:00 hay reparto nuevo.
           </Text>
         </View>
       ) : (
@@ -266,6 +291,7 @@ const estilos = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: colors.ink,
   },
+  pastillaConexion: { backgroundColor: colors.accent },
   pastillaCierreTexto: { fontFamily: fonts.sansNegrita, fontSize: 11.5, color: colors.onInk },
 
   mensajes: { padding: 20, gap: 10 },

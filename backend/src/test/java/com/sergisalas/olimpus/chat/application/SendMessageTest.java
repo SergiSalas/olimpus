@@ -60,6 +60,8 @@ class SendMessageTest {
                         0,
                         "climbing",
                         null,
+                        null,
+                        null,
                         null);
         storedConversations.put(chat.id(), chat);
 
@@ -82,6 +84,13 @@ class SendMessageTest {
                         return storedConversations.values().stream()
                                 .filter(c -> c.isOpen() && c.involves(accountId))
                                 .findFirst();
+                    }
+
+                    @Override
+                    public List<Conversation> connectionsOf(UUID accountId) {
+                        return storedConversations.values().stream()
+                                .filter(c -> c.isConnected() && c.involves(accountId))
+                                .toList();
                     }
 
                     @Override

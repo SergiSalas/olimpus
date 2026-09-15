@@ -238,8 +238,40 @@ export type Chat = {
   canAskForPhoto: boolean;
   /** Si tú ya lo pediste. Lo que haya hecho el otro no se cuenta. */
   alreadyAskedForPhoto: boolean;
+  /** Si estamos en la última media hora: toca responder. */
+  decisionTime: boolean;
+  /** Lo que respondiste tú. Lo del otro no viaja nunca. */
+  yourDecision: 'YES' | 'NO' | null;
+  /** Si acabó en conexión: el chat ya no cierra. */
+  connected: boolean;
   messages: ChatMessage[];
 };
+
+export type Connection = {
+  conversationId: string;
+  level: number;
+  nickname: string | null;
+  age: number;
+  interests: string[];
+  photoAvailable: boolean;
+  connectedOn: string;
+  lastMessage: string | null;
+  lastMessageAt: string | null;
+};
+
+export const fetchConnections = (token: string) =>
+  request<Connection[]>('/api/connections', {}, token);
+
+/**
+ * La respuesta del final del día. No devuelve nada: el resultado se monta a las
+ * 22:00, así que ni el momento de esta llamada puede filtrarlo.
+ */
+export const decide = (token: string, conversationId: string, answer: 'YES' | 'NO') =>
+  request<void>(
+    `/api/conversations/${conversationId}/decision`,
+    { method: 'POST', body: JSON.stringify({ answer }) },
+    token,
+  );
 
 export const fetchChat = (token: string, conversationId: string) =>
   request<Chat>(`/api/conversations/${conversationId}`, {}, token);

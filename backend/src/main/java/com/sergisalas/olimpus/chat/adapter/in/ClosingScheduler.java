@@ -23,9 +23,12 @@ public class ClosingScheduler {
 
     @Scheduled(fixedDelayString = "${olimpus.closing.every-ms:300000}")
     public void closeTheDueOnes() {
-        var closed = closeFinished.execute();
-        if (!closed.isEmpty()) {
-            log.info("Closed {} conversations that were past their time.", closed.size());
+        var result = closeFinished.execute();
+        if (result.total() > 0) {
+            log.info(
+                    "Day settled: {} conversations became connections, {} closed.",
+                    result.connected().size(),
+                    result.closed().size());
         }
     }
 }

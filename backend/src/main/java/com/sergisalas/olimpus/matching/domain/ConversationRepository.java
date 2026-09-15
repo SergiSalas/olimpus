@@ -15,4 +15,7 @@ public interface ConversationRepository {
     Optional<Conversation> openFor(UUID accountId, LocalDate date);
 
     Optional<Conversation> byId(UUID id);
+
+    /** The conversations that ended in a mutual yes. They never expire. */
+    List<Conversation> connectionsOf(UUID accountId);
 }
