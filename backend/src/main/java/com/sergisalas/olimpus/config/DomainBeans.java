@@ -1,6 +1,7 @@
 package com.sergisalas.olimpus.config;
 
 import com.sergisalas.olimpus.auth.application.AuthenticateSession;
+import com.sergisalas.olimpus.auth.application.DeleteAccount;
 import com.sergisalas.olimpus.auth.application.RequestLoginCode;
 import com.sergisalas.olimpus.auth.application.VerifyLoginCode;
 import com.sergisalas.olimpus.auth.domain.AccountRepository;
@@ -206,6 +207,12 @@ public class DomainBeans {
     CloseFinishedConversations closeFinishedConversations(
             ConversationRepository conversations, RoundSchedule schedule, Clock clock) {
         return new CloseFinishedConversations(conversations, schedule, clock);
+    }
+
+    @Bean
+    DeleteAccount deleteAccount(
+            AccountRepository accounts, PhotoRepository photos, PhotoStorage storage) {
+        return new DeleteAccount(accounts, photos, storage);
     }
 
     @Bean

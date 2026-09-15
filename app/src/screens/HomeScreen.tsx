@@ -1,5 +1,6 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { ownPhotoSource, type Me, type Profile } from '../api';
+import { useState } from 'react';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ApiError, deleteAccount, ownPhotoSource, type Me, type Profile } from '../api';
 import { Boton, Etiqueta, Pastilla, Tarjeta } from '../components';
 import { useNombreInteres } from '../interests';
 import { tipoDeProfundidad } from '../mapeo';
@@ -64,6 +65,41 @@ export function HomeScreen({
   onSalir: () => void;
 }) {
   const nombreInteres = useNombreInteres();
+  const [borrando, setBorrando] = useState(false);
+
+  /**
+   * Se avisa de lo que se pierde ANTES de preguntar, con las palabras claras:
+   * "esto no se puede deshacer" cuesta poco de escribir y evita el arrepentimiento
+   * de alguien que creía que solo cerraba sesión.
+   */
+  function confirmarBorrado() {
+    Alert.alert(
+      '¿Borrar tu cuenta?',
+      'Se va todo: tu registro, tu foto, tus conversaciones y tus conexiones. ' +
+        'También desaparecen para las personas con las que hablaste. No se puede deshacer.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Borrar para siempre',
+          style: 'destructive',
+          onPress: async () => {
+            setBorrando(true);
+            try {
+              await deleteAccount(token);
+              onSalir();
+            } catch (e) {
+              Alert.alert(
+                'No se pudo borrar',
+                e instanceof ApiError ? e.message : 'Inténtalo de nuevo en un momento.',
+              );
+            } finally {
+              setBorrando(false);
+            }
+          },
+        },
+      ],
+    );
+  }
 
   return (
     <ScrollView style={estilos.pantalla} contentContainerStyle={estilos.contenido}>
@@ -127,6 +163,15 @@ export function HomeScreen({
       <Pressable style={{ paddingVertical: 14 }} onPress={onSalir}>
         <Text style={estilos.enlaceFlojo}>Cerrar sesión ({me.email})</Text>
       </Pressable>
+
+      <Pressable
+        style={{ paddingVertical: 10, paddingBottom: 20 }}
+        onPress={confirmarBorrado}
+        disabled={borrando}>
+        <Text style={estilos.borrar}>
+          {borrando ? 'Borrando…' : 'Borrar mi cuenta'}
+        </Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -165,6 +210,12 @@ const estilos = StyleSheet.create({
   rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   foto: { width: 150, aspectRatio: 3 / 4, borderRadius: 14, backgroundColor: colors.surface2 },
   bio: { fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 21, color: colors.ink2 },
+  borrar: {
+    fontFamily: fonts.sansMedia,
+    fontSize: 13,
+    color: colors.error,
+    textAlign: 'center',
+  },
   enlaceFlojo: {
     fontFamily: fonts.sansMedia,
     fontSize: 13.5,

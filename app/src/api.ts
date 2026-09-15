@@ -84,6 +84,13 @@ export const verifyLoginCode = (email: string, code: string) =>
 
 export const fetchMe = (token: string) => request<Me>('/api/me', {}, token);
 
+/**
+ * Borrar la cuenta. Se va todo: registro, foto, conversaciones y mensajes.
+ * No hay periodo de gracia ni "la guardamos 30 días por si cambias de idea".
+ */
+export const deleteAccount = (token: string) =>
+  request<void>('/api/me', { method: 'DELETE' }, token);
+
 // ---------- registro ----------
 
 export type Gender = 'WOMAN' | 'MAN' | 'NON_BINARY' | 'OTHER';

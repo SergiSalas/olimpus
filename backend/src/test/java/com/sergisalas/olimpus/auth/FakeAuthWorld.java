@@ -104,6 +104,11 @@ public class FakeAuthWorld {
                 }
 
                 @Override
+                public void delete(UUID accountId) {
+                    storedAccounts.values().removeIf(a -> a.id().equals(accountId));
+                }
+
+                @Override
                 public Account save(Account account) {
                     storedAccounts.put(account.email().value(), account);
                     return account;
