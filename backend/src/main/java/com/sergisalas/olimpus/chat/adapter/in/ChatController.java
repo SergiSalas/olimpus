@@ -4,6 +4,7 @@ import com.sergisalas.olimpus.auth.adapter.in.CurrentAccount;
 import com.sergisalas.olimpus.auth.domain.Account;
 import com.sergisalas.olimpus.chat.application.GetChat;
 import com.sergisalas.olimpus.matching.application.AskToSeePhoto;
+import com.sergisalas.olimpus.notifications.application.Announce;
 import com.sergisalas.olimpus.matching.application.DecideOnPartner;
 import com.sergisalas.olimpus.matching.domain.Decision;
 import org.springframework.http.HttpStatus;
@@ -76,6 +77,7 @@ public class ChatController {
     private final AskToSeePhoto askToSeePhoto;
     private final ViewPartnerPhoto viewPartnerPhoto;
     private final DecideOnPartner decideOnPartner;
+    private final Announce announce;
 
     public ChatController(
             GetChat getChat,
@@ -84,7 +86,8 @@ public class ChatController {
             IcebreakerWording icebreakers,
             AskToSeePhoto askToSeePhoto,
             ViewPartnerPhoto viewPartnerPhoto,
-            DecideOnPartner decideOnPartner) {
+            DecideOnPartner decideOnPartner,
+            Announce announce) {
         this.getChat = getChat;
         this.sendMessage = sendMessage;
         this.broadcaster = broadcaster;
@@ -92,6 +95,7 @@ public class ChatController {
         this.askToSeePhoto = askToSeePhoto;
         this.viewPartnerPhoto = viewPartnerPhoto;
         this.decideOnPartner = decideOnPartner;
+        this.announce = announce;
     }
 
     @GetMapping
@@ -133,6 +137,8 @@ public class ChatController {
         // The writer gets the answer from the POST itself; the other person gets
         // it over the long-lived connection, if they have it open.
         broadcaster.newMessage(sent.conversation(), sent.message());
+        // Y si tiene la app cerrada, le llega igual.
+        announce.newMessage(sent.conversation(), account.id());
 
         return toResponse(sent.message(), account.id());
     }

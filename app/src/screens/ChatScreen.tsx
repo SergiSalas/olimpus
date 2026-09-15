@@ -21,6 +21,7 @@ import {
   type ChatMessage,
 } from '../api';
 import { PreguntaFinal } from '../components/Decision';
+import { Reportar } from '../components/Reportar';
 import { Escalones, LoQueSeVe } from '../components/Escalera';
 import { Etiqueta } from '../components';
 import { colors, fonts, radios } from '../theme';
@@ -45,6 +46,7 @@ export function ChatScreen({
   const [error, setError] = useState<string | null>(null);
   const [pidiendoFoto, setPidiendoFoto] = useState(false);
   const [respondiendo, setRespondiendo] = useState(false);
+  const [reportando, setReportando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const lista = useRef<FlatList<ChatMessage>>(null);
 
@@ -163,12 +165,28 @@ export function ChatScreen({
           </Text>
           <Escalones nivel={chat.partner.level} />
         </View>
-        <View style={[estilos.pastillaCierre, chat.connected && estilos.pastillaConexion]}>
-          <Text style={estilos.pastillaCierreTexto}>
-            {chat.connected ? 'Conexión' : `Cierra ${hora(chat.closesAt)}`}
-          </Text>
+        <View style={estilos.derecha}>
+          <View style={[estilos.pastillaCierre, chat.connected && estilos.pastillaConexion]}>
+            <Text style={estilos.pastillaCierreTexto}>
+              {chat.connected ? 'Conexión' : `Cierra ${hora(chat.closesAt)}`}
+            </Text>
+          </View>
+          <Pressable onPress={() => setReportando(true)} hitSlop={10}>
+            <Text style={estilos.reportar}>Reportar</Text>
+          </Pressable>
         </View>
       </View>
+
+      <Reportar
+        visible={reportando}
+        token={token}
+        conversationId={conversationId}
+        onCerrar={() => setReportando(false)}
+        onHecho={() => {
+          setReportando(false);
+          onVolver();
+        }}
+      />
 
       <FlatList
         ref={lista}
@@ -215,7 +233,9 @@ export function ChatScreen({
       {cerrada ? (
         <View style={estilos.barra}>
           <Text style={estilos.cerradoTexto}>
-            Esta conversación se cerró a las 22:00. Mañana a las 4:00 hay reparto nuevo.
+            {chat.state === 'BLOCKED'
+              ? 'Esta conversación está cortada. No os volveremos a emparejar.'
+              : 'Esta conversación se cerró a las 22:00. Mañana a las 4:00 hay reparto nuevo.'}
           </Text>
         </View>
       ) : (
@@ -285,12 +305,13 @@ const estilos = StyleSheet.create({
   nombre: { fontFamily: fonts.sansNegrita, fontSize: 15, color: colors.ink },
   nivel: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3 },
   pastillaCierre: {
-    marginLeft: 'auto',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 999,
     backgroundColor: colors.ink,
   },
+  derecha: { marginLeft: 'auto', alignItems: 'flex-end', gap: 4 },
+  reportar: { fontFamily: fonts.sansMedia, fontSize: 11.5, color: colors.ink4 },
   pastillaConexion: { backgroundColor: colors.accent },
   pastillaCierreTexto: { fontFamily: fonts.sansNegrita, fontSize: 11.5, color: colors.onInk },
 

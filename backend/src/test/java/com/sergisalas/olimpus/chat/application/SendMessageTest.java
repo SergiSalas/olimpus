@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.sergisalas.olimpus.chat.domain.ChatClosedException;
 import com.sergisalas.olimpus.chat.domain.Message;
+import com.sergisalas.olimpus.chat.domain.MessageModerator;
+import com.sergisalas.olimpus.chat.domain.MessageRejectedException;
 import com.sergisalas.olimpus.chat.domain.MessageRepository;
 import com.sergisalas.olimpus.chat.domain.NotYourConversationException;
 import com.sergisalas.olimpus.matching.domain.Conversation;
@@ -41,6 +43,9 @@ class SendMessageTest {
 
     private Conversation chat;
     private SendMessage send;
+
+    /** Moderation that lets everything through; one test swaps it for a strict one. */
+    private MessageModerator moderator = text -> MessageModerator.Verdict.ALLOW;
 
     @BeforeEach
     void setUp() {
@@ -132,7 +137,7 @@ class SendMessageTest {
                     }
                 };
 
-        send = new SendMessage(conversations, messages, clock);
+        send = new SendMessage(conversations, messages, moderator, clock);
     }
 
     @Test
@@ -206,5 +211,17 @@ class SendMessageTest {
     void a_huge_message_is_rejected() {
         assertThatThrownBy(() -> send.execute(chat.id(), ANA, "x".repeat(1001)))
                 .isInstanceOf(RuleViolationException.class);
+    }
+
+    @Test
+    void a_message_moderation_rejects_never_reaches_the_other_person() {
+        moderator = text -> MessageModerator.Verdict.REJECT;
+        setUp();
+
+        assertThatThrownBy(() -> send.execute(chat.id(), ANA, "algo horrible"))
+                .isInstanceOf(MessageRejectedException.class);
+
+        assertThat(storedMessages).isEmpty();
+        assertThat(storedConversations.get(chat.id()).messagesFromA()).isZero();
     }
 }

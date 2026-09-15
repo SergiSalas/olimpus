@@ -11,7 +11,10 @@ import com.sergisalas.olimpus.auth.domain.SessionRepository;
 import com.sergisalas.olimpus.chat.application.CloseFinishedConversations;
 import com.sergisalas.olimpus.chat.application.GetChat;
 import com.sergisalas.olimpus.chat.application.SendMessage;
+import com.sergisalas.olimpus.chat.domain.MessageModerator;
 import com.sergisalas.olimpus.chat.domain.MessageRepository;
+import com.sergisalas.olimpus.safety.application.ReportAndBlock;
+import com.sergisalas.olimpus.safety.domain.BlockRepository;
 import com.sergisalas.olimpus.health.application.CheckHealth;
 import com.sergisalas.olimpus.health.domain.DatabaseInfo;
 import com.sergisalas.olimpus.matching.application.AskToSeePhoto;
@@ -32,6 +35,9 @@ import com.sergisalas.olimpus.profile.domain.PhotoModerator;
 import com.sergisalas.olimpus.profile.domain.PhotoRepository;
 import com.sergisalas.olimpus.profile.domain.PhotoStorage;
 import com.sergisalas.olimpus.profile.domain.ProfileRepository;
+import com.sergisalas.olimpus.notifications.application.Announce;
+import com.sergisalas.olimpus.notifications.domain.Notifier;
+import com.sergisalas.olimpus.shared.adapter.Messages;
 import com.sergisalas.olimpus.shared.domain.Hasher;
 import java.time.Clock;
 import java.time.ZoneId;
@@ -141,8 +147,26 @@ public class DomainBeans {
 
     @Bean
     SendMessage sendMessage(
-            ConversationRepository conversations, MessageRepository messages, Clock clock) {
-        return new SendMessage(conversations, messages, clock);
+            ConversationRepository conversations,
+            MessageRepository messages,
+            MessageModerator moderator,
+            Clock clock) {
+        return new SendMessage(conversations, messages, moderator, clock);
+    }
+
+    /**
+     * The wording of the five notices comes from the same catalogue as every
+     * other text a person reads; the use case only knows the keys.
+     */
+    @Bean
+    Announce announce(Notifier notifier, Messages messages) {
+        return new Announce(notifier, messages::get);
+    }
+
+    @Bean
+    ReportAndBlock reportAndBlock(
+            ConversationRepository conversations, BlockRepository blocks, Clock clock) {
+        return new ReportAndBlock(conversations, blocks, clock);
     }
 
     @Bean

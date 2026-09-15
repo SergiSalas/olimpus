@@ -166,6 +166,11 @@ public record Conversation(
         return withState(ConversationState.CLOSED);
     }
 
+    /** Reported or blocked: nothing more can be written, whatever state it was in. */
+    public Conversation blocked() {
+        return withState(ConversationState.BLOCKED);
+    }
+
     private Conversation withState(ConversationState newState) {
         return copy(newState, messagesFromA, messagesFromB, photoWantedByA, photoWantedByB);
     }

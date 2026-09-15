@@ -227,7 +227,7 @@ export type ChatMessage = {
 
 export type Chat = {
   conversationId: string;
-  state: 'OPEN' | 'CANCELLED' | 'CLOSED';
+  state: 'OPEN' | 'CANCELLED' | 'CLOSED' | 'BLOCKED' | 'CONNECTED';
   closesAt: string;
   /** La pregunta con la que arranca, sacada de un interés que compartís. */
   icebreaker: string;
@@ -258,6 +258,26 @@ export type Connection = {
   lastMessage: string | null;
   lastMessageAt: string | null;
 };
+
+export type ReportReason =
+  | 'DISRESPECT'
+  | 'UNWANTED_SEXUAL'
+  | 'SPAM'
+  | 'FAKE_PROFILE'
+  | 'LOOKS_UNDERAGE'
+  | 'OTHER';
+
+/** Un toque: corta la conversación al momento y no os vuelve a emparejar. */
+export const reportar = (token: string, conversationId: string, reason: ReportReason | null) =>
+  request<void>(
+    `/api/conversations/${conversationId}/report`,
+    { method: 'POST', body: JSON.stringify({ reason }) },
+    token,
+  );
+
+/** Dónde encontrar este móvil, para los cinco avisos. */
+export const registerPushToken = (token: string, pushToken: string) =>
+  request<void>('/api/push-token', { method: 'POST', body: JSON.stringify({ token: pushToken }) }, token);
 
 export const fetchConnections = (token: string) =>
   request<Connection[]>('/api/connections', {}, token);

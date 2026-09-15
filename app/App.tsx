@@ -19,6 +19,7 @@ import { IntroScreen } from './src/screens/IntroScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
+import { activarAvisos } from './src/avisos';
 import { clearToken, readToken, saveToken } from './src/session';
 import { colors } from './src/theme';
 
@@ -71,6 +72,18 @@ export default function App() {
   useEffect(() => {
     arrancar();
   }, [arrancar]);
+
+  /**
+   * Los avisos se piden una vez, cuando ya hay sesión y registro: pedir permiso
+   * nada más abrir, antes de que se entienda para qué sirve, es la mejor forma
+   * de que digan que no.
+   */
+  useEffect(() => {
+    if (state.kind !== 'hoy') return;
+    activarAvisos(state.token).catch(() => {
+      // Sin avisos la app funciona igual; no hay nada que contarle a nadie.
+    });
+  }, [state]);
 
   async function entrar(sesion: StartedSession) {
     await saveToken(sesion.token);

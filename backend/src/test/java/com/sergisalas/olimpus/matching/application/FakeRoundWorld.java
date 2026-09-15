@@ -7,6 +7,7 @@ import com.sergisalas.olimpus.matching.domain.ConversationRepository;
 import com.sergisalas.olimpus.matching.domain.InterestWeights;
 import com.sergisalas.olimpus.matching.domain.MatchContext;
 import com.sergisalas.olimpus.matching.domain.MatchContextFactory;
+import com.sergisalas.olimpus.matching.domain.PairKey;
 import com.sergisalas.olimpus.matching.domain.ProfileDirectory;
 import com.sergisalas.olimpus.matching.domain.RoundSchedule;
 import com.sergisalas.olimpus.profile.domain.Profile;
@@ -111,11 +112,17 @@ public class FakeRoundWorld {
                 }
             };
 
+    /** Pairs that blocked each other. The rounds read them as a hard filter. */
+    public final java.util.Set<PairKey> blocked = new java.util.HashSet<>();
+
     public final MatchContextFactory contexts =
-            (today, pool) ->
-                    MatchContext.on(today)
-                            .interestWeights(InterestWeights.fromPopulation(pool))
-                            .build();
+            (today, pool) -> {
+                var builder =
+                        MatchContext.on(today)
+                                .interestWeights(InterestWeights.fromPopulation(pool));
+                blocked.forEach(pair -> builder.blocked(pair.first(), pair.second()));
+                return builder.build();
+            };
 
     public RunDailyRound dailyRound() {
         return new RunDailyRound(profiles, conversations, contexts, schedule);
