@@ -14,7 +14,9 @@ import com.sergisalas.olimpus.chat.application.SendMessage;
 import com.sergisalas.olimpus.chat.domain.MessageRepository;
 import com.sergisalas.olimpus.health.application.CheckHealth;
 import com.sergisalas.olimpus.health.domain.DatabaseInfo;
+import com.sergisalas.olimpus.matching.application.AskToSeePhoto;
 import com.sergisalas.olimpus.matching.application.GetTodaysConversation;
+import com.sergisalas.olimpus.matching.application.ViewPartnerPhoto;
 import com.sergisalas.olimpus.matching.application.RunDailyRound;
 import com.sergisalas.olimpus.matching.domain.ConversationRepository;
 import com.sergisalas.olimpus.matching.domain.MatchContextFactory;
@@ -95,6 +97,21 @@ public class DomainBeans {
         return new ViewPhoto(photos, storage);
     }
 
+    @Bean
+    AskToSeePhoto askToSeePhoto(
+            ConversationRepository conversations, MessageRepository messages, Clock clock) {
+        return new AskToSeePhoto(conversations, messages, clock);
+    }
+
+    @Bean
+    ViewPartnerPhoto viewPartnerPhoto(
+            ConversationRepository conversations,
+            MessageRepository messages,
+            ViewPhoto photos,
+            Clock clock) {
+        return new ViewPartnerPhoto(conversations, messages, photos, clock);
+    }
+
     /** The community's time zone. The 4:00, 14:00 and 22:00 are computed in it. */
     @Bean
     RoundSchedule roundSchedule(@Value("${olimpus.zone:Europe/Madrid}") String zone) {
@@ -113,10 +130,11 @@ public class DomainBeans {
     @Bean
     GetTodaysConversation getTodaysConversation(
             ConversationRepository conversations,
+            MessageRepository messages,
             ProfileDirectory profiles,
             RoundSchedule schedule,
             Clock clock) {
-        return new GetTodaysConversation(conversations, profiles, schedule, clock);
+        return new GetTodaysConversation(conversations, messages, profiles, schedule, clock);
     }
 
     @Bean

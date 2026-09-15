@@ -22,7 +22,8 @@ public class JdbcConversationRepository implements ConversationRepository {
     private static final String COLUMNS =
             """
             id, round_date, round_kind, account_a, account_b, origin, score,
-            opens_at, closes_at, state, messages_from_a, messages_from_b, icebreaker_interest
+            opens_at, closes_at, state, messages_from_a, messages_from_b, icebreaker_interest,
+            photo_wanted_by_a, photo_wanted_by_b
             """;
 
     private static final RowMapper<Conversation> MAPPER = JdbcConversationRepository::toConversation;
@@ -39,12 +40,15 @@ public class JdbcConversationRepository implements ConversationRepository {
                 """
                 insert into conversation (
                     id, round_date, round_kind, account_a, account_b, origin, score,
-                    opens_at, closes_at, state, messages_from_a, messages_from_b, icebreaker_interest)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    opens_at, closes_at, state, messages_from_a, messages_from_b, icebreaker_interest,
+                    photo_wanted_by_a, photo_wanted_by_b)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict (id) do update set
                     state = excluded.state,
                     messages_from_a = excluded.messages_from_a,
-                    messages_from_b = excluded.messages_from_b
+                    messages_from_b = excluded.messages_from_b,
+                    photo_wanted_by_a = excluded.photo_wanted_by_a,
+                    photo_wanted_by_b = excluded.photo_wanted_by_b
                 """,
                 c.id(),
                 java.sql.Date.valueOf(c.roundDate()),
@@ -58,7 +62,9 @@ public class JdbcConversationRepository implements ConversationRepository {
                 c.state().name(),
                 c.messagesFromA(),
                 c.messagesFromB(),
-                c.icebreakerInterest());
+                c.icebreakerInterest(),
+                c.photoWantedByA() == null ? null : Timestamp.from(c.photoWantedByA()),
+                c.photoWantedByB() == null ? null : Timestamp.from(c.photoWantedByB()));
     }
 
     @Override
@@ -111,6 +117,13 @@ public class JdbcConversationRepository implements ConversationRepository {
                 ConversationState.valueOf(rs.getString("state")),
                 rs.getInt("messages_from_a"),
                 rs.getInt("messages_from_b"),
-                rs.getString("icebreaker_interest"));
+                rs.getString("icebreaker_interest"),
+                instantOrNull(rs, "photo_wanted_by_a"),
+                instantOrNull(rs, "photo_wanted_by_b"));
+    }
+
+    private static java.time.Instant instantOrNull(ResultSet rs, String column) throws SQLException {
+        Timestamp value = rs.getTimestamp(column);
+        return value == null ? null : value.toInstant();
     }
 }

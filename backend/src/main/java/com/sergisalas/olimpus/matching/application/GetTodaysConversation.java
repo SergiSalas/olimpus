@@ -2,7 +2,10 @@ package com.sergisalas.olimpus.matching.application;
 
 import com.sergisalas.olimpus.matching.domain.Conversation;
 import com.sergisalas.olimpus.matching.domain.ConversationRepository;
+import com.sergisalas.olimpus.chat.domain.MessageRepository;
 import com.sergisalas.olimpus.matching.domain.PartnerView;
+import com.sergisalas.olimpus.matching.domain.UnlockLadder;
+import com.sergisalas.olimpus.matching.domain.UnlockLevel;
 import com.sergisalas.olimpus.matching.domain.ProfileDirectory;
 import com.sergisalas.olimpus.matching.domain.RoundSchedule;
 import com.sergisalas.olimpus.profile.domain.Profile;
@@ -33,16 +36,19 @@ public class GetTodaysConversation {
     }
 
     private final ConversationRepository conversations;
+    private final MessageRepository messages;
     private final ProfileDirectory profiles;
     private final RoundSchedule schedule;
     private final Clock clock;
 
     public GetTodaysConversation(
             ConversationRepository conversations,
+            MessageRepository messages,
             ProfileDirectory profiles,
             RoundSchedule schedule,
             Clock clock) {
         this.conversations = conversations;
+        this.messages = messages;
         this.profiles = profiles;
         this.schedule = schedule;
         this.clock = clock;
@@ -63,8 +69,14 @@ public class GetTodaysConversation {
             return Today.nothing(today);
         }
 
+        // The card outside the chat also respects the level: once they have
+        // written to each other, it already says the nickname.
+        UnlockLevel level =
+                UnlockLadder.levelOf(
+                        conversation, messages.byConversation(conversation.id()), clock.instant());
+
         List<String> shared = PartnerView.sharedInterests(me.get(), partner.get());
-        PartnerView view = PartnerView.levelZero(partner.get(), me.get(), today, shared);
+        PartnerView view = PartnerView.at(level, partner.get(), me.get(), today, shared);
 
         return new Today(Optional.of(conversation), Optional.of(view), shared, today);
     }

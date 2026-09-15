@@ -44,6 +44,20 @@ public class ViewPhoto {
         return photos.findByAccountId(accountId).filter(Photo::canBeShown).isPresent();
     }
 
+    /**
+     * Someone else's photo, once whoever asks has earned it. Deciding that is not
+     * this class's business: the unlock level lives in the conversation, so the
+     * caller has already checked it. What is checked here is the other half: a
+     * photo that moderation has not approved is shown to nobody, ever.
+     */
+    public Bytes photoOf(UUID ownerId) {
+        Photo photo =
+                photos.findByAccountId(ownerId)
+                        .filter(Photo::canBeShown)
+                        .orElseThrow(PhotoNotVisibleException::new);
+        return read(photo);
+    }
+
     private Bytes read(Photo photo) {
         byte[] content =
                 storage.read(photo.storageId()).orElseThrow(PhotoNotVisibleException::new);

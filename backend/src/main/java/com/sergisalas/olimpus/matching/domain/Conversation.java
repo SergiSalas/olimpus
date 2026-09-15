@@ -29,7 +29,10 @@ public record Conversation(
          * The shared interest the opening question is about, or null when they
          * share none. Only the interest is kept: the wording depends on the reader.
          */
-        String icebreakerInterest) {
+        String icebreakerInterest,
+        /** When each side said they want to see the other. Null until they do. */
+        Instant photoWantedByA,
+        Instant photoWantedByB) {
 
     public Conversation {
         if (id == null) throw new IllegalArgumentException("id is missing");
@@ -70,7 +73,9 @@ public record Conversation(
                 ConversationState.OPEN,
                 0,
                 0,
-                icebreakerInterest);
+                icebreakerInterest,
+                null,
+                null);
     }
 
     public boolean involves(UUID accountId) {
@@ -116,15 +121,57 @@ public record Conversation(
                 state, messagesFromA + (isA ? 1 : 0), messagesFromB + (isA ? 0 : 1));
     }
 
+    /**
+     * Whether someone has already said they want to see the other.
+     *
+     * <p>Nobody is told that the other one asked: only that both did, when both
+     * did. Otherwise the first to ask would be putting pressure on the other.
+     */
+    public boolean photoWantedBy(UUID accountId) {
+        if (accountA.equals(accountId)) return photoWantedByA != null;
+        if (accountB.equals(accountId)) return photoWantedByB != null;
+        throw new IllegalArgumentException("that account is not in this conversation");
+    }
+
+    public boolean bothWantPhoto() {
+        return photoWantedByA != null && photoWantedByB != null;
+    }
+
+    public Conversation withPhotoWantedBy(UUID accountId, Instant when) {
+        if (!involves(accountId)) {
+            throw new IllegalArgumentException("that account is not in this conversation");
+        }
+        boolean isA = accountA.equals(accountId);
+        return copy(
+                state,
+                messagesFromA,
+                messagesFromB,
+                isA ? firstNotNull(photoWantedByA, when) : photoWantedByA,
+                isA ? photoWantedByB : firstNotNull(photoWantedByB, when));
+    }
+
     public Conversation cancelled() {
-        return withStateAndCounts(ConversationState.CANCELLED, messagesFromA, messagesFromB);
+        return withState(ConversationState.CANCELLED);
     }
 
     public Conversation closed() {
-        return withStateAndCounts(ConversationState.CLOSED, messagesFromA, messagesFromB);
+        return withState(ConversationState.CLOSED);
+    }
+
+    private Conversation withState(ConversationState newState) {
+        return copy(newState, messagesFromA, messagesFromB, photoWantedByA, photoWantedByB);
     }
 
     private Conversation withStateAndCounts(ConversationState newState, int fromA, int fromB) {
+        return copy(newState, fromA, fromB, photoWantedByA, photoWantedByB);
+    }
+
+    private Conversation copy(
+            ConversationState newState,
+            int fromA,
+            int fromB,
+            Instant wantedByA,
+            Instant wantedByB) {
         return new Conversation(
                 id,
                 roundDate,
@@ -138,6 +185,13 @@ public record Conversation(
                 newState,
                 fromA,
                 fromB,
-                icebreakerInterest);
+                icebreakerInterest,
+                wantedByA,
+                wantedByB);
+    }
+
+    /** Asking twice does not move the moment it was first asked. */
+    private static Instant firstNotNull(Instant existing, Instant fallback) {
+        return existing != null ? existing : fallback;
     }
 }

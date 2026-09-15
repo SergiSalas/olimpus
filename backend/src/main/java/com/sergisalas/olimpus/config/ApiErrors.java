@@ -4,6 +4,7 @@ import com.sergisalas.olimpus.auth.adapter.in.NotAuthenticatedException;
 import com.sergisalas.olimpus.auth.domain.InvalidLoginCodeException;
 import com.sergisalas.olimpus.chat.domain.ChatClosedException;
 import com.sergisalas.olimpus.chat.domain.NotYourConversationException;
+import com.sergisalas.olimpus.matching.domain.TooSoonForPhotoException;
 import com.sergisalas.olimpus.profile.domain.PhotoNotVisibleException;
 import com.sergisalas.olimpus.profile.domain.ProfileNotFoundException;
 import com.sergisalas.olimpus.profile.domain.UnderageException;
@@ -62,6 +63,12 @@ public class ApiErrors {
     @ExceptionHandler(UnderageException.class)
     public ResponseEntity<ApiError> underage(UnderageException e) {
         return respond(HttpStatus.FORBIDDEN, e);
+    }
+
+    /** Asking for the photo before the conversation has earned it. */
+    @ExceptionHandler(TooSoonForPhotoException.class)
+    public ResponseEntity<ApiError> tooSoon(TooSoonForPhotoException e) {
+        return respond(HttpStatus.CONFLICT, e);
     }
 
     /** Never uploaded, not approved, or not earned yet: all three answer alike. */

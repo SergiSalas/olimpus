@@ -58,7 +58,9 @@ class SendMessageTest {
                         ConversationState.OPEN,
                         0,
                         0,
-                        "climbing");
+                        "climbing",
+                        null,
+                        null);
         storedConversations.put(chat.id(), chat);
 
         ConversationRepository conversations =

@@ -6,6 +6,8 @@ import com.sergisalas.olimpus.chat.domain.NotYourConversationException;
 import com.sergisalas.olimpus.matching.domain.Conversation;
 import com.sergisalas.olimpus.matching.domain.ConversationRepository;
 import com.sergisalas.olimpus.matching.domain.PartnerView;
+import com.sergisalas.olimpus.matching.domain.UnlockLadder;
+import com.sergisalas.olimpus.matching.domain.UnlockLevel;
 import com.sergisalas.olimpus.matching.domain.ProfileDirectory;
 import com.sergisalas.olimpus.matching.domain.RoundSchedule;
 import com.sergisalas.olimpus.profile.domain.Profile;
@@ -20,7 +22,11 @@ public class GetChat {
             Conversation conversation,
             PartnerView partner,
             List<String> sharedInterests,
-            List<Message> messages) {}
+            List<Message> messages,
+            /** Whether the "I want to see you" button belongs on the screen yet. */
+            boolean canAskForPhoto,
+            /** Whether this viewer already asked. The other one's answer is never told. */
+            boolean alreadyAsked) {}
 
     private final ConversationRepository conversations;
     private final MessageRepository messages;
@@ -55,10 +61,20 @@ public class GetChat {
                         .byAccountId(conversation.partnerOf(viewer))
                         .orElseThrow(NotYourConversationException::new);
 
+        List<Message> written = messages.byConversation(conversationId);
+        var now = clock.instant();
+        UnlockLevel level = UnlockLadder.levelOf(conversation, written, now);
+
         List<String> shared = PartnerView.sharedInterests(me, partner);
         PartnerView view =
-                PartnerView.levelZero(partner, me, schedule.dateOf(clock.instant()), shared);
+                PartnerView.at(level, partner, me, schedule.dateOf(now), shared);
 
-        return new Chat(conversation, view, shared, messages.byConversation(conversationId));
+        return new Chat(
+                conversation,
+                view,
+                shared,
+                written,
+                UnlockLadder.canAskForPhoto(conversation, written, now),
+                conversation.photoWantedBy(viewer));
     }
 }

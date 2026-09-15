@@ -71,16 +71,24 @@ class GetTodaysConversationTest {
 
     @Test
     void the_level_zero_view_does_not_leak_nickname_or_bio() {
-        // Shape check: the view only has four fields, and none of them is the
-        // profile. If someone added the nickname here, this test reminds them.
-        var fields =
-                java.util.Arrays.stream(
-                                com.sergisalas.olimpus.matching.domain.PartnerView.class
-                                        .getRecordComponents())
-                        .map(java.lang.reflect.RecordComponent::getName)
-                        .toList();
+        // The view grows with the level (PartnerViewTest covers each rung). What
+        // this one guards is the card outside the chat: a freshly handed out
+        // conversation, where nothing has been earned yet.
+        Profile ana =
+                TestPeople.person().nickname("Ana").gender(Gender.WOMAN).seeking(Gender.MAN).build();
+        Profile leo =
+                TestPeople.person().nickname("Leo").gender(Gender.MAN).seeking(Gender.WOMAN).build();
+        world.people.addAll(List.of(ana, leo));
+        world.dailyRound().execute(TestPeople.TODAY, RoundKind.MAIN);
 
-        assertThat(fields).containsExactly("age", "interestsShown", "approxDistanceKm", "level");
+        var view = world.todaysConversation().execute(ana.accountId()).partner().orElseThrow();
+
+        assertThat(view.level()).isZero();
+        assertThat(view.nickname()).isNull();
+        assertThat(view.bio()).isNull();
+        assertThat(view.languages()).isEmpty();
+        assertThat(view.intent()).isNull();
+        assertThat(view.photoAvailable()).isFalse();
     }
 
     @Test

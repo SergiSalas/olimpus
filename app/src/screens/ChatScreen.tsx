@@ -12,12 +12,14 @@ import {
 } from 'react-native';
 import {
   ApiError,
+  askToSeePhoto,
   fetchChat,
   openChatSocket,
   sendMessage,
   type Chat,
   type ChatMessage,
 } from '../api';
+import { Escalones, LoQueSeVe } from '../components/Escalera';
 import { Etiqueta } from '../components';
 import { colors, fonts, radios } from '../theme';
 
@@ -39,6 +41,8 @@ export function ChatScreen({
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pidiendoFoto, setPidiendoFoto] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
   const lista = useRef<FlatList<ChatMessage>>(null);
 
   const cargar = useCallback(async () => {
@@ -76,10 +80,31 @@ export function ChatScreen({
       setChat((actual) =>
         actual ? { ...actual, messages: [...actual.messages, mensaje] } : actual,
       );
+      // Ese mensaje puede haber abierto un nivel: quien lo decide es el
+      // servidor, así que se le vuelve a preguntar en vez de adivinarlo aquí.
+      cargar();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No se pudo enviar.');
     } finally {
       setEnviando(false);
+    }
+  }
+
+  async function quieroVerte() {
+    setPidiendoFoto(true);
+    setError(null);
+    try {
+      const respuesta = await askToSeePhoto(token, conversationId);
+      setAviso(
+        respuesta.bothAccepted
+          ? 'Los dos habéis dicho que sí. Ya podéis veros.'
+          : 'Anotado. Si la otra persona también lo pide, aparecerá la foto.',
+      );
+      await cargar();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No se pudo pedir.');
+    } finally {
+      setPidiendoFoto(false);
     }
   }
 
@@ -116,8 +141,11 @@ export function ChatScreen({
             {chat.bothHaveWritten ? 'Conversación en marcha' : 'Alguien nuevo'}
           </Text>
           <Text style={estilos.nivel}>
-            {chat.partner.age} años · nivel {chat.partner.level}
+            {chat.partner.nickname
+              ? `${chat.partner.nickname}, ${chat.partner.age}`
+              : `${chat.partner.age} años`}
           </Text>
+          <Escalones nivel={chat.partner.level} />
         </View>
         <View style={estilos.pastillaCierre}>
           <Text style={estilos.pastillaCierreTexto}>Cierra {hora(chat.closesAt)}</Text>
@@ -131,9 +159,22 @@ export function ChatScreen({
         contentContainerStyle={estilos.mensajes}
         onContentSizeChange={() => lista.current?.scrollToEnd({ animated: true })}
         ListHeaderComponent={
-          <View style={estilos.arranque}>
-            <Etiqueta tono="accent">Para empezar</Etiqueta>
-            <Text style={estilos.arranqueTexto}>{chat.icebreaker}</Text>
+          <View style={{ gap: 12, marginBottom: 10 }}>
+            <LoQueSeVe
+              chat={chat}
+              token={token}
+              pidiendo={pidiendoFoto}
+              onQuieroVerte={quieroVerte}
+            />
+            {aviso && (
+              <View style={estilos.aviso}>
+                <Text style={estilos.avisoTexto}>{aviso}</Text>
+              </View>
+            )}
+            <View style={estilos.arranque}>
+              <Etiqueta tono="accent">Para empezar</Etiqueta>
+              <Text style={estilos.arranqueTexto}>{chat.icebreaker}</Text>
+            </View>
           </View>
         }
         renderItem={({ item }) => (
@@ -239,6 +280,14 @@ const estilos = StyleSheet.create({
     marginBottom: 10,
     gap: 6,
   },
+  aviso: {
+    backgroundColor: colors.accentWash,
+    borderWidth: 1,
+    borderColor: colors.accentBorde,
+    borderRadius: 14,
+    padding: 14,
+  },
+  avisoTexto: { fontFamily: fonts.sansMedia, fontSize: 13.5, lineHeight: 19, color: colors.ink },
   arranqueTexto: { fontFamily: fonts.sans, fontSize: 15, lineHeight: 22, color: colors.ink },
 
   burbuja: { maxWidth: '82%', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 14 },

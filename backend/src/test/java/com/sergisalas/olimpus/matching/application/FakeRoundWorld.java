@@ -1,5 +1,7 @@
 package com.sergisalas.olimpus.matching.application;
 
+import com.sergisalas.olimpus.chat.domain.Message;
+import com.sergisalas.olimpus.chat.domain.MessageRepository;
 import com.sergisalas.olimpus.matching.domain.Conversation;
 import com.sergisalas.olimpus.matching.domain.ConversationRepository;
 import com.sergisalas.olimpus.matching.domain.InterestWeights;
@@ -22,10 +24,27 @@ import java.util.stream.Collectors;
 public class FakeRoundWorld {
 
     public final List<Profile> people = new ArrayList<>();
+    public final List<Message> written = new ArrayList<>();
     public final Map<UUID, Conversation> stored = new LinkedHashMap<>();
     public final RoundSchedule schedule = RoundSchedule.of(java.time.ZoneId.of("Europe/Madrid"));
 
     public Instant now = Instant.parse("2026-09-12T06:00:00Z");
+
+    /** The unlock ladder is computed from the messages, so the rounds need them too. */
+    public final MessageRepository messages =
+            new MessageRepository() {
+                @Override
+                public void save(Message message) {
+                    written.add(message);
+                }
+
+                @Override
+                public List<Message> byConversation(UUID conversationId) {
+                    return written.stream()
+                            .filter(m -> m.conversationId().equals(conversationId))
+                            .toList();
+                }
+            };
 
     public final Clock clock =
             new Clock() {
@@ -96,6 +115,6 @@ public class FakeRoundWorld {
     }
 
     public GetTodaysConversation todaysConversation() {
-        return new GetTodaysConversation(conversations, profiles, schedule, clock);
+        return new GetTodaysConversation(conversations, messages, profiles, schedule, clock);
     }
 }

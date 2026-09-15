@@ -178,12 +178,27 @@ export function ownPhotoSource(token: string) {
 
 // ---------- la conversación del día ----------
 
+/**
+ * Lo que se ve del otro, según lo que la conversación haya desbloqueado.
+ *
+ * Un campo en null no es que falte: es que todavía no se ha ganado. El servidor
+ * ni siquiera lo manda, así que la app no podría enseñarlo por error.
+ */
 export type Partner = {
+  /** 0 match · 1 primer mensaje · 2 conversación · 3 buena conexión · 4 confianza */
+  level: number;
   age: number;
-  /** Solo dos, y del nivel 0: ni apodo, ni bio, ni foto. */
   interests: string[];
   approxDistanceKm: number;
-  level: number;
+  /** Desde el nivel 1. */
+  nickname: string | null;
+  /** Desde el nivel 2. */
+  bio: string | null;
+  /** Desde el nivel 3. */
+  languages: string[];
+  intent: string | null;
+  /** Nivel 3: la foto ya se puede pedir. */
+  photoAvailable: boolean;
 };
 
 export type Today = {
@@ -219,11 +234,31 @@ export type Chat = {
   partner: Partner;
   sharedInterests: string[];
   bothHaveWritten: boolean;
+  /** Si el botón de "quiero verte" debe estar ya en pantalla. */
+  canAskForPhoto: boolean;
+  /** Si tú ya lo pediste. Lo que haya hecho el otro no se cuenta. */
+  alreadyAskedForPhoto: boolean;
   messages: ChatMessage[];
 };
 
 export const fetchChat = (token: string, conversationId: string) =>
   request<Chat>(`/api/conversations/${conversationId}`, {}, token);
+
+/** "Quiero verte". Solo dice si habéis aceptado los dos, nunca qué hizo el otro. */
+export const askToSeePhoto = (token: string, conversationId: string) =>
+  request<{ bothAccepted: boolean; level: number }>(
+    `/api/conversations/${conversationId}/see-photo`,
+    { method: 'POST' },
+    token,
+  );
+
+/** La foto del otro. No es un enlace público: se comprueba en cada lectura. */
+export function partnerPhotoSource(token: string, conversationId: string) {
+  return {
+    uri: `${backendUrl()}/api/conversations/${conversationId}/partner-photo`,
+    headers: { Authorization: `Bearer ${token}` },
+  };
+}
 
 export const sendMessage = (token: string, conversationId: string, text: string) =>
   request<ChatMessage>(
