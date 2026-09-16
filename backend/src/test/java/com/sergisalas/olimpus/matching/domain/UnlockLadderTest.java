@@ -187,4 +187,66 @@ class UnlockLadderTest {
             assertThat(pedida.bothWantPhoto()).isFalse();
         }
     }
+
+    @Nested
+    class WhenEachLevelOpened {
+
+        @Test
+        void the_reply_that_gets_both_talking_is_the_one_that_opens_level_one() {
+            List<Message> messages = conversation("AAB");
+
+            var unlocks = UnlockLadder.unlocksOf(charla, messages, after(Duration.ofMinutes(5)));
+
+            assertThat(unlocks).hasSize(1);
+            assertThat(unlocks.get(0).level()).isEqualTo(UnlockLevel.FIRST_MESSAGE);
+            // The third message, the first one from the other person.
+            assertThat(unlocks.get(0).afterMessageId()).isEqualTo(messages.get(2).id());
+        }
+
+        @Test
+        void a_conversation_nobody_answered_has_nothing_to_announce() {
+            assertThat(UnlockLadder.unlocksOf(charla, conversation("AAAA"), after(Duration.ofHours(6))))
+                    .isEmpty();
+        }
+
+        @Test
+        void an_hour_going_by_with_nobody_writing_also_opens_level_two() {
+            // Three turns each within the first minutes, then silence.
+            List<Message> messages = conversation("ABABAB");
+
+            var soon = UnlockLadder.unlocksOf(charla, messages, after(Duration.ofMinutes(30)));
+            assertThat(soon).extracting(UnlockLadder.Unlock::level)
+                    .containsExactly(UnlockLevel.FIRST_MESSAGE);
+
+            var later = UnlockLadder.unlocksOf(charla, messages, after(Duration.ofHours(2)));
+            assertThat(later).extracting(UnlockLadder.Unlock::level)
+                    .containsExactly(UnlockLevel.FIRST_MESSAGE, UnlockLevel.CONVERSATION);
+            // Nobody wrote it: time alone opened it.
+            assertThat(later.get(1).afterMessageId()).isNull();
+        }
+
+        @Test
+        void the_photo_is_announced_at_the_moment_the_second_person_accepted() {
+            Instant first = after(Duration.ofHours(4));
+            Instant second = after(Duration.ofHours(6));
+            Conversation both =
+                    charla.withPhotoWantedBy(ANA, first).withPhotoWantedBy(LEO, second);
+
+            var unlocks =
+                    UnlockLadder.unlocksOf(both, conversation("ABABAB"), after(Duration.ofHours(7)));
+
+            assertThat(unlocks).extracting(UnlockLadder.Unlock::level)
+                    .contains(UnlockLevel.GOOD_CONNECTION);
+            assertThat(unlocks.get(unlocks.size() - 1).at()).isEqualTo(second);
+        }
+
+        @Test
+        void the_same_conversation_always_gives_the_same_notices() {
+            List<Message> messages = conversation("ABABAB");
+            Instant now = after(Duration.ofHours(3));
+
+            assertThat(UnlockLadder.unlocksOf(charla, messages, now))
+                    .isEqualTo(UnlockLadder.unlocksOf(charla, messages, now));
+        }
+    }
 }

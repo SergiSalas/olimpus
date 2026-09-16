@@ -48,7 +48,7 @@ export function ChatScreen({
   const [respondiendo, setRespondiendo] = useState(false);
   const [reportando, setReportando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
-  const lista = useRef<FlatList<ChatMessage>>(null);
+  const lista = useRef<FlatList<Fila>>(null);
 
   const cargar = useCallback(async () => {
     try {
@@ -66,12 +66,19 @@ export function ChatScreen({
   useEffect(() => {
     const socket = openChatSocket(token, (mensaje) => {
       if (mensaje.conversationId !== conversationId || mensaje.mine) return;
-      setChat((actual) =>
-        actual ? { ...actual, messages: [...actual.messages, mensaje] } : actual,
-      );
+
+      setChat((actual) => {
+        if (!actual) return actual;
+        // Si ese mensaje ha abierto un nivel, hay cosas nuevas que enseñar (su
+        // apodo, su bio) y el aviso que lo cuenta: se le pide todo al servidor.
+        if (mensaje.level > actual.partner.level) {
+          cargar();
+        }
+        return { ...actual, messages: [...actual.messages, mensaje] };
+      });
     });
     return () => socket.close();
-  }, [token, conversationId]);
+  }, [token, conversationId, cargar]);
 
   async function enviar() {
     const limpio = texto.trim();
@@ -190,8 +197,8 @@ export function ChatScreen({
 
       <FlatList
         ref={lista}
-        data={chat.messages}
-        keyExtractor={(m) => m.id}
+        data={conAvisos(chat)}
+        keyExtractor={(item) => item.clave}
         contentContainerStyle={estilos.mensajes}
         onContentSizeChange={() => lista.current?.scrollToEnd({ animated: true })}
         ListHeaderComponent={
@@ -220,12 +227,24 @@ export function ChatScreen({
             </View>
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={[estilos.burbuja, item.mine ? estilos.mia : estilos.suya]}>
-            <Text style={item.mine ? estilos.textoMio : estilos.textoSuyo}>{item.text}</Text>
-            <Text style={item.mine ? estilos.horaMia : estilos.horaSuya}>{hora(item.sentAt)}</Text>
-          </View>
-        )}
+        renderItem={({ item }) =>
+          item.tipo === 'aviso' ? (
+            <View style={estilos.desbloqueo}>
+              <View style={estilos.rayita} />
+              <Text style={estilos.desbloqueoTexto}>{item.texto}</Text>
+              <View style={estilos.rayita} />
+            </View>
+          ) : (
+            <View style={[estilos.burbuja, item.mensaje.mine ? estilos.mia : estilos.suya]}>
+              <Text style={item.mensaje.mine ? estilos.textoMio : estilos.textoSuyo}>
+                {item.mensaje.text}
+              </Text>
+              <Text style={item.mensaje.mine ? estilos.horaMia : estilos.horaSuya}>
+                {hora(item.mensaje.sentAt)}
+              </Text>
+            </View>
+          )
+        }
       />
 
       {error && <Text style={estilos.error}>{error}</Text>}
@@ -263,6 +282,39 @@ export function ChatScreen({
       )}
     </KeyboardAvoidingView>
   );
+}
+
+/** Lo que se ve en el hilo: mensajes y, entre ellos, los avisos de desbloqueo. */
+type Fila =
+  | { clave: string; tipo: 'mensaje'; mensaje: ChatMessage }
+  | { clave: string; tipo: 'aviso'; texto: string };
+
+/**
+ * Mezcla los dos. El servidor dice después de qué mensaje va cada aviso, así
+ * que aquí no se decide nada: se colocan donde toca y siguen ahí al recargar.
+ */
+function conAvisos(chat: Chat): Fila[] {
+  const filas: Fila[] = [];
+
+  for (const mensaje of chat.messages) {
+    filas.push({ clave: mensaje.id, tipo: 'mensaje', mensaje });
+
+    for (const unlock of chat.unlocks) {
+      if (unlock.afterMessageId === mensaje.id) {
+        filas.push({ clave: `nivel-${unlock.level}`, tipo: 'aviso', texto: unlock.text });
+      }
+    }
+  }
+
+  // Los que no cuelgan de ningún mensaje (los abrió el tiempo, o el "quiero
+  // verte" de los dos) van al final, que es cuando ocurrieron.
+  for (const unlock of chat.unlocks) {
+    if (!unlock.afterMessageId) {
+      filas.push({ clave: `nivel-${unlock.level}`, tipo: 'aviso', texto: unlock.text });
+    }
+  }
+
+  return filas;
 }
 
 function hora(iso: string): string {
@@ -337,6 +389,21 @@ const estilos = StyleSheet.create({
   avisoTexto: { fontFamily: fonts.sansMedia, fontSize: 13.5, lineHeight: 19, color: colors.ink },
   arranqueTexto: { fontFamily: fonts.sans, fontSize: 15, lineHeight: 22, color: colors.ink },
 
+  desbloqueo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  rayita: { flex: 1, height: 1, backgroundColor: colors.accentBorde },
+  desbloqueoTexto: {
+    fontFamily: fonts.sansMedia,
+    fontSize: 12.5,
+    color: colors.accent,
+    textAlign: 'center',
+    flexShrink: 1,
+  },
   burbuja: { maxWidth: '82%', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 14 },
   mia: { alignSelf: 'flex-end', backgroundColor: colors.ink, borderBottomRightRadius: 6 },
   suya: {

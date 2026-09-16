@@ -5,6 +5,7 @@ import com.sergisalas.olimpus.auth.domain.Account;
 import com.sergisalas.olimpus.chat.application.GetChat;
 import com.sergisalas.olimpus.matching.application.AskToSeePhoto;
 import com.sergisalas.olimpus.notifications.application.Announce;
+import com.sergisalas.olimpus.shared.adapter.Messages;
 import com.sergisalas.olimpus.matching.application.DecideOnPartner;
 import com.sergisalas.olimpus.matching.domain.Decision;
 import org.springframework.http.HttpStatus;
@@ -62,9 +63,16 @@ public class ChatController {
             /** What you answered, if you did. The other one's answer never travels. */
             String yourDecision,
             boolean connected,
+            List<UnlockResponse> unlocks,
             List<MessageResponse> messages) {}
 
     public record PhotoAnswer(boolean bothAccepted, int level) {}
+
+    /**
+     * A notice to show inside the conversation, right after the message that
+     * earned it.
+     */
+    public record UnlockResponse(int level, UUID afterMessageId, Instant at, String text) {}
 
     public record DecisionRequest(Decision answer) {}
 
@@ -78,6 +86,7 @@ public class ChatController {
     private final ViewPartnerPhoto viewPartnerPhoto;
     private final DecideOnPartner decideOnPartner;
     private final Announce announce;
+    private final Messages messages;
 
     public ChatController(
             GetChat getChat,
@@ -87,7 +96,8 @@ public class ChatController {
             AskToSeePhoto askToSeePhoto,
             ViewPartnerPhoto viewPartnerPhoto,
             DecideOnPartner decideOnPartner,
-            Announce announce) {
+            Announce announce,
+            Messages messages) {
         this.getChat = getChat;
         this.sendMessage = sendMessage;
         this.broadcaster = broadcaster;
@@ -96,6 +106,7 @@ public class ChatController {
         this.viewPartnerPhoto = viewPartnerPhoto;
         this.decideOnPartner = decideOnPartner;
         this.announce = announce;
+        this.messages = messages;
     }
 
     @GetMapping
@@ -125,6 +136,16 @@ public class ChatController {
                 chat.decisionTime(),
                 chat.yourDecision() == null ? null : chat.yourDecision().name(),
                 conversation.isConnected(),
+                chat.unlocks().stream()
+                        .map(
+                                unlock ->
+                                        new UnlockResponse(
+                                                unlock.level().number(),
+                                                unlock.afterMessageId(),
+                                                unlock.at(),
+                                                messages.get(
+                                                        "unlock.level-" + unlock.level().number())))
+                        .toList(),
                 chat.messages().stream().map(m -> toResponse(m, account.id())).toList());
     }
 
@@ -136,7 +157,11 @@ public class ChatController {
 
         // The writer gets the answer from the POST itself; the other person gets
         // it over the long-lived connection, if they have it open.
-        broadcaster.newMessage(sent.conversation(), sent.message());
+        // El nivel se calcula aqui y viaja con el mensaje: asi el desbloqueo se
+        // ve en el momento tambien para quien lo recibe.
+        var chat = getChat.execute(id, account.id());
+        broadcaster.newMessage(
+                sent.conversation(), sent.message(), chat.partner().level());
         // Y si tiene la app cerrada, le llega igual.
         announce.newMessage(sent.conversation(), account.id());
 

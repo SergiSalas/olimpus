@@ -232,6 +232,15 @@ export type ChatMessage = {
   sentAt: string;
 };
 
+/** Un aviso de desbloqueo, para pintarlo justo después del mensaje que lo abrió. */
+export type Unlock = {
+  level: number;
+  /** null cuando lo abrió el tiempo, no un mensaje. */
+  afterMessageId: string | null;
+  at: string;
+  text: string;
+};
+
 export type Chat = {
   conversationId: string;
   state: 'OPEN' | 'CANCELLED' | 'CLOSED' | 'BLOCKED' | 'CONNECTED';
@@ -251,6 +260,7 @@ export type Chat = {
   yourDecision: 'YES' | 'NO' | null;
   /** Si acabó en conexión: el chat ya no cierra. */
   connected: boolean;
+  unlocks: Unlock[];
   messages: ChatMessage[];
 };
 
@@ -330,7 +340,10 @@ export const sendMessage = (token: string, conversationId: string, text: string)
  * Conexión permanente para recibir lo que escribe el otro al instante.
  * Solo baja mensajes: enviar se hace por HTTP, donde ya están las reglas.
  */
-export function openChatSocket(token: string, onMessage: (m: ChatMessage & { conversationId: string }) => void) {
+export function openChatSocket(
+  token: string,
+  onMessage: (m: ChatMessage & { conversationId: string; level: number }) => void,
+) {
   const url = `${backendUrl().replace(/^http/, 'ws')}/ws/chat?token=${encodeURIComponent(token)}`;
   const socket = new WebSocket(url);
 

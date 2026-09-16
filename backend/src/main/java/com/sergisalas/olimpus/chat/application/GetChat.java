@@ -29,7 +29,8 @@ public class GetChat {
             /** Whether this viewer already asked. The other one's answer is never told. */
             boolean alreadyAsked,
             boolean decisionTime,
-            Decision yourDecision) {}
+            Decision yourDecision,
+            List<UnlockLadder.Unlock> unlocks) {}
 
     private final ConversationRepository conversations;
     private final MessageRepository messages;
@@ -80,6 +81,7 @@ public class GetChat {
                 UnlockLadder.canAskForPhoto(conversation, written, now),
                 conversation.photoWantedBy(viewer),
                 conversation.acceptsDecisionAt(now),
-                conversation.decisionBy(viewer));
+                conversation.decisionBy(viewer),
+                UnlockLadder.unlocksOf(conversation, written, now));
     }
 }

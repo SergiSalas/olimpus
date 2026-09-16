@@ -95,6 +95,66 @@ public final class UnlockLadder {
                 && elapsed(messages, now).compareTo(TIME_BEFORE_ASKING_FOR_PHOTO) >= 0;
     }
 
+    /**
+     * The moment a level opened.
+     *
+     * @param afterMessageId the message that opened it, or null when time alone
+     *     did (an hour passing, or the two photo requests)
+     */
+    public record Unlock(UnlockLevel level, java.util.UUID afterMessageId, Instant at) {}
+
+    /**
+     * When each level opened, in order.
+     *
+     * <p>Computed instead of remembered, like the level itself, so that the
+     * notice inside the chat lands in the same place today and after a reload.
+     * The alternative, writing down "unlocked!" when it happens, drifts from the
+     * messages the moment anything is retried or replayed.
+     */
+    public static List<Unlock> unlocksOf(
+            Conversation conversation, List<Message> messages, Instant now) {
+
+        List<Unlock> unlocks = new java.util.ArrayList<>();
+        UnlockLevel highest = UnlockLevel.MATCH;
+
+        // Levels 1 and 2 are opened by a message: the reply that gets both
+        // talking, or the one that completes the turns once the hour has passed.
+        for (int i = 0; i < messages.size(); i++) {
+            List<Message> soFar = messages.subList(0, i + 1);
+            Message last = messages.get(i);
+            UnlockLevel level = levelOf(conversation, soFar, last.sentAt());
+
+            if (level.number() > highest.number() && level.atLeast(UnlockLevel.FIRST_MESSAGE)
+                    && !level.atLeast(UnlockLevel.GOOD_CONNECTION)) {
+                unlocks.add(new Unlock(level, last.id(), last.sentAt()));
+                highest = level;
+            }
+        }
+
+        // An hour can go by with nobody writing, and that also opens level 2.
+        UnlockLevel byTime = levelOf(conversation, messages, now);
+        if (byTime == UnlockLevel.CONVERSATION && highest.number() < byTime.number()) {
+            unlocks.add(new Unlock(byTime, null, now));
+            highest = byTime;
+        }
+
+        // Level 3 is not opened by talking but by both people accepting.
+        if (conversation.bothWantPhoto()) {
+            Instant both =
+                    conversation.photoWantedByA().isAfter(conversation.photoWantedByB())
+                            ? conversation.photoWantedByA()
+                            : conversation.photoWantedByB();
+            unlocks.add(new Unlock(UnlockLevel.GOOD_CONNECTION, null, both));
+        }
+
+        // And level 4 by the mutual yes at the end of the day.
+        if (conversation.isConnected()) {
+            unlocks.add(new Unlock(UnlockLevel.TRUST, null, conversation.closesAt()));
+        }
+
+        return unlocks;
+    }
+
     /** Time since the conversation actually started, not since it was handed out. */
     public static Duration elapsed(List<Message> messages, Instant now) {
         if (messages.isEmpty()) return Duration.ZERO;
