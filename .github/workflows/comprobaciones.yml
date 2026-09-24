@@ -1,0 +1,49 @@
+# Lo que tiene que pasar antes de fusionar nada: los tests del backend y que la
+# app compile. Se ejecuta en cada PR y en cada push a main y develop.
+name: Comprobaciones
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+# Un push nuevo a la misma rama cancela la comprobación anterior, que ya no sirve.
+concurrency:
+  group: comprobaciones-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend · tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      # mvnw está en git sin permiso de ejecución: se lanza con bash.
+      - run: bash mvnw -B test
+
+  app:
+    name: App · tipos y mapeo
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      # Una traducción que falte en un idioma tampoco compila.
+      - run: npx tsc --noEmit
+      # La ida y vuelta entre las respuestas del registro y los números del algoritmo.
+      - run: node --experimental-strip-types src/mapeo.check.ts
