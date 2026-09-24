@@ -7,7 +7,7 @@ import java.util.UUID;
 
 /**
  * A valid profile that each test changes only in what it wants to check.
- * Without it, every test would have to repeat the fifteen sign-up answers.
+ * Without it, every test would have to repeat every sign-up answer.
  */
 public final class TestProfiles {
 
@@ -23,7 +23,6 @@ public final class TestProfiles {
     public static final class Builder {
         private UUID accountId = ACCOUNT;
         private String nickname = "Sergi";
-        private String bio = "I like the sea.";
         private LocalDate birthDate = LocalDate.of(1995, 3, 20);
         private Gender gender = Gender.MAN;
         private Set<Gender> seeking = Set.of(Gender.WOMAN);
@@ -40,14 +39,37 @@ public final class TestProfiles {
         private Intent intent = Intent.RELATIONSHIP;
         private Set<String> interests =
                 Set.of("climbing", "movies", "cooking", "astronomy", "chess");
+        private String genderLabel = "";
+        private List<PromptAnswer> prompts =
+                List.of(
+                        new PromptAnswer("last-hooked", "A book about lighthouses."),
+                        new PromptAnswer("always-ask", "What did you have for breakfast?"),
+                        new PromptAnswer("perfect-tuesday", "The sea and nothing else."));
+        private String occupation = "";
+        private String fromPlace = "";
 
         public Builder nickname(String v) {
             nickname = v;
             return this;
         }
 
-        public Builder bio(String v) {
-            bio = v;
+        public Builder genderLabel(String v) {
+            genderLabel = v;
+            return this;
+        }
+
+        public Builder prompts(List<PromptAnswer> v) {
+            prompts = v;
+            return this;
+        }
+
+        public Builder occupation(String v) {
+            occupation = v;
+            return this;
+        }
+
+        public Builder fromPlace(String v) {
+            fromPlace = v;
             return this;
         }
 
@@ -101,9 +123,9 @@ public final class TestProfiles {
             return new Profile(
                     accountId,
                     nickname,
-                    bio,
                     birthDate,
                     gender,
+                    genderLabel,
                     seeking,
                     ageMin,
                     ageMax,
@@ -113,7 +135,10 @@ public final class TestProfiles {
                     sociability,
                     conversationDepth,
                     intent,
-                    interests);
+                    interests,
+                    prompts,
+                    occupation,
+                    fromPlace);
         }
     }
 }

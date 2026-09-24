@@ -10,12 +10,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Use case: 22:00.
+ * Use case: 22:00, the moment the day is settled.
  *
- * <p>Closes the conversations that are past their time. From here on each
- * person's decision rules, which arrives in step 7.
+ * <p>Whoever got a yes from both keeps the chat, now with no closing time.
+ * Everyone else's conversation closes, and neither side is told what the other
+ * answered: the two endings look the same from the outside.
  */
 public class CloseFinishedConversations {
+
+    /** What the closing did, split so the logs and the notifications can tell them apart. */
+    public record Result(List<Conversation> connected, List<Conversation> closed) {
+
+        public int total() {
+            return connected.size() + closed.size();
+        }
+    }
 
     private final ConversationRepository conversations;
     private final RoundSchedule schedule;
@@ -28,22 +37,30 @@ public class CloseFinishedConversations {
         this.clock = clock;
     }
 
-    public List<Conversation> execute() {
+    public Result execute() {
         Instant now = clock.instant();
         LocalDate today = schedule.dateOf(now);
 
+        List<Conversation> connected = new ArrayList<>();
         List<Conversation> closed = new ArrayList<>();
+
         // The previous day is checked too: if the server was down at 22:00,
         // yesterday's conversations cannot stay open forever.
         for (LocalDate day : List.of(today.minusDays(1), today)) {
             for (Conversation conversation : conversations.byDate(day)) {
-                if (conversation.isOpen() && !now.isBefore(conversation.closesAt())) {
-                    Conversation closedOne = conversation.closed();
-                    conversations.save(closedOne);
-                    closed.add(closedOne);
+                if (!conversation.isOpen() || now.isBefore(conversation.closesAt())) {
+                    continue;
                 }
+
+                // Only a yes from both. No answer is not a yes: whoever never
+                // opened the app did not choose to keep going.
+                Conversation settled =
+                        conversation.bothSaidYes() ? conversation.connected() : conversation.closed();
+                conversations.save(settled);
+
+                (settled.isConnected() ? connected : closed).add(settled);
             }
         }
-        return closed;
+        return new Result(connected, closed);
     }
 }

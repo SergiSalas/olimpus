@@ -20,7 +20,52 @@ function cargarNombres(): Promise<Record<string, string>> {
   return catalogo;
 }
 
-/** Devuelve una función id -> nombre. Mientras carga, enseña el id sin guiones. */
+/** Un emoji por interés del catálogo. Uno nuevo sin emoji sale con ✨ hasta que se le ponga. */
+const EMOJIS: Record<string, string> = {
+  travel: '✈️',
+  music: '🎵',
+  movies: '🎬',
+  cooking: '🍳',
+  'tv-series': '📺',
+  reading: '📚',
+  sports: '⚽',
+  tapas: '🍤',
+  photography: '📷',
+  hiking: '🥾',
+  concerts: '🎤',
+  'video-games': '🎮',
+  art: '🎨',
+  running: '🏃',
+  gym: '🏋️',
+  animals: '🐾',
+  theatre: '🎭',
+  gardening: '🌱',
+  podcasts: '🎧',
+  dancing: '💃',
+  guitar: '🎸',
+  surfing: '🏄',
+  cycling: '🚴',
+  history: '🏛️',
+  astronomy: '🔭',
+  climbing: '🧗',
+  chess: '♟️',
+  ceramics: '🏺',
+  diving: '🤿',
+  'board-games': '🎲',
+  philosophy: '🤔',
+  wine: '🍷',
+  improv: '🤹',
+  beekeeping: '🐝',
+  'ice-climbing': '🧊',
+  'instrument-making': '🪕',
+  birdwatching: '🐦',
+  kendo: '🥋',
+};
+
+/** "♟️ Ajedrez": el nombre de un interés con su emoji delante. */
+export const conEmoji = (id: string, nombre: string) => `${EMOJIS[id] ?? '✨'} ${nombre}`;
+
+/** Devuelve una función id -> nombre con emoji. Mientras carga, enseña el id sin guiones. */
 export function useNombreInteres(): (id: string) => string {
   const [nombres, setNombres] = useState<Record<string, string>>({});
 
@@ -34,5 +79,5 @@ export function useNombreInteres(): (id: string) => string {
     };
   }, []);
 
-  return (id) => nombres[id] ?? id.replace(/-/g, ' ');
+  return (id) => conEmoji(id, nombres[id] ?? id.replace(/-/g, ' '));
 }

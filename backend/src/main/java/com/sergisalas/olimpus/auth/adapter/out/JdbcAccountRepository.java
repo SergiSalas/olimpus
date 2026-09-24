@@ -58,4 +58,12 @@ public class JdbcAccountRepository implements AccountRepository {
                 EmailAddress.of(rs.getString("email")),
                 rs.getTimestamp("created_at").toInstant());
     }
+
+    @Override
+    public void delete(UUID accountId) {
+        // Every other table references the account with "on delete cascade", so
+        // this one line takes the profile, the photo row, the conversations, the
+        // messages, the blocks, the sessions and the push tokens with it.
+        jdbc.update("delete from account where id = ?", accountId);
+    }
 }

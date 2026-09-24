@@ -1,4 +1,6 @@
 import Constants from 'expo-constants';
+import { fetch as subirFetch } from 'expo/fetch';
+import { File } from 'expo-file-system';
 
 /**
  * Durante el desarrollo, el movil carga la app desde este mismo ordenador.
@@ -84,6 +86,13 @@ export const verifyLoginCode = (email: string, code: string) =>
 
 export const fetchMe = (token: string) => request<Me>('/api/me', {}, token);
 
+/**
+ * Borrar la cuenta. Se va todo: registro, foto, conversaciones y mensajes.
+ * No hay periodo de gracia ni "la guardamos 30 días por si cambias de idea".
+ */
+export const deleteAccount = (token: string) =>
+  request<void>('/api/me', { method: 'DELETE' }, token);
+
 // ---------- registro ----------
 
 export type Gender = 'WOMAN' | 'MAN' | 'NON_BINARY' | 'OTHER';
@@ -95,12 +104,19 @@ export type LanguageSkill = { code: string; level: LanguageLevel };
 /** `name` es el id que se guarda ("ice-climbing"); `label`, lo que se enseña ("Escalada en hielo"). */
 export type Interest = { name: string; label: string };
 
+/** La pregunta elegida del catálogo y lo que se contestó. */
+export type PromptAnswer = { question: string; answer: string };
+
+/** `name` es el id que se guarda ("always-ask"); `label`, la pregunta escrita. */
+export type PromptQuestion = { name: string; label: string };
+
 export type ProfileData = {
   nickname: string;
-  bio: string;
   /** "1995-03-20" */
   birthDate: string;
   gender: Gender;
+  /** Cómo lo dice la persona. Se enseña en el nivel 3, no se usa para emparejar. */
+  genderLabel: string;
   seeking: Gender[];
   ageMin: number;
   ageMax: number;
@@ -112,11 +128,17 @@ export type ProfileData = {
   conversationDepth: number;
   intent: Intent;
   interests: string[];
+  /** Las tres preguntas contestadas. Es lo que se abre en el nivel 2. */
+  prompts: PromptAnswer[];
+  occupation: string;
+  fromPlace: string;
 };
 
 export type Profile = ProfileData & { age: number };
 
 export const fetchInterests = () => request<Interest[]>('/api/interests');
+
+export const fetchPrompts = () => request<PromptQuestion[]>('/api/prompts');
 
 /** Devuelve null si esa cuenta todavía no ha hecho el registro. */
 export async function fetchProfile(token: string): Promise<Profile | null> {
@@ -131,14 +153,80 @@ export async function fetchProfile(token: string): Promise<Profile | null> {
 export const saveProfile = (token: string, data: ProfileData) =>
   request<Profile>('/api/profile', { method: 'PUT', body: JSON.stringify(data) }, token);
 
+// ---------- la foto ----------
+
+export type PhotoState = {
+  uploaded: boolean;
+  moderation: 'PENDING' | 'APPROVED' | 'REJECTED';
+  uploadedAt: string;
+};
+
+/**
+ * La foto viaja como formulario, no como JSON: así no hay que convertirla a
+ * texto y crecer un tercio por el camino.
+ *
+ * El fichero se manda con el `File` de expo-file-system, que implementa Blob.
+ * El apaño de toda la vida —pasarle a FormData un objeto `{uri, name, type}`—
+ * ya no vale: el FormData de React Native pasó a seguir el estándar y lo
+ * rechaza con «Unsupported FormDataPart implementation», que es un error que
+ * solo se ve al subir de verdad, nunca al compilar. Y el fetch es el de
+ * `expo/fetch`, que es el que la documentación de la v57 usa para subir.
+ */
+export async function uploadPhoto(token: string, uri: string): Promise<PhotoState> {
+  const formulario = new FormData();
+  formulario.append('file', new File(uri));
+
+  const response = await subirFetch(`${backendUrl()}/api/profile/photo`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formulario,
+  });
+
+  const body = await response.text();
+  const data = body ? JSON.parse(body) : null;
+  if (!response.ok) {
+    throw new ApiError(data?.error ?? `El servidor respondió ${response.status}`, response.status);
+  }
+  return data as PhotoState;
+}
+
+/**
+ * La dirección de tu propia foto. No es un enlace público: el servidor
+ * comprueba la llave en cada petición, así que hay que pasarle la cabecera.
+ */
+export function ownPhotoSource(token: string) {
+  return {
+    uri: `${backendUrl()}/api/profile/photo`,
+    headers: { Authorization: `Bearer ${token}` },
+  };
+}
+
 // ---------- la conversación del día ----------
 
+/**
+ * Lo que se ve del otro, según lo que la conversación haya desbloqueado.
+ *
+ * Un campo en null no es que falte: es que todavía no se ha ganado. El servidor
+ * ni siquiera lo manda, así que la app no podría enseñarlo por error.
+ */
 export type Partner = {
+  /** 0 match · 1 primer mensaje · 2 conversación · 3 buena conexión · 4 confianza */
+  level: number;
   age: number;
-  /** Solo dos, y del nivel 0: ni apodo, ni bio, ni foto. */
   interests: string[];
   approxDistanceKm: number;
-  level: number;
+  /** Desde el nivel 1. */
+  nickname: string | null;
+  /** Desde el nivel 2: las tres preguntas contestadas, con la pregunta ya escrita. */
+  prompts: { question: string; label: string; answer: string }[];
+  /** Desde el nivel 3. */
+  languages: string[];
+  intent: string | null;
+  genderLabel: string | null;
+  occupation: string | null;
+  fromPlace: string | null;
+  /** Nivel 3: la foto ya se puede pedir. */
+  photoAvailable: boolean;
 };
 
 export type Today = {
@@ -165,20 +253,102 @@ export type ChatMessage = {
   sentAt: string;
 };
 
+/** Un aviso de desbloqueo, para pintarlo justo después del mensaje que lo abrió. */
+export type Unlock = {
+  level: number;
+  /** null cuando lo abrió el tiempo, no un mensaje. */
+  afterMessageId: string | null;
+  at: string;
+  text: string;
+};
+
 export type Chat = {
   conversationId: string;
-  state: 'OPEN' | 'CANCELLED' | 'CLOSED';
+  state: 'OPEN' | 'CANCELLED' | 'CLOSED' | 'BLOCKED' | 'CONNECTED';
   closesAt: string;
   /** La pregunta con la que arranca, sacada de un interés que compartís. */
   icebreaker: string;
   partner: Partner;
   sharedInterests: string[];
   bothHaveWritten: boolean;
+  /** Si el botón de "quiero verte" debe estar ya en pantalla. */
+  canAskForPhoto: boolean;
+  /** Si tú ya lo pediste. Lo que haya hecho el otro no se cuenta. */
+  alreadyAskedForPhoto: boolean;
+  /** Si estamos en la última media hora: toca responder. */
+  decisionTime: boolean;
+  /** Lo que respondiste tú. Lo del otro no viaja nunca. */
+  yourDecision: 'YES' | 'NO' | null;
+  /** Si acabó en conexión: el chat ya no cierra. */
+  connected: boolean;
+  unlocks: Unlock[];
   messages: ChatMessage[];
 };
 
+export type Connection = {
+  conversationId: string;
+  level: number;
+  nickname: string | null;
+  age: number;
+  interests: string[];
+  photoAvailable: boolean;
+  connectedOn: string;
+  lastMessage: string | null;
+  lastMessageAt: string | null;
+};
+
+export type ReportReason =
+  | 'DISRESPECT'
+  | 'UNWANTED_SEXUAL'
+  | 'SPAM'
+  | 'FAKE_PROFILE'
+  | 'LOOKS_UNDERAGE'
+  | 'OTHER';
+
+/** Un toque: corta la conversación al momento y no os vuelve a emparejar. */
+export const reportar = (token: string, conversationId: string, reason: ReportReason | null) =>
+  request<void>(
+    `/api/conversations/${conversationId}/report`,
+    { method: 'POST', body: JSON.stringify({ reason }) },
+    token,
+  );
+
+/** Dónde encontrar este móvil, para los cinco avisos. */
+export const registerPushToken = (token: string, pushToken: string) =>
+  request<void>('/api/push-token', { method: 'POST', body: JSON.stringify({ token: pushToken }) }, token);
+
+export const fetchConnections = (token: string) =>
+  request<Connection[]>('/api/connections', {}, token);
+
+/**
+ * La respuesta del final del día. No devuelve nada: el resultado se monta a las
+ * 22:00, así que ni el momento de esta llamada puede filtrarlo.
+ */
+export const decide = (token: string, conversationId: string, answer: 'YES' | 'NO') =>
+  request<void>(
+    `/api/conversations/${conversationId}/decision`,
+    { method: 'POST', body: JSON.stringify({ answer }) },
+    token,
+  );
+
 export const fetchChat = (token: string, conversationId: string) =>
   request<Chat>(`/api/conversations/${conversationId}`, {}, token);
+
+/** "Quiero verte". Solo dice si habéis aceptado los dos, nunca qué hizo el otro. */
+export const askToSeePhoto = (token: string, conversationId: string) =>
+  request<{ bothAccepted: boolean; level: number }>(
+    `/api/conversations/${conversationId}/see-photo`,
+    { method: 'POST' },
+    token,
+  );
+
+/** La foto del otro. No es un enlace público: se comprueba en cada lectura. */
+export function partnerPhotoSource(token: string, conversationId: string) {
+  return {
+    uri: `${backendUrl()}/api/conversations/${conversationId}/partner-photo`,
+    headers: { Authorization: `Bearer ${token}` },
+  };
+}
 
 export const sendMessage = (token: string, conversationId: string, text: string) =>
   request<ChatMessage>(
@@ -191,7 +361,10 @@ export const sendMessage = (token: string, conversationId: string, text: string)
  * Conexión permanente para recibir lo que escribe el otro al instante.
  * Solo baja mensajes: enviar se hace por HTTP, donde ya están las reglas.
  */
-export function openChatSocket(token: string, onMessage: (m: ChatMessage & { conversationId: string }) => void) {
+export function openChatSocket(
+  token: string,
+  onMessage: (m: ChatMessage & { conversationId: string; level: number }) => void,
+) {
   const url = `${backendUrl().replace(/^http/, 'ws')}/ws/chat?token=${encodeURIComponent(token)}`;
   const socket = new WebSocket(url);
 
@@ -206,3 +379,16 @@ export function openChatSocket(token: string, onMessage: (m: ChatMessage & { con
 
   return socket;
 }
+
+// ---------- modo de pruebas (solo en desarrollo) ----------
+
+/** Qué paso del día adelantar en la conversación de prueba. */
+export type PasoDemo = 'HOUR' | 'PHOTO' | 'DECISION' | 'CLOSE';
+
+/** Crea una persona de prueba que encaja contigo y te da la conversación de hoy con ella. */
+export const startDemo = (token: string) =>
+  request<{ conversationId: string; nickname: string }>('/api/dev/demo', { method: 'POST' }, token);
+
+/** Mueve el reloj de la conversación de prueba: las reglas no cambian, solo las horas. */
+export const advanceDemo = (token: string, step: PasoDemo) =>
+  request<unknown>(`/api/dev/demo/advance?step=${step}`, { method: 'POST' }, token);

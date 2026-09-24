@@ -2,5 +2,8 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true
-  }
+  },
+  // Los .check.ts son scripts de node, no código de la app: se ejecutan con
+  // `node --experimental-strip-types` y no pasan por el empaquetador.
+  "exclude": ["node_modules", "src/**/*.check.ts"]
 }

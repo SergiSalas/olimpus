@@ -18,4 +18,9 @@ public class UnderageException extends RuntimeException implements UserFacingErr
     public Object[] messageArgs() {
         return new Object[0];
     }
+
+    @Override
+    public Kind kind() {
+        return Kind.NOT_ALLOWED;
+    }
 }

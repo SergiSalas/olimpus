@@ -29,7 +29,13 @@ public record Conversation(
          * The shared interest the opening question is about, or null when they
          * share none. Only the interest is kept: the wording depends on the reader.
          */
-        String icebreakerInterest) {
+        String icebreakerInterest,
+        /** When each side said they want to see the other. Null until they do. */
+        Instant photoWantedByA,
+        Instant photoWantedByB,
+        /** What each one answered at the end. Null until they answer. */
+        Decision decisionByA,
+        Decision decisionByB) {
 
     public Conversation {
         if (id == null) throw new IllegalArgumentException("id is missing");
@@ -70,7 +76,11 @@ public record Conversation(
                 ConversationState.OPEN,
                 0,
                 0,
-                icebreakerInterest);
+                icebreakerInterest,
+                null,
+                null,
+                null,
+                null);
     }
 
     public boolean involves(UUID accountId) {
@@ -97,9 +107,12 @@ public record Conversation(
         return state == ConversationState.OPEN;
     }
 
-    /** Messages are accepted while it is open and 22:00 has not arrived. */
+    /**
+     * Messages are accepted while it is open and 22:00 has not arrived, and
+     * forever once it became a connection.
+     */
     public boolean acceptsMessagesAt(Instant now) {
-        return isOpen() && now.isBefore(closesAt);
+        return isConnected() || (isOpen() && now.isBefore(closesAt));
     }
 
     /**
@@ -116,15 +129,73 @@ public record Conversation(
                 state, messagesFromA + (isA ? 1 : 0), messagesFromB + (isA ? 0 : 1));
     }
 
+    /**
+     * Whether someone has already said they want to see the other.
+     *
+     * <p>Nobody is told that the other one asked: only that both did, when both
+     * did. Otherwise the first to ask would be putting pressure on the other.
+     */
+    public boolean photoWantedBy(UUID accountId) {
+        if (accountA.equals(accountId)) return photoWantedByA != null;
+        if (accountB.equals(accountId)) return photoWantedByB != null;
+        throw new IllegalArgumentException("that account is not in this conversation");
+    }
+
+    public boolean bothWantPhoto() {
+        return photoWantedByA != null && photoWantedByB != null;
+    }
+
+    public Conversation withPhotoWantedBy(UUID accountId, Instant when) {
+        if (!involves(accountId)) {
+            throw new IllegalArgumentException("that account is not in this conversation");
+        }
+        boolean isA = accountA.equals(accountId);
+        return copy(
+                state,
+                messagesFromA,
+                messagesFromB,
+                isA ? firstNotNull(photoWantedByA, when) : photoWantedByA,
+                isA ? photoWantedByB : firstNotNull(photoWantedByB, when));
+    }
+
     public Conversation cancelled() {
-        return withStateAndCounts(ConversationState.CANCELLED, messagesFromA, messagesFromB);
+        return withState(ConversationState.CANCELLED);
     }
 
     public Conversation closed() {
-        return withStateAndCounts(ConversationState.CLOSED, messagesFromA, messagesFromB);
+        return withState(ConversationState.CLOSED);
+    }
+
+    /** Reported or blocked: nothing more can be written, whatever state it was in. */
+    public Conversation blocked() {
+        return withState(ConversationState.BLOCKED);
+    }
+
+    private Conversation withState(ConversationState newState) {
+        return copy(newState, messagesFromA, messagesFromB, photoWantedByA, photoWantedByB);
     }
 
     private Conversation withStateAndCounts(ConversationState newState, int fromA, int fromB) {
+        return copy(newState, fromA, fromB, photoWantedByA, photoWantedByB);
+    }
+
+    private Conversation copy(
+            ConversationState newState,
+            int fromA,
+            int fromB,
+            Instant wantedByA,
+            Instant wantedByB) {
+        return copy(newState, fromA, fromB, wantedByA, wantedByB, decisionByA, decisionByB);
+    }
+
+    private Conversation copy(
+            ConversationState newState,
+            int fromA,
+            int fromB,
+            Instant wantedByA,
+            Instant wantedByB,
+            Decision byA,
+            Decision byB) {
         return new Conversation(
                 id,
                 roundDate,
@@ -138,6 +209,63 @@ public record Conversation(
                 newState,
                 fromA,
                 fromB,
-                icebreakerInterest);
+                icebreakerInterest,
+                wantedByA,
+                wantedByB,
+                byA,
+                byB);
+    }
+
+    /** How long before closing the question is asked. */
+    public static final java.time.Duration DECISION_WINDOW = java.time.Duration.ofMinutes(30);
+
+    /**
+     * The last minutes, and only them. Asking earlier would end the conversation
+     * before it is over; asking afterwards gets a cold, polite answer.
+     */
+    public boolean acceptsDecisionAt(Instant now) {
+        return isOpen()
+                && !now.isBefore(closesAt.minus(DECISION_WINDOW))
+                && now.isBefore(closesAt);
+    }
+
+    public Decision decisionBy(UUID accountId) {
+        if (accountA.equals(accountId)) return decisionByA;
+        if (accountB.equals(accountId)) return decisionByB;
+        throw new IllegalArgumentException("that account is not in this conversation");
+    }
+
+    /** Only a yes from both is a connection. No answer is not a yes. */
+    public boolean bothSaidYes() {
+        return decisionByA == Decision.YES && decisionByB == Decision.YES;
+    }
+
+    public Conversation withDecisionBy(UUID accountId, Decision decision) {
+        if (!involves(accountId)) {
+            throw new IllegalArgumentException("that account is not in this conversation");
+        }
+        boolean isA = accountA.equals(accountId);
+        return copy(
+                state,
+                messagesFromA,
+                messagesFromB,
+                photoWantedByA,
+                photoWantedByB,
+                isA ? decision : decisionByA,
+                isA ? decisionByB : decision);
+    }
+
+    /** Both said yes: the chat stays, with no closing time. */
+    public Conversation connected() {
+        return withState(ConversationState.CONNECTED);
+    }
+
+    public boolean isConnected() {
+        return state == ConversationState.CONNECTED;
+    }
+
+    /** Asking twice does not move the moment it was first asked. */
+    private static Instant firstNotNull(Instant existing, Instant fallback) {
+        return existing != null ? existing : fallback;
     }
 }

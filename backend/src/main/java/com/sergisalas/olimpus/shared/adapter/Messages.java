@@ -39,6 +39,11 @@ public class Messages {
         return getOrDefault("interest." + interest, interest);
     }
 
+    /** "always-ask" -> "Una pregunta que siempre acabo haciendo". */
+    public String promptLabel(String question) {
+        return getOrDefault("prompt." + question, question);
+    }
+
     public Locale locale() {
         return LocaleContextHolder.getLocale();
     }

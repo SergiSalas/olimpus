@@ -151,7 +151,7 @@ const estilos = StyleSheet.create({
   flecha: { fontFamily: fonts.sansNegrita, fontSize: 17, color: colors.ink2 },
   centro: { flex: 1, justifyContent: 'center' },
   marca: {
-    fontFamily: fonts.serif,
+    fontFamily: fonts.display,
     fontSize: 26,
     color: colors.accent,
     marginBottom: 18,

@@ -4,22 +4,22 @@ import {
   Figtree_600SemiBold,
   Figtree_700Bold,
 } from '@expo-google-fonts/figtree';
-import {
-  InstrumentSerif_400Regular,
-  InstrumentSerif_400Regular_Italic,
-} from '@expo-google-fonts/instrument-serif';
+import { Fredoka_600SemiBold, Fredoka_700Bold } from '@expo-google-fonts/fredoka';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { fetchMe, fetchProfile, type Me, type Profile, type StartedSession } from './src/api';
 import { ChatScreen } from './src/screens/ChatScreen';
+import { EditarScreen } from './src/screens/EditarScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { IntroScreen } from './src/screens/IntroScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
+import { activarAvisos } from './src/avisos';
 import { clearToken, readToken, saveToken } from './src/session';
+import { Entrada } from './src/components';
 import { colors } from './src/theme';
 
 type State =
@@ -29,6 +29,8 @@ type State =
   | { kind: 'fuera' }
   /** Con sesión pero sin registro hecho: el único camino es terminarlo. */
   | { kind: 'registro'; token: string; me: Me }
+  /** Cambiar lo ya respondido, en una sola pantalla y sin rehacer nada. */
+  | { kind: 'editar'; token: string; me: Me; perfil: Profile }
   | { kind: 'hoy'; token: string; me: Me; perfil: Profile }
   | { kind: 'chat'; token: string; me: Me; perfil: Profile; conversationId: string }
   | { kind: 'miRegistro'; token: string; me: Me; perfil: Profile };
@@ -41,8 +43,8 @@ export default function App() {
     Figtree_500Medium,
     Figtree_600SemiBold,
     Figtree_700Bold,
-    InstrumentSerif_400Regular,
-    InstrumentSerif_400Regular_Italic,
+    Fredoka_600SemiBold,
+    Fredoka_700Bold,
   });
 
   /**
@@ -72,6 +74,18 @@ export default function App() {
     arrancar();
   }, [arrancar]);
 
+  /**
+   * Los avisos se piden una vez, cuando ya hay sesión y registro: pedir permiso
+   * nada más abrir, antes de que se entienda para qué sirve, es la mejor forma
+   * de que digan que no.
+   */
+  useEffect(() => {
+    if (state.kind !== 'hoy') return;
+    activarAvisos(state.token).catch(() => {
+      // Sin avisos la app funciona igual; no hay nada que contarle a nadie.
+    });
+  }, [state]);
+
   async function entrar(sesion: StartedSession) {
     await saveToken(sesion.token);
     await arrancar();
@@ -92,7 +106,8 @@ export default function App() {
   }
 
   return (
-    <>
+    // Cada cambio de pantalla entra con un pequeño muelle.
+    <Entrada key={state.kind} style={styles.pantalla}>
       {state.kind === 'intro' && <IntroScreen onEmpezar={() => setState({ kind: 'fuera' })} />}
 
       {state.kind === 'fuera' && (
@@ -114,7 +129,6 @@ export default function App() {
           perfil={state.perfil}
           onAbrirChat={(conversationId) => setState({ ...state, kind: 'chat', conversationId })}
           onPerfil={() => setState({ ...state, kind: 'miRegistro' })}
-          onSalir={salir}
         />
       )}
 
@@ -122,8 +136,20 @@ export default function App() {
         <ChatScreen
           token={state.token}
           conversationId={state.conversationId}
+          yo={state.perfil.nickname}
           onVolver={() =>
             setState({ kind: 'hoy', token: state.token, me: state.me, perfil: state.perfil })
+          }
+        />
+      )}
+
+      {state.kind === 'editar' && (
+        <EditarScreen
+          token={state.token}
+          perfil={state.perfil}
+          onVolver={() => setState({ ...state, kind: 'miRegistro' })}
+          onGuardado={(perfil) =>
+            setState({ kind: 'miRegistro', token: state.token, me: state.me, perfil })
           }
         />
       )}
@@ -132,17 +158,19 @@ export default function App() {
         <HomeScreen
           me={state.me}
           perfil={state.perfil}
+          token={state.token}
           onVolver={() => setState({ ...state, kind: 'hoy' })}
-          onEditar={() => setState({ kind: 'registro', token: state.token, me: state.me })}
+          onEditar={() => setState({ ...state, kind: 'editar' })}
           onSalir={salir}
         />
       )}
 
       <StatusBar style="dark" />
-    </>
+    </Entrada>
   );
 }
 
 const styles = StyleSheet.create({
+  pantalla: { flex: 1, backgroundColor: colors.bg },
   centrado: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
 });

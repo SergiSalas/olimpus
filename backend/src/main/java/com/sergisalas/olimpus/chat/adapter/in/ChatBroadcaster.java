@@ -40,19 +40,26 @@ public class ChatBroadcaster {
         if (sessions.isEmpty()) open.remove(accountId);
     }
 
-    public void newMessage(Conversation conversation, Message message) {
+    /**
+     * @param level where the conversation stands after this message, so the phone
+     *     knows whether something just got unlocked. Without it, the person who
+     *     receives the message would keep seeing the old level until they
+     *     reloaded, and the unlock is the moment the whole app is about.
+     */
+    public void newMessage(Conversation conversation, Message message, int level) {
         for (UUID recipient : List.of(conversation.accountA(), conversation.accountB())) {
             boolean mine = recipient.equals(message.senderAccountId());
             send(
                     recipient,
                     """
-                    {"type":"message","conversationId":"%s","id":"%s","mine":%s,"text":%s,"sentAt":"%s"}"""
+                    {"type":"message","conversationId":"%s","id":"%s","mine":%s,"text":%s,"sentAt":"%s","level":%d}"""
                             .formatted(
                                     conversation.id(),
                                     message.id(),
                                     mine,
                                     asJson(message.text()),
-                                    message.sentAt()));
+                                    message.sentAt(),
+                                    level));
         }
     }
 

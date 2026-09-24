@@ -21,3 +21,6 @@ web-build/
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Fotos subidas en desarrollo: no van al repositorio
+backend/data/

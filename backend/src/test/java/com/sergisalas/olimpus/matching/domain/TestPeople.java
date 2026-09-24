@@ -6,6 +6,7 @@ import com.sergisalas.olimpus.profile.domain.InterestCatalog;
 import com.sergisalas.olimpus.profile.domain.LanguageSkill;
 import com.sergisalas.olimpus.profile.domain.Location;
 import com.sergisalas.olimpus.profile.domain.Profile;
+import com.sergisalas.olimpus.profile.domain.PromptAnswer;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -16,6 +17,13 @@ import java.util.UUID;
 
 /** A factory of people for the matching tests. */
 public final class TestPeople {
+
+    /** Matching never reads the answers, only needs them to be there. */
+    private static final List<PromptAnswer> PROMPTS =
+            List.of(
+                    new PromptAnswer("last-hooked", "A book about lighthouses."),
+                    new PromptAnswer("always-ask", "What did you have for breakfast?"),
+                    new PromptAnswer("perfect-tuesday", "The sea and nothing else."));
 
     public static final LocalDate TODAY = LocalDate.of(2026, 9, 12);
 
@@ -120,9 +128,9 @@ public final class TestPeople {
             return new Profile(
                     id,
                     nickname,
-                    "",
                     TODAY.minusYears(age).minusDays(1),
                     gender,
+                    "",
                     seeking,
                     ageMin,
                     ageMax,
@@ -132,7 +140,10 @@ public final class TestPeople {
                     sociability,
                     conversationDepth,
                     intent,
-                    interests);
+                    interests,
+                    PROMPTS,
+                    "",
+                    "");
         }
     }
 

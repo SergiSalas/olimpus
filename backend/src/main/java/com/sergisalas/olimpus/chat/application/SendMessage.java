@@ -2,6 +2,8 @@ package com.sergisalas.olimpus.chat.application;
 
 import com.sergisalas.olimpus.chat.domain.ChatClosedException;
 import com.sergisalas.olimpus.chat.domain.Message;
+import com.sergisalas.olimpus.chat.domain.MessageModerator;
+import com.sergisalas.olimpus.chat.domain.MessageRejectedException;
 import com.sergisalas.olimpus.chat.domain.MessageRepository;
 import com.sergisalas.olimpus.chat.domain.NotYourConversationException;
 import com.sergisalas.olimpus.matching.domain.Conversation;
@@ -24,12 +26,17 @@ public class SendMessage {
 
     private final ConversationRepository conversations;
     private final MessageRepository messages;
+    private final MessageModerator moderator;
     private final Clock clock;
 
     public SendMessage(
-            ConversationRepository conversations, MessageRepository messages, Clock clock) {
+            ConversationRepository conversations,
+            MessageRepository messages,
+            MessageModerator moderator,
+            Clock clock) {
         this.conversations = conversations;
         this.messages = messages;
+        this.moderator = moderator;
         this.clock = clock;
     }
 
@@ -48,7 +55,12 @@ public class SendMessage {
                     : ChatClosedException.notOpen();
         }
 
+        // Moderation goes before storing, not after: a message that has been
+        // read cannot be unread.
         Message message = Message.written(conversationId, sender, text, now);
+        if (moderator.review(message.text()) == MessageModerator.Verdict.REJECT) {
+            throw new MessageRejectedException();
+        }
         messages.save(message);
 
         Conversation updated = conversation.withMessageFrom(sender);

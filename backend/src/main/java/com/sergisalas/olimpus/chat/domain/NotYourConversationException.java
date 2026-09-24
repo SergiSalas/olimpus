@@ -18,4 +18,9 @@ public class NotYourConversationException extends RuntimeException implements Us
     public Object[] messageArgs() {
         return new Object[0];
     }
+
+    @Override
+    public Kind kind() {
+        return Kind.NOT_FOUND;
+    }
 }

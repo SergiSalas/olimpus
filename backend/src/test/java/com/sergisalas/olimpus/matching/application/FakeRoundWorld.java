@@ -1,10 +1,13 @@
 package com.sergisalas.olimpus.matching.application;
 
+import com.sergisalas.olimpus.chat.domain.Message;
+import com.sergisalas.olimpus.chat.domain.MessageRepository;
 import com.sergisalas.olimpus.matching.domain.Conversation;
 import com.sergisalas.olimpus.matching.domain.ConversationRepository;
 import com.sergisalas.olimpus.matching.domain.InterestWeights;
 import com.sergisalas.olimpus.matching.domain.MatchContext;
 import com.sergisalas.olimpus.matching.domain.MatchContextFactory;
+import com.sergisalas.olimpus.matching.domain.PairKey;
 import com.sergisalas.olimpus.matching.domain.ProfileDirectory;
 import com.sergisalas.olimpus.matching.domain.RoundSchedule;
 import com.sergisalas.olimpus.profile.domain.Profile;
@@ -22,10 +25,27 @@ import java.util.stream.Collectors;
 public class FakeRoundWorld {
 
     public final List<Profile> people = new ArrayList<>();
+    public final List<Message> written = new ArrayList<>();
     public final Map<UUID, Conversation> stored = new LinkedHashMap<>();
     public final RoundSchedule schedule = RoundSchedule.of(java.time.ZoneId.of("Europe/Madrid"));
 
     public Instant now = Instant.parse("2026-09-12T06:00:00Z");
+
+    /** The unlock ladder is computed from the messages, so the rounds need them too. */
+    public final MessageRepository messages =
+            new MessageRepository() {
+                @Override
+                public void save(Message message) {
+                    written.add(message);
+                }
+
+                @Override
+                public List<Message> byConversation(UUID conversationId) {
+                    return written.stream()
+                            .filter(m -> m.conversationId().equals(conversationId))
+                            .toList();
+                }
+            };
 
     public final Clock clock =
             new Clock() {
@@ -80,22 +100,35 @@ public class FakeRoundWorld {
                 }
 
                 @Override
+                public List<Conversation> connectionsOf(UUID accountId) {
+                    return stored.values().stream()
+                            .filter(c -> c.isConnected() && c.involves(accountId))
+                            .toList();
+                }
+
+                @Override
                 public Optional<Conversation> byId(UUID id) {
                     return Optional.ofNullable(stored.get(id));
                 }
             };
 
+    /** Pairs that blocked each other. The rounds read them as a hard filter. */
+    public final java.util.Set<PairKey> blocked = new java.util.HashSet<>();
+
     public final MatchContextFactory contexts =
-            (today, pool) ->
-                    MatchContext.on(today)
-                            .interestWeights(InterestWeights.fromPopulation(pool))
-                            .build();
+            (today, pool) -> {
+                var builder =
+                        MatchContext.on(today)
+                                .interestWeights(InterestWeights.fromPopulation(pool));
+                blocked.forEach(pair -> builder.blocked(pair.first(), pair.second()));
+                return builder.build();
+            };
 
     public RunDailyRound dailyRound() {
         return new RunDailyRound(profiles, conversations, contexts, schedule);
     }
 
     public GetTodaysConversation todaysConversation() {
-        return new GetTodaysConversation(conversations, profiles, schedule, clock);
+        return new GetTodaysConversation(conversations, messages, profiles, schedule, clock);
     }
 }

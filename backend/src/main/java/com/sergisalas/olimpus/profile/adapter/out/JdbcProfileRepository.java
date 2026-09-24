@@ -6,6 +6,7 @@ import com.sergisalas.olimpus.profile.domain.LanguageSkill;
 import com.sergisalas.olimpus.profile.domain.Location;
 import com.sergisalas.olimpus.profile.domain.Profile;
 import com.sergisalas.olimpus.profile.domain.ProfileRepository;
+import com.sergisalas.olimpus.profile.domain.PromptAnswer;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -37,20 +38,28 @@ public class JdbcProfileRepository implements ProfileRepository {
                                         LanguageSkill.Level.valueOf(rs.getString("level"))),
                         accountId);
 
+        List<PromptAnswer> prompts =
+                jdbc.query(
+                        "select question, answer from profile_prompt where account_id = ? order by position",
+                        (rs, row) ->
+                                new PromptAnswer(rs.getString("question"), rs.getString("answer")),
+                        accountId);
+
         return jdbc.query(
                         """
-                        select account_id, nickname, bio, birth_date, gender, seeking,
+                        select account_id, nickname, birth_date, gender, gender_label, seeking,
                                age_min, age_max, max_distance_km, latitude, longitude,
-                               sociability, conversation_depth, intent, interests
+                               sociability, conversation_depth, intent, interests,
+                               occupation, from_place
                         from profile where account_id = ?
                         """,
                         (rs, row) ->
                                 new Profile(
                                         rs.getObject("account_id", UUID.class),
                                         rs.getString("nickname"),
-                                        rs.getString("bio"),
                                         rs.getDate("birth_date").toLocalDate(),
                                         Gender.valueOf(rs.getString("gender")),
+                                        rs.getString("gender_label"),
                                         toGenders(rs.getArray("seeking")),
                                         rs.getInt("age_min"),
                                         rs.getInt("age_max"),
@@ -60,28 +69,35 @@ public class JdbcProfileRepository implements ProfileRepository {
                                         rs.getInt("sociability"),
                                         rs.getInt("conversation_depth"),
                                         Intent.valueOf(rs.getString("intent")),
-                                        toStrings(rs.getArray("interests"))),
+                                        toStrings(rs.getArray("interests")),
+                                        prompts,
+                                        rs.getString("occupation"),
+                                        rs.getString("from_place")),
                         accountId)
                 .stream()
                 .findFirst();
     }
 
-    /** Profile and languages are saved together or not at all: one single transaction. */
+    /**
+     * Profile, languages and prompts are saved together or not at all: one
+     * single transaction.
+     */
     @Override
     @Transactional
     public void save(Profile profile) {
         jdbc.update(
                 """
                 insert into profile (
-                    account_id, nickname, bio, birth_date, gender, seeking,
+                    account_id, nickname, birth_date, gender, gender_label, seeking,
                     age_min, age_max, max_distance_km, latitude, longitude,
-                    sociability, conversation_depth, intent, interests)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    sociability, conversation_depth, intent, interests,
+                    occupation, from_place)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict (account_id) do update set
                     nickname = excluded.nickname,
-                    bio = excluded.bio,
                     birth_date = excluded.birth_date,
                     gender = excluded.gender,
+                    gender_label = excluded.gender_label,
                     seeking = excluded.seeking,
                     age_min = excluded.age_min,
                     age_max = excluded.age_max,
@@ -92,13 +108,15 @@ public class JdbcProfileRepository implements ProfileRepository {
                     conversation_depth = excluded.conversation_depth,
                     intent = excluded.intent,
                     interests = excluded.interests,
+                    occupation = excluded.occupation,
+                    from_place = excluded.from_place,
                     updated_at = now()
                 """,
                 profile.accountId(),
                 profile.nickname(),
-                profile.bio(),
                 java.sql.Date.valueOf(profile.birthDate()),
                 profile.gender().name(),
+                profile.genderLabel(),
                 profile.seeking().stream().map(Gender::name).toArray(String[]::new),
                 profile.ageMin(),
                 profile.ageMax(),
@@ -108,7 +126,9 @@ public class JdbcProfileRepository implements ProfileRepository {
                 profile.sociability(),
                 profile.conversationDepth(),
                 profile.intent().name(),
-                profile.interests().toArray(String[]::new));
+                profile.interests().toArray(String[]::new),
+                profile.occupation(),
+                profile.fromPlace());
 
         jdbc.update("delete from profile_language where account_id = ?", profile.accountId());
         for (LanguageSkill language : profile.languages()) {
@@ -117,6 +137,17 @@ public class JdbcProfileRepository implements ProfileRepository {
                     profile.accountId(),
                     language.code(),
                     language.level().name());
+        }
+
+        jdbc.update("delete from profile_prompt where account_id = ?", profile.accountId());
+        List<PromptAnswer> prompts = profile.prompts();
+        for (int position = 0; position < prompts.size(); position++) {
+            jdbc.update(
+                    "insert into profile_prompt (account_id, position, question, answer) values (?, ?, ?, ?)",
+                    profile.accountId(),
+                    position,
+                    prompts.get(position).question(),
+                    prompts.get(position).answer());
         }
     }
 

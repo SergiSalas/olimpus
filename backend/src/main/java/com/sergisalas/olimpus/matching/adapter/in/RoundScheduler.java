@@ -1,6 +1,7 @@
 package com.sergisalas.olimpus.matching.adapter.in;
 
 import com.sergisalas.olimpus.matching.application.RunDailyRound;
+import com.sergisalas.olimpus.notifications.application.Announce;
 import com.sergisalas.olimpus.matching.domain.RoundKind;
 import com.sergisalas.olimpus.matching.domain.RoundSchedule;
 import java.time.Clock;
@@ -21,11 +22,14 @@ public class RoundScheduler {
 
     private final RunDailyRound runDailyRound;
     private final RoundSchedule schedule;
+    private final Announce announce;
     private final Clock clock;
 
-    public RoundScheduler(RunDailyRound runDailyRound, RoundSchedule schedule, Clock clock) {
+    public RoundScheduler(
+            RunDailyRound runDailyRound, RoundSchedule schedule, Announce announce, Clock clock) {
         this.runDailyRound = runDailyRound;
         this.schedule = schedule;
+        this.announce = announce;
         this.clock = clock;
     }
 
@@ -53,5 +57,11 @@ public class RoundScheduler {
                 result.created().size(),
                 result.leftOut().size(),
                 result.cancelled().size());
+
+        if (kind == RoundKind.MAIN) {
+            announce.newMatches(result.created());
+        } else {
+            announce.secondChance(result.created());
+        }
     }
 }

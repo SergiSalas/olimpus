@@ -1,6 +1,7 @@
 package com.sergisalas.olimpus.config;
 
 import com.sergisalas.olimpus.auth.application.AuthenticateSession;
+import com.sergisalas.olimpus.auth.application.DeleteAccount;
 import com.sergisalas.olimpus.auth.application.RequestLoginCode;
 import com.sergisalas.olimpus.auth.application.VerifyLoginCode;
 import com.sergisalas.olimpus.auth.domain.AccountRepository;
@@ -11,10 +12,17 @@ import com.sergisalas.olimpus.auth.domain.SessionRepository;
 import com.sergisalas.olimpus.chat.application.CloseFinishedConversations;
 import com.sergisalas.olimpus.chat.application.GetChat;
 import com.sergisalas.olimpus.chat.application.SendMessage;
+import com.sergisalas.olimpus.chat.domain.MessageModerator;
 import com.sergisalas.olimpus.chat.domain.MessageRepository;
+import com.sergisalas.olimpus.safety.application.ReportAndBlock;
+import com.sergisalas.olimpus.safety.domain.BlockRepository;
 import com.sergisalas.olimpus.health.application.CheckHealth;
 import com.sergisalas.olimpus.health.domain.DatabaseInfo;
+import com.sergisalas.olimpus.matching.application.AskToSeePhoto;
+import com.sergisalas.olimpus.matching.application.DecideOnPartner;
 import com.sergisalas.olimpus.matching.application.GetTodaysConversation;
+import com.sergisalas.olimpus.matching.application.ListConnections;
+import com.sergisalas.olimpus.matching.application.ViewPartnerPhoto;
 import com.sergisalas.olimpus.matching.application.RunDailyRound;
 import com.sergisalas.olimpus.matching.domain.ConversationRepository;
 import com.sergisalas.olimpus.matching.domain.MatchContextFactory;
@@ -22,7 +30,17 @@ import com.sergisalas.olimpus.matching.domain.ProfileDirectory;
 import com.sergisalas.olimpus.matching.domain.RoundSchedule;
 import com.sergisalas.olimpus.profile.application.GetProfile;
 import com.sergisalas.olimpus.profile.application.SaveProfile;
+import com.sergisalas.olimpus.profile.application.UploadPhoto;
+import com.sergisalas.olimpus.profile.application.ViewPhoto;
+import com.sergisalas.olimpus.profile.domain.PhotoModerator;
+import com.sergisalas.olimpus.profile.domain.PhotoRepository;
+import com.sergisalas.olimpus.profile.domain.PhotoStorage;
 import com.sergisalas.olimpus.profile.domain.ProfileRepository;
+import com.sergisalas.olimpus.insights.application.MeasureOutcomes;
+import com.sergisalas.olimpus.insights.domain.InsightsQueries;
+import com.sergisalas.olimpus.notifications.application.Announce;
+import com.sergisalas.olimpus.notifications.domain.Notifier;
+import com.sergisalas.olimpus.shared.adapter.Messages;
 import com.sergisalas.olimpus.shared.domain.Hasher;
 import java.time.Clock;
 import java.time.ZoneId;
@@ -79,6 +97,32 @@ public class DomainBeans {
         return new GetProfile(profiles);
     }
 
+    @Bean
+    UploadPhoto uploadPhoto(
+            PhotoRepository photos, PhotoStorage storage, PhotoModerator moderator, Clock clock) {
+        return new UploadPhoto(photos, storage, moderator, clock);
+    }
+
+    @Bean
+    ViewPhoto viewPhoto(PhotoRepository photos, PhotoStorage storage) {
+        return new ViewPhoto(photos, storage);
+    }
+
+    @Bean
+    AskToSeePhoto askToSeePhoto(
+            ConversationRepository conversations, MessageRepository messages, Clock clock) {
+        return new AskToSeePhoto(conversations, messages, clock);
+    }
+
+    @Bean
+    ViewPartnerPhoto viewPartnerPhoto(
+            ConversationRepository conversations,
+            MessageRepository messages,
+            ViewPhoto photos,
+            Clock clock) {
+        return new ViewPartnerPhoto(conversations, messages, photos, clock);
+    }
+
     /** The community's time zone. The 4:00, 14:00 and 22:00 are computed in it. */
     @Bean
     RoundSchedule roundSchedule(@Value("${olimpus.zone:Europe/Madrid}") String zone) {
@@ -97,16 +141,41 @@ public class DomainBeans {
     @Bean
     GetTodaysConversation getTodaysConversation(
             ConversationRepository conversations,
+            MessageRepository messages,
             ProfileDirectory profiles,
             RoundSchedule schedule,
             Clock clock) {
-        return new GetTodaysConversation(conversations, profiles, schedule, clock);
+        return new GetTodaysConversation(conversations, messages, profiles, schedule, clock);
     }
 
     @Bean
     SendMessage sendMessage(
-            ConversationRepository conversations, MessageRepository messages, Clock clock) {
-        return new SendMessage(conversations, messages, clock);
+            ConversationRepository conversations,
+            MessageRepository messages,
+            MessageModerator moderator,
+            Clock clock) {
+        return new SendMessage(conversations, messages, moderator, clock);
+    }
+
+    /**
+     * The wording of the five notices comes from the same catalogue as every
+     * other text a person reads; the use case only knows the keys.
+     */
+    @Bean
+    Announce announce(Notifier notifier, Messages messages) {
+        return new Announce(notifier, messages::get);
+    }
+
+    @Bean
+    MeasureOutcomes measureOutcomes(
+            InsightsQueries queries, RoundSchedule schedule, Clock clock) {
+        return new MeasureOutcomes(queries, schedule, clock);
+    }
+
+    @Bean
+    ReportAndBlock reportAndBlock(
+            ConversationRepository conversations, BlockRepository blocks, Clock clock) {
+        return new ReportAndBlock(conversations, blocks, clock);
     }
 
     @Bean
@@ -120,9 +189,30 @@ public class DomainBeans {
     }
 
     @Bean
+    DecideOnPartner decideOnPartner(ConversationRepository conversations, Clock clock) {
+        return new DecideOnPartner(conversations, clock);
+    }
+
+    @Bean
+    ListConnections listConnections(
+            ConversationRepository conversations,
+            MessageRepository messages,
+            ProfileDirectory profiles,
+            RoundSchedule schedule,
+            Clock clock) {
+        return new ListConnections(conversations, messages, profiles, schedule, clock);
+    }
+
+    @Bean
     CloseFinishedConversations closeFinishedConversations(
             ConversationRepository conversations, RoundSchedule schedule, Clock clock) {
         return new CloseFinishedConversations(conversations, schedule, clock);
+    }
+
+    @Bean
+    DeleteAccount deleteAccount(
+            AccountRepository accounts, PhotoRepository photos, PhotoStorage storage) {
+        return new DeleteAccount(accounts, photos, storage);
     }
 
     @Bean

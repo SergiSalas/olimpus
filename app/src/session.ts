@@ -22,3 +22,20 @@ export async function readToken(): Promise<string | null> {
 export async function clearToken(): Promise<void> {
   await SecureStore.deleteItemAsync(KEY);
 }
+
+/**
+ * Si ya se vio la presentación de una conversación: la animación de entrada
+ * solo sale la primera vez. Si el llavero falla se da por vista, que saltarse
+ * una animación no rompe nada y repetirla cada vez sí cansa.
+ */
+export async function presentacionVista(conversationId: string): Promise<boolean> {
+  try {
+    return (await SecureStore.getItemAsync(`olimpus.visto.${conversationId}`)) !== null;
+  } catch {
+    return true;
+  }
+}
+
+export async function marcarPresentacionVista(conversationId: string): Promise<void> {
+  await SecureStore.setItemAsync(`olimpus.visto.${conversationId}`, '1').catch(() => {});
+}
