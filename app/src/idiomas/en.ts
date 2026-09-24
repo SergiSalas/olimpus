@@ -388,4 +388,6 @@ export const en: Record<Clave, string> = {
   'idiomaApp.ayuda': 'Messages and profiles from other people stay as they wrote them.',
   'rango.zonaNota': 'Your location is never shown exactly: the other person sees “3 km away”.',
   'masDeTi.nota': "They aren't used for matching: they just help people get to know you.",
+  'subida.titulo': 'Level {nivel}!',
+  'subida.desbloqueado': 'Now you can see: {desc}',
 };

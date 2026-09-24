@@ -32,6 +32,7 @@ import { Reportar } from '../components/Reportar';
 import { Escalones, LoQueSeVe, NIVELES, PedirFoto } from '../components/Escalera';
 import { PanelPruebas } from '../components/PanelPruebas';
 import { Presentacion } from '../components/Presentacion';
+import { SubidaNivel } from '../components/SubidaNivel';
 import { Entrada, Puntos, Rebote } from '../components';
 import { marcarPresentacionVista, presentacionVista } from '../session';
 import { colors, fonts } from '../theme';
@@ -69,6 +70,8 @@ export function ChatScreen({
   const [presentando, setPresentando] = useState(false);
   /** Salta a verdadero un momento cuando sube el nivel: la cabecera da un brinco. */
   const [subio, setSubio] = useState(false);
+  /** El nivel al que se acaba de subir, mientras se celebra. */
+  const [celebrando, setCelebrando] = useState<number | null>(null);
   const nivelAnterior = useRef<number | null>(null);
   /** La otra persona está escribiendo: se apaga solo si deja de avisar. */
   const [escribe, setEscribe] = useState(false);
@@ -104,6 +107,7 @@ export function ChatScreen({
     if (nivel === null) return;
     if (nivelAnterior.current !== null && nivel > nivelAnterior.current) {
       setSubio(true);
+      setCelebrando(nivel);
       const reloj = setTimeout(() => setSubio(false), 700);
       nivelAnterior.current = nivel;
       return () => clearTimeout(reloj);
@@ -202,10 +206,9 @@ export function ChatScreen({
     setPidiendoFoto(true);
     setError(null);
     try {
-      const respuesta = await askToSeePhoto(token, conversationId);
+      await askToSeePhoto(token, conversationId);
       await cargar();
-      // Si los dos lo habéis pedido, la foto está lista: se abre su perfil.
-      if (respuesta.bothAccepted) setViendoPerfil(true);
+      // Si los dos lo habéis pedido, sube al nivel 3 y la celebración lleva a la foto.
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t('chat.errorPedir'));
     } finally {
@@ -411,6 +414,14 @@ export function ChatScreen({
       )}
 
       <PanelPruebas token={token} onHecho={cargar} />
+
+      {celebrando !== null && (
+        <SubidaNivel
+          nivel={celebrando}
+          onVerPerfil={() => setViendoPerfil(true)}
+          onFin={() => setCelebrando(null)}
+        />
+      )}
 
       {presentando && (
         <Presentacion

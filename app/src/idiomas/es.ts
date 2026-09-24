@@ -386,6 +386,8 @@ export const es = {
   'idiomaApp.ayuda': 'Los mensajes y perfiles de otras personas se quedan como los escribieron.',
   'rango.zonaNota': 'Tu zona nunca se muestra exacta: la otra persona lee «a 3 km de ti».',
   'masDeTi.nota': 'No se usan para emparejar: solo para que te conozcan.',
+  'subida.titulo': '¡Nivel {nivel}!',
+  'subida.desbloqueado': 'Ya puedes ver: {desc}',
 };
 
 export type Clave = keyof typeof es;
