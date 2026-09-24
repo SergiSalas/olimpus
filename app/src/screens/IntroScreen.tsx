@@ -285,34 +285,31 @@ const MOMENTOS = [
 function UnaAlDia({ activo }: { activo: boolean }) {
   const filas = useRef([valor(), valor(), valor()]).current;
   const tarjeta = useRef(valor()).current;
-  // La barra cambia de alto: eso no lo puede animar el hilo nativo.
   const barra = useRef(valor()).current;
 
+  // La barra avanza a tramos y llega a cada momento del día a la vez que su fila.
   useAlLlegar(activo, () => {
     [...filas, tarjeta, barra].forEach((v) => v.setValue(0));
-    return Animated.parallel([
-      Animated.timing(barra, { toValue: 1, duration: 3200, useNativeDriver: false }),
-      Animated.sequence([
-        Animated.delay(200),
-        muelle(filas[0]),
-        Animated.spring(tarjeta, { toValue: 1, useNativeDriver: true, speed: 8, bounciness: 12 }),
-        Animated.delay(500),
-        muelle(filas[1]),
-        Animated.delay(900),
-        muelle(filas[2]),
-      ]),
+    return Animated.sequence([
+      Animated.delay(200),
+      Animated.parallel([muelle(filas[0]), hasta(barra, 0.15, 500)]),
+      Animated.spring(tarjeta, { toValue: 1, useNativeDriver: true, speed: 8, bounciness: 12 }),
+      Animated.delay(300),
+      Animated.parallel([muelle(filas[1]), hasta(barra, 0.6, 900)]),
+      Animated.delay(400),
+      Animated.parallel([muelle(filas[2]), hasta(barra, 1, 900)]),
     ]);
   });
 
   return (
     <View style={estilos.dia}>
       <View style={estilos.carril}>
-        <Animated.View
-          style={[
-            estilos.carrilLleno,
-            { height: barra.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
-          ]}
-        />
+        {/*
+          Ocupa todo el carril y crece escalándose desde arriba. Con un alto en
+          porcentaje dependía del alto de las filas, que aún no se conoce al
+          empezar, y la barra salía vacía o a saltos.
+        */}
+        <Animated.View style={[estilos.carrilLleno, { transform: [{ scaleY: barra }] }]} />
       </View>
       <View style={{ flex: 1, gap: 22 }}>
         {MOMENTOS.map((m, i) => (
@@ -618,7 +615,12 @@ const estilos = StyleSheet.create({
     backgroundColor: 'rgba(42,23,71,0.1)',
     overflow: 'hidden',
   },
-  carrilLleno: { width: 6, borderRadius: 999, backgroundColor: colors.uva },
+  carrilLleno: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 999,
+    backgroundColor: colors.uva,
+    transformOrigin: 'top',
+  },
   momento: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   momentoEmoji: { fontSize: 30 },
   momentoHora: { fontFamily: fonts.sansNegrita, fontSize: 13, color: colors.uva },
