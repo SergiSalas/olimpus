@@ -12,7 +12,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { Boton, BotonPlano, Flotar } from '../components';
+import { Boton, BotonPlano, Flotar, Puntos } from '../components';
 import { colors, fonts } from '../theme';
 import { PastillaIdioma } from '../components/SelectorIdioma';
 import { t } from '../i18n';
@@ -230,46 +230,6 @@ function HablaPrimero({ activo }: { activo: boolean }) {
           <Puntos />
         </Animated.View>
       </View>
-    </View>
-  );
-}
-
-/** Los tres puntitos de "escribiendo…", botando uno detrás de otro. */
-function Puntos() {
-  const v = useRef(valor()).current;
-  useEffect(() => {
-    const bucle = Animated.loop(
-      Animated.timing(v, {
-        toValue: 1,
-        duration: 900,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    );
-    bucle.start();
-    return () => bucle.stop();
-  }, [v]);
-  return (
-    <View style={estilos.puntos}>
-      {[0, 1, 2].map((i) => (
-        <Animated.View
-          key={i}
-          style={[
-            estilos.punto,
-            {
-              transform: [
-                {
-                  translateY: v.interpolate({
-                    inputRange: [0, 0.15 + i * 0.2, 0.3 + i * 0.2, 1],
-                    outputRange: [0, -5, 0, 0],
-                    extrapolate: 'clamp',
-                  }),
-                },
-              ],
-            },
-          ]}
-        />
-      ))}
     </View>
   );
 }
@@ -604,8 +564,6 @@ const estilos = StyleSheet.create({
     paddingVertical: 14,
   },
   escribiendoMio: { left: undefined, right: 0, backgroundColor: colors.accentWash },
-  puntos: { flexDirection: 'row', gap: 5 },
-  punto: { width: 8, height: 8, borderRadius: 999, backgroundColor: colors.ink4 },
 
   // 2
   dia: { flexDirection: 'row', gap: 18 },

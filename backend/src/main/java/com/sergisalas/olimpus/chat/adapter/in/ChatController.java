@@ -16,6 +16,7 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import com.sergisalas.olimpus.chat.application.SendMessage;
+import com.sergisalas.olimpus.chat.application.SignalTyping;
 import com.sergisalas.olimpus.chat.domain.Message;
 import java.time.Instant;
 import java.util.List;
@@ -92,6 +93,7 @@ public class ChatController {
     private final GetChat getChat;
     private final SendMessage sendMessage;
     private final LikeMessage likeMessage;
+    private final SignalTyping signalTyping;
     private final ChatBroadcaster broadcaster;
     private final IcebreakerWording icebreakers;
     private final AskToSeePhoto askToSeePhoto;
@@ -104,6 +106,7 @@ public class ChatController {
             GetChat getChat,
             SendMessage sendMessage,
             LikeMessage likeMessage,
+            SignalTyping signalTyping,
             ChatBroadcaster broadcaster,
             IcebreakerWording icebreakers,
             AskToSeePhoto askToSeePhoto,
@@ -114,6 +117,7 @@ public class ChatController {
         this.getChat = getChat;
         this.sendMessage = sendMessage;
         this.likeMessage = likeMessage;
+        this.signalTyping = signalTyping;
         this.broadcaster = broadcaster;
         this.icebreakers = icebreakers;
         this.askToSeePhoto = askToSeePhoto;
@@ -192,6 +196,17 @@ public class ChatController {
         announce.newMessage(sent.conversation(), account.id());
 
         return toResponse(sent.message(), account.id(), false);
+    }
+
+    /**
+     * "I'm writing". The phone sends it at most every few seconds while typing;
+     * it goes over HTTP like everything a phone sends, so the rules are checked
+     * in one place, and comes down to the other person over the live connection.
+     */
+    @PostMapping("/typing")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void typing(@PathVariable UUID id, @CurrentAccount Account account) {
+        broadcaster.typing(signalTyping.execute(id, account.id()), account.id());
     }
 
     /**

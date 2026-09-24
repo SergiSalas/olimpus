@@ -13,6 +13,7 @@ import com.sergisalas.olimpus.chat.application.CloseFinishedConversations;
 import com.sergisalas.olimpus.chat.application.GetChat;
 import com.sergisalas.olimpus.chat.application.LikeMessage;
 import com.sergisalas.olimpus.chat.application.SendMessage;
+import com.sergisalas.olimpus.chat.application.SignalTyping;
 import com.sergisalas.olimpus.chat.domain.MessageLikes;
 import com.sergisalas.olimpus.chat.domain.MessageModerator;
 import com.sergisalas.olimpus.chat.domain.MessageRepository;
@@ -188,6 +189,11 @@ public class DomainBeans {
             RoundSchedule schedule,
             Clock clock) {
         return new GetChat(conversations, messages, likes, profiles, schedule, clock);
+    }
+
+    @Bean
+    SignalTyping signalTyping(ConversationRepository conversations, Clock clock) {
+        return new SignalTyping(conversations, clock);
     }
 
     @Bean

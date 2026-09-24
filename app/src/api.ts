@@ -367,6 +367,10 @@ export const sendMessage = (token: string, conversationId: string, text: string)
     token,
   );
 
+/** "Estoy escribiendo". Si se pierde no pasa nada: el mensaje llegará igual. */
+export const avisarEscribiendo = (token: string, conversationId: string) =>
+  request<void>(`/api/conversations/${conversationId}/typing`, { method: 'POST' }, token);
+
 /** Pone o quita el corazón en un mensaje de la otra persona. */
 export const likeMessage = (
   token: string,
@@ -388,6 +392,7 @@ export function openChatSocket(
   token: string,
   onMessage: (m: ChatMessage & { conversationId: string; level: number }) => void,
   onLike?: (like: { conversationId: string; messageId: string; liked: boolean }) => void,
+  onEscribe?: (conversationId: string) => void,
 ) {
   const url = `${backendUrl().replace(/^http/, 'ws')}/ws/chat?token=${encodeURIComponent(token)}`;
   const socket = new WebSocket(url);
@@ -397,6 +402,7 @@ export function openChatSocket(
       const data = JSON.parse(String(event.data));
       if (data.type === 'message') onMessage(data);
       if (data.type === 'like') onLike?.(data);
+      if (data.type === 'typing') onEscribe?.(data.conversationId);
     } catch {
       // Un mensaje que no se entiende no puede tumbar el chat.
     }

@@ -16,6 +16,7 @@ import {
 import {
   ApiError,
   askToSeePhoto,
+  avisarEscribiendo,
   decide,
   fetchChat,
   likeMessage,
@@ -31,7 +32,7 @@ import { Reportar } from '../components/Reportar';
 import { Escalones, LoQueSeVe, NIVELES, PedirFoto } from '../components/Escalera';
 import { PanelPruebas } from '../components/PanelPruebas';
 import { Presentacion } from '../components/Presentacion';
-import { Entrada, Rebote } from '../components';
+import { Entrada, Puntos, Rebote } from '../components';
 import { marcarPresentacionVista, presentacionVista } from '../session';
 import { colors, fonts } from '../theme';
 import { horaCorta as hora, t } from '../i18n';
@@ -69,6 +70,10 @@ export function ChatScreen({
   /** Salta a verdadero un momento cuando sube el nivel: la cabecera da un brinco. */
   const [subio, setSubio] = useState(false);
   const nivelAnterior = useRef<number | null>(null);
+  /** La otra persona está escribiendo: se apaga solo si deja de avisar. */
+  const [escribe, setEscribe] = useState(false);
+  const apagarEscribe = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ultimoAviso = useRef(0);
   const lista = useRef<FlatList<Fila>>(null);
 
   const cargar = useCallback(async () => {
@@ -113,6 +118,8 @@ export function ChatScreen({
       (mensaje) => {
         if (mensaje.conversationId !== conversationId || mensaje.mine) return;
 
+        // Llegó su mensaje: ya no está escribiendo.
+        setEscribe(false);
         setChat((actual) => {
           if (!actual) return actual;
           // Si ese mensaje ha abierto un nivel, hay cosas nuevas que enseñar (su
@@ -126,6 +133,12 @@ export function ChatScreen({
       (corazon) => {
         if (corazon.conversationId !== conversationId) return;
         marcarCorazon(corazon.messageId, corazon.liked);
+      },
+      (enLaConversacion) => {
+        if (enLaConversacion !== conversationId) return;
+        setEscribe(true);
+        if (apagarEscribe.current) clearTimeout(apagarEscribe.current);
+        apagarEscribe.current = setTimeout(() => setEscribe(false), ESCRIBE_DURA_MS);
       },
     );
     return () => socket.close();
@@ -151,6 +164,15 @@ export function ChatScreen({
     } finally {
       setEnviando(false);
     }
+  }
+
+  /** Como mucho un aviso cada pocos segundos mientras se escribe. */
+  function escribiendo(nuevo: string) {
+    setTexto(nuevo);
+    const ahora = Date.now();
+    if (!nuevo.trim() || ahora - ultimoAviso.current < AVISO_CADA_MS) return;
+    ultimoAviso.current = ahora;
+    avisarEscribiendo(token, conversationId).catch(() => {});
   }
 
   function marcarCorazon(messageId: string, liked: boolean) {
@@ -315,6 +337,13 @@ export function ChatScreen({
             </View>
           </View>
         }
+        ListFooterComponent={
+          escribe ? (
+            <Entrada style={estilos.escribe}>
+              <Puntos />
+            </Entrada>
+          ) : null
+        }
         renderItem={({ item }) =>
           item.tipo === 'aviso' ? (
             <Entrada style={{ alignItems: 'center', paddingVertical: 6 }}>
@@ -361,7 +390,7 @@ export function ChatScreen({
           <TextInput
             style={estilos.campo}
             value={texto}
-            onChangeText={setTexto}
+            onChangeText={escribiendo}
             placeholder={t('chat.escribe')}
             placeholderTextColor={colors.ink5}
             multiline
@@ -393,6 +422,11 @@ export function ChatScreen({
     </KeyboardAvoidingView>
   );
 }
+
+/** Cada cuánto, como mucho, se avisa al otro de que escribes. */
+const AVISO_CADA_MS = 2500;
+/** Sin un aviso nuevo en este tiempo, se da por hecho que ha dejado de escribir. */
+const ESCRIBE_DURA_MS = 4000;
 
 /** Lo que se ve en el hilo: mensajes y, entre ellos, los avisos de desbloqueo. */
 type Fila =
@@ -550,6 +584,18 @@ const estilos = StyleSheet.create({
   },
   desbloqueoVer: { fontFamily: fonts.sansMedia, fontSize: 11.5, color: colors.onInk2 },
 
+  escribe: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderBottomWidth: 4,
+    borderColor: colors.line,
+    borderRadius: 22,
+    borderBottomLeftRadius: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    marginTop: 10,
+  },
   fijos: { paddingHorizontal: 16, paddingTop: 8, gap: 8 },
   barra: {
     flexDirection: 'row',

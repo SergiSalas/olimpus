@@ -159,6 +159,46 @@ export function Flotar({
   );
 }
 
+/** Los tres puntitos de "escribiendo…", botando uno detrás de otro. */
+export function Puntos() {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const bucle = Animated.loop(
+      Animated.timing(v, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    bucle.start();
+    return () => bucle.stop();
+  }, [v]);
+  return (
+    <View style={estilos.puntos}>
+      {[0, 1, 2].map((i) => (
+        <Animated.View
+          key={i}
+          style={[
+            estilos.punto,
+            {
+              transform: [
+                {
+                  translateY: v.interpolate({
+                    inputRange: [0, 0.15 + i * 0.2, 0.3 + i * 0.2, 1],
+                    outputRange: [0, -5, 0, 0],
+                    extrapolate: 'clamp',
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
 /** Botón principal, con relieve. Chicle el de avanzar, uva oscura el de rematar. */
 export function Boton({
   texto,
@@ -551,6 +591,8 @@ const estilos = StyleSheet.create({
     overflow: 'hidden',
   },
   barraLlena: { height: 10, borderRadius: 999, backgroundColor: colors.menta },
+  puntos: { flexDirection: 'row', gap: 5 },
+  punto: { width: 8, height: 8, borderRadius: 999, backgroundColor: colors.ink4 },
   pasoTexto: { fontFamily: fonts.display, fontSize: 13, color: colors.ink3 },
 });
 
