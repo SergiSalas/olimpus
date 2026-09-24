@@ -1,16 +1,157 @@
-import { type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type PressableProps,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
-import { colors, espacios, fonts, radios, text } from './theme';
+import { colors, fonts, radios, text } from './theme';
 
-/** Botón principal. Terracota el de avanzar, negro el de rematar. */
+const muelle = { useNativeDriver: true, speed: 30, bounciness: 14 };
+
+/**
+ * Pressable que se encoge al tocarlo y rebota al soltarlo. Con `pop`, además
+ * da un saltito cada vez que pasa a verdadero (al elegir una opción).
+ *
+ * `style` es lo que se ve y se encoge; `fuera`, el hueco que ocupa en su
+ * padre (un `flex: 1` en una fila, por ejemplo).
+ */
+export function Rebote({
+  style,
+  fuera,
+  pop,
+  children,
+  ...props
+}: Omit<PressableProps, 'style' | 'children'> & {
+  style?: StyleProp<ViewStyle>;
+  fuera?: StyleProp<ViewStyle>;
+  pop?: boolean;
+  children?: ReactNode;
+}) {
+  const escala = useRef(new Animated.Value(1)).current;
+  const primera = useRef(true);
+
+  useEffect(() => {
+    if (primera.current) {
+      primera.current = false;
+      return;
+    }
+    if (!pop) return;
+    escala.setValue(1.12);
+    Animated.spring(escala, { toValue: 1, ...muelle, bounciness: 18 }).start();
+  }, [pop, escala]);
+
+  return (
+    <Pressable
+      {...props}
+      style={fuera}
+      onPressIn={(e) => {
+        Animated.spring(escala, { toValue: 0.93, ...muelle }).start();
+        props.onPressIn?.(e);
+      }}
+      onPressOut={(e) => {
+        Animated.spring(escala, { toValue: 1, ...muelle }).start();
+        props.onPressOut?.(e);
+      }}>
+      <Animated.View style={[style, { transform: [{ scale: escala }] }]}>{children}</Animated.View>
+    </Pressable>
+  );
+}
+
+/**
+ * Aparece desde abajo con un pequeño muelle. `retraso` en ms, para escalonar;
+ * `desdeX` para que llegue de lado (positivo, desde la derecha).
+ */
+export function Entrada({
+  children,
+  retraso = 0,
+  desdeX = 0,
+  style,
+}: {
+  children: ReactNode;
+  retraso?: number;
+  desdeX?: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(v, {
+      toValue: 1,
+      delay: retraso,
+      useNativeDriver: true,
+      speed: 12,
+      bounciness: 9,
+    }).start();
+  }, [v, retraso]);
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          opacity: v.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 1, 1] }),
+          transform: [
+            { translateX: v.interpolate({ inputRange: [0, 1], outputRange: [desdeX, 0] }) },
+            { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [desdeX ? 0 : 28, 0] }) },
+            { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) },
+          ],
+        },
+      ]}>
+      {children}
+    </Animated.View>
+  );
+}
+
+/** Flota arriba y abajo sin parar, balanceándose `giro` grados. Para adornos. */
+export function Flotar({
+  children,
+  duracion = 2600,
+  distancia = 10,
+  giro = 6,
+  style,
+}: {
+  children: ReactNode;
+  duracion?: number;
+  distancia?: number;
+  giro?: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const ida = { duration: duracion / 2, easing: Easing.inOut(Easing.sin), useNativeDriver: true };
+    const bucle = Animated.loop(
+      Animated.sequence([
+        Animated.timing(v, { toValue: 1, ...ida }),
+        Animated.timing(v, { toValue: 0, ...ida }),
+      ]),
+    );
+    bucle.start();
+    return () => bucle.stop();
+  }, [v, duracion]);
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        style,
+        {
+          transform: [
+            { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -distancia] }) },
+            { rotate: v.interpolate({ inputRange: [0, 1], outputRange: [`-${giro}deg`, `${giro}deg`] }) },
+          ],
+        },
+      ]}>
+      {children}
+    </Animated.View>
+  );
+}
+
+/** Botón principal, con relieve. Chicle el de avanzar, uva oscura el de rematar. */
 export function Boton({
   texto,
   onPress,
@@ -26,7 +167,8 @@ export function Boton({
 }) {
   const apagado = ocupado || deshabilitado;
   return (
-    <Pressable
+    <Rebote
+      pop={!apagado}
       style={[
         estilos.boton,
         tono === 'oscuro' ? estilos.botonOscuro : estilos.botonAccent,
@@ -46,16 +188,16 @@ export function Boton({
           {texto}
         </Text>
       )}
-    </Pressable>
+    </Rebote>
   );
 }
 
 /** Botón de texto, sin fondo. */
 export function BotonPlano({ texto, onPress }: { texto: string; onPress: () => void }) {
   return (
-    <Pressable style={estilos.botonPlano} onPress={onPress}>
+    <Rebote style={estilos.botonPlano} onPress={onPress}>
       <Text style={estilos.botonPlanoTexto}>{texto}</Text>
-    </Pressable>
+    </Rebote>
   );
 }
 
@@ -74,7 +216,8 @@ export function FilaOpcion({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <Rebote
+      pop={elegida}
       style={[estilos.fila, elegida ? estilos.filaElegida : estilos.filaNormal]}
       onPress={onPress}>
       <View style={{ flexShrink: 1, gap: 3 }}>
@@ -89,7 +232,7 @@ export function FilaOpcion({
           elegida && (varias ? estilos.cuadroElegido : estilos.circuloElegido),
         ]}
       />
-    </Pressable>
+    </Rebote>
   );
 }
 
@@ -108,7 +251,8 @@ export function Pastilla({
   tono?: 'oscuro' | 'suave';
 }) {
   return (
-    <Pressable
+    <Rebote
+      pop={elegida}
       style={[
         estilos.pastilla,
         elegida
@@ -123,17 +267,17 @@ export function Pastilla({
       <Text
         style={[
           estilos.pastillaTexto,
-          elegida && tono === 'oscuro' && { color: colors.onInk, fontFamily: fonts.sansNegrita },
+          elegida && tono === 'oscuro' && { color: '#FFFFFF', fontFamily: fonts.sansNegrita },
           elegida && tono === 'suave' && { color: colors.ink, fontFamily: fonts.sansMedia },
         ]}>
         {etiqueta}
       </Text>
-    </Pressable>
+    </Rebote>
   );
 }
 
-/** Dos opciones lado a lado: las parejas de "cómo te relacionas". */
-export function DosOpciones({
+/** Opciones lado a lado: los pares de "cómo te relacionas", los tres niveles de idioma. */
+export function Opciones({
   opciones,
   elegida,
   onElegir,
@@ -145,8 +289,10 @@ export function DosOpciones({
   return (
     <View style={{ flexDirection: 'row', gap: 9 }}>
       {opciones.map((opcion) => (
-        <Pressable
+        <Rebote
           key={opcion}
+          fuera={{ flex: 1 }}
+          pop={opcion === elegida}
           style={[estilos.segmento, opcion === elegida && estilos.segmentoElegido]}
           onPress={() => onElegir(opcion)}>
           <Text
@@ -156,7 +302,7 @@ export function DosOpciones({
             ]}>
             {opcion}
           </Text>
-        </Pressable>
+        </Rebote>
       ))}
     </View>
   );
@@ -188,6 +334,7 @@ export function Campo({
   keyboardType,
   autoFocus,
   onSubmit,
+  teclaIntro = 'go',
 }: {
   valor: string;
   onChange: (v: string) => void;
@@ -197,6 +344,8 @@ export function Campo({
   keyboardType?: 'default' | 'number-pad' | 'email-address';
   autoFocus?: boolean;
   onSubmit?: () => void;
+  /** Qué dice la tecla Intro: "Ir" para enviar, "Siguiente" para pasar de campo. */
+  teclaIntro?: 'go' | 'next';
 }) {
   return (
     <TextInput
@@ -212,12 +361,12 @@ export function Campo({
       autoCorrect={keyboardType !== 'email-address'}
       autoFocus={autoFocus}
       onSubmitEditing={onSubmit}
-      returnKeyType={onSubmit ? 'go' : 'default'}
+      returnKeyType={onSubmit ? teclaIntro : 'default'}
     />
   );
 }
 
-/** Cabecera del registro: flecha atrás, barra de avance y "3 de 11". */
+/** Cabecera del registro: flecha atrás, barra de avance con muelle y "3 de 11". */
 export function CabeceraPaso({
   paso,
   total,
@@ -227,13 +376,28 @@ export function CabeceraPaso({
   total: number;
   onAtras: () => void;
 }) {
+  const avance = useRef(new Animated.Value(paso / total)).current;
+  useEffect(() => {
+    Animated.spring(avance, {
+      toValue: paso / total,
+      useNativeDriver: false,
+      speed: 10,
+      bounciness: 10,
+    }).start();
+  }, [avance, paso, total]);
+
   return (
     <View style={estilos.cabecera}>
-      <Pressable style={estilos.redondo} onPress={onAtras}>
+      <Rebote style={estilos.redondo} onPress={onAtras}>
         <Text style={estilos.flecha}>←</Text>
-      </Pressable>
+      </Rebote>
       <View style={estilos.barra}>
-        <View style={[estilos.barraLlena, { width: `${(paso / total) * 100}%` }]} />
+        <Animated.View
+          style={[
+            estilos.barraLlena,
+            { width: avance.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
+          ]}
+        />
       </View>
       <Text style={estilos.pasoTexto}>
         {paso} de {total}
@@ -242,68 +406,35 @@ export function CabeceraPaso({
   );
 }
 
-/** Envoltorio de pantalla del registro: titular, ayuda, contenido y botón abajo. */
-export function PantallaPaso({
-  titulo,
-  ayuda,
-  children,
-  botonTexto,
-  onSiguiente,
-  listo,
-  ocupado,
-  desplazable,
-}: {
-  titulo: string;
-  ayuda?: string;
-  children: ReactNode;
-  botonTexto?: string;
-  onSiguiente: () => void;
-  listo: boolean;
-  ocupado?: boolean;
-  desplazable?: boolean;
-}) {
-  const contenido = (
-    <>
-      <Text style={text.titulo}>{titulo}</Text>
-      {ayuda && <Text style={[text.ayuda, { marginTop: 8, marginBottom: 14 }]}>{ayuda}</Text>}
-      {children}
-    </>
-  );
-
-  return (
-    <View style={estilos.pantallaPaso}>
-      {desplazable ? (
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 16 }}
-          keyboardShouldPersistTaps="handled">
-          {contenido}
-        </ScrollView>
-      ) : (
-        <View style={{ flex: 1 }}>{contenido}</View>
-      )}
-      <Boton
-        texto={botonTexto ?? 'Continuar'}
-        onPress={onSiguiente}
-        deshabilitado={!listo}
-        ocupado={ocupado}
-      />
-    </View>
-  );
-}
+/** Relieve: un borde inferior más grueso hace que todo parezca un botón de juguete. */
+const relieve = { borderWidth: 1.5, borderBottomWidth: 4 };
 
 const estilos = StyleSheet.create({
   boton: {
-    height: 56,
+    height: 58,
     borderRadius: radios.boton,
     alignItems: 'center',
     justifyContent: 'center',
+    borderBottomWidth: 5,
   },
-  botonAccent: { backgroundColor: colors.accent },
-  botonOscuro: { backgroundColor: colors.ink },
-  botonApagado: { backgroundColor: colors.lineFuerte },
+  botonAccent: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accentOscuro,
+    shadowColor: colors.accent,
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  botonOscuro: { backgroundColor: colors.ink, borderColor: '#150A28' },
+  botonApagado: {
+    backgroundColor: colors.lineFuerte,
+    borderColor: colors.trazo,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   botonPlano: { height: 46, alignItems: 'center', justifyContent: 'center' },
-  botonPlanoTexto: { fontFamily: fonts.sansMedia, fontSize: 15, color: colors.ink2 },
+  botonPlanoTexto: { fontFamily: fonts.sansNegrita, fontSize: 15, color: colors.uva },
 
   fila: {
     minHeight: 60,
@@ -315,42 +446,42 @@ const estilos = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  filaNormal: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
-  filaElegida: { backgroundColor: colors.accentWash, borderWidth: 1.5, borderColor: colors.accent },
+  filaNormal: { backgroundColor: colors.surface, ...relieve, borderColor: colors.line },
+  filaElegida: { backgroundColor: colors.accentWash, ...relieve, borderColor: colors.accent },
   filaTexto: { fontFamily: fonts.sansMedia, fontSize: 16, color: colors.ink },
   filaDetalle: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
 
-  circulo: { width: 22, height: 22, borderRadius: 999, borderWidth: 1.5, borderColor: '#D8CDBB' },
+  circulo: { width: 24, height: 24, borderRadius: 999, borderWidth: 2, borderColor: colors.trazo },
   circuloElegido: {
     backgroundColor: colors.accent,
-    borderColor: colors.accent,
-    borderWidth: 4,
+    borderColor: colors.accentWash,
+    borderWidth: 5,
   },
-  cuadro: { width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, borderColor: '#D8CDBB' },
-  cuadroElegido: { backgroundColor: colors.accent, borderColor: colors.accent, borderWidth: 4 },
+  cuadro: { width: 24, height: 24, borderRadius: 8, borderWidth: 2, borderColor: colors.trazo },
+  cuadroElegido: { backgroundColor: colors.accent, borderColor: colors.accentWash, borderWidth: 5 },
 
   pastilla: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: radios.pastilla,
-    borderWidth: 1,
+    ...relieve,
+    borderBottomWidth: 3,
   },
   pastillaNormal: { backgroundColor: colors.surface, borderColor: colors.line },
-  pastillaOscura: { backgroundColor: colors.ink, borderColor: colors.ink },
+  pastillaOscura: { backgroundColor: colors.uva, borderColor: '#6A3FD1' },
   pastillaSuave: { backgroundColor: colors.accentWash, borderColor: colors.accentBorde },
   pastillaTexto: { fontFamily: fonts.sansMedia, fontSize: 14.5, color: colors.ink2 },
 
   segmento: {
-    flex: 1,
     paddingVertical: 15,
     paddingHorizontal: 12,
     borderRadius: radios.campo,
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    ...relieve,
     borderColor: colors.line,
     alignItems: 'center',
   },
-  segmentoElegido: { backgroundColor: colors.accentWash, borderWidth: 1.5, borderColor: colors.accent },
+  segmentoElegido: { backgroundColor: colors.accentWash, borderColor: colors.accent },
   segmentoTexto: {
     fontFamily: fonts.sansMedia,
     fontSize: 14.5,
@@ -360,16 +491,21 @@ const estilos = StyleSheet.create({
 
   tarjeta: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    ...relieve,
+    borderBottomWidth: 5,
     borderColor: colors.line,
     borderRadius: radios.tarjeta,
     padding: 20,
     gap: 12,
+    shadowColor: colors.uva,
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
   },
-  tarjetaOscura: { backgroundColor: colors.ink, borderColor: colors.ink },
+  tarjetaOscura: { backgroundColor: colors.ink, borderColor: '#150A28' },
 
   campo: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.line,
     borderRadius: radios.campo,
     backgroundColor: colors.surface,
@@ -390,25 +526,23 @@ const estilos = StyleSheet.create({
     gap: 14,
   },
   redondo: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 999,
     backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  flecha: { fontFamily: fonts.sansNegrita, fontSize: 17, color: colors.ink2 },
-  barra: { flex: 1, height: 4, borderRadius: 999, backgroundColor: colors.lineFuerte, overflow: 'hidden' },
-  barraLlena: { height: 4, borderRadius: 999, backgroundColor: colors.accent },
-  pasoTexto: { fontFamily: fonts.sansMedia, fontSize: 12, color: colors.ink4 },
-
-  pantallaPaso: {
+  flecha: { fontFamily: fonts.sansNegrita, fontSize: 18, color: colors.uva },
+  barra: {
     flex: 1,
-    paddingHorizontal: espacios.pantalla,
-    paddingTop: 24,
-    paddingBottom: 30,
-    gap: 16,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: colors.surface2,
+    overflow: 'hidden',
   },
+  barraLlena: { height: 10, borderRadius: 999, backgroundColor: colors.menta },
+  pasoTexto: { fontFamily: fonts.display, fontSize: 13, color: colors.ink3 },
 });
 
 export { estilos as estilosComunes };

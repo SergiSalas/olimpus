@@ -91,7 +91,7 @@ export function Reportar({
 }
 
 const estilos = StyleSheet.create({
-  fondo: { flex: 1, backgroundColor: 'rgba(33,29,26,0.45)', justifyContent: 'flex-end' },
+  fondo: { flex: 1, backgroundColor: colors.velo, justifyContent: 'flex-end' },
   hoja: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: 24,
@@ -100,7 +100,7 @@ const estilos = StyleSheet.create({
     paddingBottom: 40,
     gap: 8,
   },
-  titulo: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink },
+  titulo: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
   ayuda: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 20, color: colors.ink3 },
   motivo: {
     backgroundColor: colors.surface,
