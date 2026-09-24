@@ -1,5 +1,6 @@
 package com.sergisalas.olimpus.notifications.adapter.out;
 
+import com.sergisalas.olimpus.notifications.domain.PushTarget;
 import com.sergisalas.olimpus.notifications.domain.PushTokenRepository;
 import java.util.List;
 import java.util.UUID;
@@ -16,25 +17,29 @@ public class JdbcPushTokenRepository implements PushTokenRepository {
     }
 
     @Override
-    public void save(UUID accountId, String token) {
+    public void save(UUID accountId, String token, String language) {
         // A phone that changes hands brings its token to another account: the
         // token belongs to whoever logged in last.
         jdbc.update(
                 """
-                insert into push_token (token, account_id, updated_at)
-                values (?, ?, now())
+                insert into push_token (token, account_id, language, updated_at)
+                values (?, ?, ?, now())
                 on conflict (token) do update set
                     account_id = excluded.account_id,
+                    language = excluded.language,
                     updated_at = now()
                 """,
                 token,
-                accountId);
+                accountId,
+                language);
     }
 
     @Override
-    public List<String> tokensOf(UUID accountId) {
-        return jdbc.queryForList(
-                "select token from push_token where account_id = ?", String.class, accountId);
+    public List<PushTarget> tokensOf(UUID accountId) {
+        return jdbc.query(
+                "select token, language from push_token where account_id = ?",
+                (rs, row) -> new PushTarget(rs.getString("token"), rs.getString("language")),
+                accountId);
     }
 
     @Override

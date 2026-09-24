@@ -63,6 +63,18 @@ public class ChatBroadcaster {
         }
     }
 
+    /**
+     * "Writing…", only to the other person. It is never stored: if it gets lost,
+     * the message it announced arrives anyway.
+     */
+    public void typing(Conversation conversation, UUID writer) {
+        send(
+                conversation.partnerOf(writer),
+                """
+                {"type":"typing","conversationId":"%s"}"""
+                        .formatted(conversation.id()));
+    }
+
     /** A heart put on or taken off: both phones update the message at once. */
     public void liked(Conversation conversation, UUID messageId, boolean liked) {
         String payload =

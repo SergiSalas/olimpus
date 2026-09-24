@@ -19,6 +19,7 @@ import {
   type Rasgos,
   type TipoConversacion,
 } from './mapeo';
+import { t } from './i18n';
 
 /**
  * Lo que se lleva respondido, en los términos en que se pregunta.
@@ -154,7 +155,9 @@ export function datosDe(b: Borrador): ProfileData {
 export const BLOQUES_LISTOS: ((b: Borrador) => boolean)[] = [
   (b) => {
     const edad = edadDe(b.fecha);
-    return b.apodo.trim().length >= APODO_MIN && edad !== null && edad >= EDAD_MIN && b.genero !== null;
+    return (
+      b.apodo.trim().length >= APODO_MIN && edad !== null && edad >= EDAD_MIN && b.genero !== null
+    );
   },
   (b) => b.busco.length > 0,
   (b) => b.ubicacion !== null && b.idiomas.length > 0,
@@ -194,7 +197,7 @@ export class FotoFallida extends Error {
     readonly perfil: Profile,
     causa: unknown,
   ) {
-    super(causa instanceof Error ? causa.message : 'No se pudo subir la foto.');
+    super(causa instanceof Error ? causa.message : t('fotoPropia.errorSubir'));
   }
 }
 

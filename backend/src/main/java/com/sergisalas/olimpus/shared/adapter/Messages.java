@@ -3,6 +3,7 @@ package com.sergisalas.olimpus.shared.adapter;
 import com.sergisalas.olimpus.shared.domain.UserFacingError;
 import java.util.Locale;
 import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContext;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +16,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class Messages {
+
+    /** Spanish, the launch community's language. */
+    static final Locale DEFAULT = Locale.forLanguageTag("es");
 
     private final MessageSource source;
 
@@ -44,7 +48,19 @@ public class Messages {
         return getOrDefault("prompt." + question, question);
     }
 
+    /** For texts nobody asked for (notifications): the language is given, not read. */
+    public String getIn(Locale locale, String key, Object... args) {
+        return source.getMessage(key, args, locale);
+    }
+
+    /**
+     * The request's language. Outside a request (a scheduled task, a test) there
+     * is none, and then it is Spanish: never the language of whatever machine the
+     * server happens to run on.
+     */
     public Locale locale() {
-        return LocaleContextHolder.getLocale();
+        LocaleContext context = LocaleContextHolder.getLocaleContext();
+        Locale locale = context == null ? null : context.getLocale();
+        return locale == null ? DEFAULT : locale;
     }
 }

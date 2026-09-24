@@ -3,14 +3,15 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError, reportar, type ReportReason } from '../api';
 import { Boton, Etiqueta } from '../components';
 import { colors, fonts, radios } from '../theme';
+import { t } from '../i18n';
 
-const MOTIVOS: { valor: ReportReason; etiqueta: string }[] = [
-  { valor: 'DISRESPECT', etiqueta: 'Me falta al respeto' },
-  { valor: 'UNWANTED_SEXUAL', etiqueta: 'Contenido sexual que no he pedido' },
-  { valor: 'SPAM', etiqueta: 'Spam o me quiere vender algo' },
-  { valor: 'FAKE_PROFILE', etiqueta: 'No parece quien dice ser' },
-  { valor: 'LOOKS_UNDERAGE', etiqueta: 'Parece menor de edad' },
-  { valor: 'OTHER', etiqueta: 'Otra cosa' },
+const MOTIVOS: { valor: ReportReason; etiqueta: () => string }[] = [
+  { valor: 'DISRESPECT', etiqueta: () => t('reportar.respeto') },
+  { valor: 'UNWANTED_SEXUAL', etiqueta: () => t('reportar.sexual') },
+  { valor: 'SPAM', etiqueta: () => t('reportar.spam') },
+  { valor: 'FAKE_PROFILE', etiqueta: () => t('reportar.falso') },
+  { valor: 'LOOKS_UNDERAGE', etiqueta: () => t('reportar.menor') },
+  { valor: 'OTHER', etiqueta: () => t('reportar.otra') },
 ];
 
 /**
@@ -42,7 +43,7 @@ export function Reportar({
       await reportar(token, conversationId, motivo);
       onHecho();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No se pudo enviar.');
+      setError(e instanceof ApiError ? e.message : t('comun.noSePudoEnviar'));
     } finally {
       setEnviando(false);
     }
@@ -52,12 +53,9 @@ export function Reportar({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onCerrar}>
       <View style={estilos.fondo}>
         <View style={estilos.hoja}>
-          <Etiqueta tono="accent">Reportar o bloquear</Etiqueta>
-          <Text style={estilos.titulo}>¿Qué ha pasado?</Text>
-          <Text style={estilos.ayuda}>
-            La conversación se corta ahora mismo y no os volveremos a emparejar. La otra persona no
-            sabrá que has sido tú.
-          </Text>
+          <Etiqueta tono="accent">{t('reportar.etiqueta')}</Etiqueta>
+          <Text style={estilos.titulo}>{t('reportar.titulo')}</Text>
+          <Text style={estilos.ayuda}>{t('reportar.ayuda')}</Text>
 
           <View style={{ gap: 8, marginTop: 6 }}>
             {MOTIVOS.map((motivo) => (
@@ -66,7 +64,7 @@ export function Reportar({
                 style={estilos.motivo}
                 disabled={enviando}
                 onPress={() => enviar(motivo.valor)}>
-                <Text style={estilos.motivoTexto}>{motivo.etiqueta}</Text>
+                <Text style={estilos.motivoTexto}>{motivo.etiqueta()}</Text>
               </Pressable>
             ))}
           </View>
@@ -75,13 +73,13 @@ export function Reportar({
 
           <View style={{ gap: 8, marginTop: 10 }}>
             <Boton
-              texto="Solo bloquear, sin motivo"
+              texto={t('reportar.soloBloquear')}
               tono="oscuro"
               ocupado={enviando}
               onPress={() => enviar(null)}
             />
             <Pressable style={{ paddingVertical: 12 }} onPress={onCerrar} disabled={enviando}>
-              <Text style={estilos.cancelar}>Cancelar</Text>
+              <Text style={estilos.cancelar}>{t('comun.cancelar')}</Text>
             </Pressable>
           </View>
         </View>

@@ -39,8 +39,8 @@ public class DemoBot {
 
     private static final Logger log = LoggerFactory.getLogger(DemoBot.class);
 
-    /** A short pause, so the answer does not land before your own message. */
-    private static final Duration THINKING = Duration.ofMillis(1500);
+    /** A short pause, with "writing…" on your screen, before the answer lands. */
+    private static final Duration THINKING = Duration.ofMillis(2500);
 
     private static final List<String> LINES =
             List.of(
@@ -122,10 +122,13 @@ public class DemoBot {
 
         if (!thread.isEmpty()) {
             Message last = thread.getLast();
-            if (!last.senderAccountId().equals(seat.bot())
-                    && last.sentAt().plus(THINKING).isBefore(now)) {
-                answer(conversation, seat.bot(), thread.size());
-                if (thread.size() % 3 == 0) heart(conversation, seat.bot(), last);
+            if (!last.senderAccountId().equals(seat.bot())) {
+                if (last.sentAt().plus(THINKING).isBefore(now)) {
+                    answer(conversation, seat.bot(), thread.size());
+                    if (thread.size() % 3 == 0) heart(conversation, seat.bot(), last);
+                } else if (conversation.acceptsMessagesAt(now)) {
+                    broadcaster.typing(conversation, seat.bot());
+                }
             }
         }
 

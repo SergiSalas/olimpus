@@ -16,6 +16,7 @@ import {
 import {
   ApiError,
   askToSeePhoto,
+  avisarEscribiendo,
   decide,
   fetchChat,
   likeMessage,
@@ -31,9 +32,11 @@ import { Reportar } from '../components/Reportar';
 import { Escalones, LoQueSeVe, NIVELES, PedirFoto } from '../components/Escalera';
 import { PanelPruebas } from '../components/PanelPruebas';
 import { Presentacion } from '../components/Presentacion';
-import { Entrada, Rebote } from '../components';
+import { SubidaNivel } from '../components/SubidaNivel';
+import { Entrada, Puntos, Rebote } from '../components';
 import { marcarPresentacionVista, presentacionVista } from '../session';
 import { colors, fonts } from '../theme';
+import { horaCorta as hora, t } from '../i18n';
 
 /**
  * El chat del día. Los mensajes se envían por HTTP y se reciben por la conexión
@@ -67,14 +70,20 @@ export function ChatScreen({
   const [presentando, setPresentando] = useState(false);
   /** Salta a verdadero un momento cuando sube el nivel: la cabecera da un brinco. */
   const [subio, setSubio] = useState(false);
+  /** El nivel al que se acaba de subir, mientras se celebra. */
+  const [celebrando, setCelebrando] = useState<number | null>(null);
   const nivelAnterior = useRef<number | null>(null);
+  /** La otra persona está escribiendo: se apaga solo si deja de avisar. */
+  const [escribe, setEscribe] = useState(false);
+  const apagarEscribe = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ultimoAviso = useRef(0);
   const lista = useRef<FlatList<Fila>>(null);
 
   const cargar = useCallback(async () => {
     try {
       setChat(await fetchChat(token, conversationId));
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No se pudo abrir la conversación.');
+      setError(e instanceof ApiError ? e.message : t('chat.errorAbrir'));
     }
   }, [token, conversationId]);
 
@@ -98,9 +107,10 @@ export function ChatScreen({
     if (nivel === null) return;
     if (nivelAnterior.current !== null && nivel > nivelAnterior.current) {
       setSubio(true);
-      const t = setTimeout(() => setSubio(false), 700);
+      setCelebrando(nivel);
+      const reloj = setTimeout(() => setSubio(false), 700);
       nivelAnterior.current = nivel;
-      return () => clearTimeout(t);
+      return () => clearTimeout(reloj);
     }
     nivelAnterior.current = nivel;
   }, [nivel]);
@@ -112,6 +122,8 @@ export function ChatScreen({
       (mensaje) => {
         if (mensaje.conversationId !== conversationId || mensaje.mine) return;
 
+        // Llegó su mensaje: ya no está escribiendo.
+        setEscribe(false);
         setChat((actual) => {
           if (!actual) return actual;
           // Si ese mensaje ha abierto un nivel, hay cosas nuevas que enseñar (su
@@ -125,6 +137,12 @@ export function ChatScreen({
       (corazon) => {
         if (corazon.conversationId !== conversationId) return;
         marcarCorazon(corazon.messageId, corazon.liked);
+      },
+      (enLaConversacion) => {
+        if (enLaConversacion !== conversationId) return;
+        setEscribe(true);
+        if (apagarEscribe.current) clearTimeout(apagarEscribe.current);
+        apagarEscribe.current = setTimeout(() => setEscribe(false), ESCRIBE_DURA_MS);
       },
     );
     return () => socket.close();
@@ -146,10 +164,19 @@ export function ChatScreen({
       // servidor, así que se le vuelve a preguntar en vez de adivinarlo aquí.
       cargar();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No se pudo enviar.');
+      setError(e instanceof ApiError ? e.message : t('comun.noSePudoEnviar'));
     } finally {
       setEnviando(false);
     }
+  }
+
+  /** Como mucho un aviso cada pocos segundos mientras se escribe. */
+  function escribiendo(nuevo: string) {
+    setTexto(nuevo);
+    const ahora = Date.now();
+    if (!nuevo.trim() || ahora - ultimoAviso.current < AVISO_CADA_MS) return;
+    ultimoAviso.current = ahora;
+    avisarEscribiendo(token, conversationId).catch(() => {});
   }
 
   function marcarCorazon(messageId: string, liked: boolean) {
@@ -171,7 +198,7 @@ export function ChatScreen({
       await likeMessage(token, conversationId, mensaje.id, liked);
     } catch (e) {
       marcarCorazon(mensaje.id, !liked);
-      setError(e instanceof ApiError ? e.message : 'No se pudo dar el corazón.');
+      setError(e instanceof ApiError ? e.message : t('chat.errorCorazon'));
     }
   }
 
@@ -179,12 +206,11 @@ export function ChatScreen({
     setPidiendoFoto(true);
     setError(null);
     try {
-      const respuesta = await askToSeePhoto(token, conversationId);
+      await askToSeePhoto(token, conversationId);
       await cargar();
-      // Si los dos lo habéis pedido, la foto está lista: se abre su perfil.
-      if (respuesta.bothAccepted) setViendoPerfil(true);
+      // Si los dos lo habéis pedido, sube al nivel 3 y la celebración lleva a la foto.
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No se pudo pedir.');
+      setError(e instanceof ApiError ? e.message : t('chat.errorPedir'));
     } finally {
       setPidiendoFoto(false);
     }
@@ -197,7 +223,7 @@ export function ChatScreen({
       await decide(token, conversationId, respuesta);
       await cargar();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No se pudo responder.');
+      setError(e instanceof ApiError ? e.message : t('chat.errorResponder'));
     } finally {
       setRespondiendo(false);
     }
@@ -212,7 +238,7 @@ export function ChatScreen({
           <ActivityIndicator color={colors.accent} />
         )}
         <Pressable onPress={onVolver}>
-          <Text style={estilos.volver}>‹ Volver</Text>
+          <Text style={estilos.volver}>{t('comun.volver')}</Text>
         </Pressable>
       </View>
     );
@@ -247,24 +273,26 @@ export function ChatScreen({
           )}
           <View style={{ flexShrink: 1, gap: 3 }}>
             <Text style={estilos.nombre} numberOfLines={1}>
-              {partner.nickname ? `${partner.nickname}, ${partner.age}` : `${partner.age} años`}
+              {partner.nickname
+                ? `${partner.nickname}, ${partner.age}`
+                : t('comun.anos', { edad: partner.age })}
             </Text>
             <View style={estilos.filaNivel}>
               <Escalones nivel={partner.level} />
               <Text style={estilos.nivel}>{NIVELES[partner.level]?.titulo}</Text>
             </View>
-            <Text style={estilos.verPerfil}>Ver perfil ›</Text>
+            <Text style={estilos.verPerfil}>{t('chat.verPerfil')}</Text>
           </View>
         </Rebote>
 
         <View style={estilos.derecha}>
           <View style={[estilos.pastillaCierre, chat.connected && estilos.pastillaConexion]}>
             <Text style={estilos.pastillaCierreTexto}>
-              {chat.connected ? '💖 Conexión' : `⏳ ${hora(chat.closesAt)}`}
+              {chat.connected ? t('chat.conexion') : `⏳ ${hora(chat.closesAt)}`}
             </Text>
           </View>
           <Pressable onPress={() => setReportando(true)} hitSlop={10}>
-            <Text style={estilos.reportar}>Reportar</Text>
+            <Text style={estilos.reportar}>{t('chat.reportar')}</Text>
           </Pressable>
         </View>
       </View>
@@ -306,18 +334,25 @@ export function ChatScreen({
           <View style={estilos.arranque}>
             <Text style={estilos.arranqueEmoji}>💡</Text>
             <View style={{ flexShrink: 1, gap: 4 }}>
-              <Text style={estilos.arranqueEtiqueta}>Para romper el hielo</Text>
+              <Text style={estilos.arranqueEtiqueta}>{t('chat.hielo')}</Text>
               <Text style={estilos.arranqueTexto}>{chat.icebreaker}</Text>
-              <Text style={estilos.pistaCorazon}>Toca dos veces un mensaje suyo para darle ❤️</Text>
+              <Text style={estilos.pistaCorazon}>{t('chat.pistaCorazon')}</Text>
             </View>
           </View>
+        }
+        ListFooterComponent={
+          escribe ? (
+            <Entrada style={estilos.escribe}>
+              <Puntos />
+            </Entrada>
+          ) : null
         }
         renderItem={({ item }) =>
           item.tipo === 'aviso' ? (
             <Entrada style={{ alignItems: 'center', paddingVertical: 6 }}>
               <Rebote style={estilos.desbloqueo} onPress={() => setViendoPerfil(true)}>
                 <Text style={estilos.desbloqueoTexto}>🔓 {item.texto}</Text>
-                <Text style={estilos.desbloqueoVer}>Ver perfil ›</Text>
+                <Text style={estilos.desbloqueoVer}>{t('chat.verPerfil')}</Text>
               </Rebote>
             </Entrada>
           ) : (
@@ -350,9 +385,7 @@ export function ChatScreen({
       {cerrada ? (
         <View style={estilos.barra}>
           <Text style={estilos.cerradoTexto}>
-            {chat.state === 'BLOCKED'
-              ? 'Esta conversación está cortada. No os volveremos a emparejar.'
-              : 'Esta conversación se cerró a las 22:00. Mañana a las 4:00 hay reparto nuevo.'}
+            {chat.state === 'BLOCKED' ? t('chat.cortada') : t('chat.cerrada')}
           </Text>
         </View>
       ) : (
@@ -360,8 +393,8 @@ export function ChatScreen({
           <TextInput
             style={estilos.campo}
             value={texto}
-            onChangeText={setTexto}
-            placeholder="Escribe algo…"
+            onChangeText={escribiendo}
+            placeholder={t('chat.escribe')}
             placeholderTextColor={colors.ink5}
             multiline
             maxLength={1000}
@@ -382,16 +415,29 @@ export function ChatScreen({
 
       <PanelPruebas token={token} onHecho={cargar} />
 
+      {celebrando !== null && (
+        <SubidaNivel
+          nivel={celebrando}
+          onVerPerfil={() => setViendoPerfil(true)}
+          onFin={() => setCelebrando(null)}
+        />
+      )}
+
       {presentando && (
         <Presentacion
           inicial={(yo.charAt(0) || '?').toUpperCase()}
-          detalle={`${partner.age} años · a ${partner.approxDistanceKm} km`}
+          detalle={t('comun.edadYDistancia', { edad: partner.age, km: partner.approxDistanceKm })}
           onFin={() => setPresentando(false)}
         />
       )}
     </KeyboardAvoidingView>
   );
 }
+
+/** Cada cuánto, como mucho, se avisa al otro de que escribes. */
+const AVISO_CADA_MS = 2500;
+/** Sin un aviso nuevo en este tiempo, se da por hecho que ha dejado de escribir. */
+const ESCRIBE_DURA_MS = 4000;
 
 /** Lo que se ve en el hilo: mensajes y, entre ellos, los avisos de desbloqueo. */
 type Fila =
@@ -424,10 +470,6 @@ function conAvisos(chat: Chat): Fila[] {
   }
 
   return filas;
-}
-
-function hora(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 const estilos = StyleSheet.create({
@@ -553,6 +595,18 @@ const estilos = StyleSheet.create({
   },
   desbloqueoVer: { fontFamily: fonts.sansMedia, fontSize: 11.5, color: colors.onInk2 },
 
+  escribe: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderBottomWidth: 4,
+    borderColor: colors.line,
+    borderRadius: 22,
+    borderBottomLeftRadius: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    marginTop: 10,
+  },
   fijos: { paddingHorizontal: 16, paddingTop: 8, gap: 8 },
   barra: {
     flexDirection: 'row',

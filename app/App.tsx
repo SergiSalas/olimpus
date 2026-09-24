@@ -18,6 +18,7 @@ import { LoginScreen } from './src/screens/LoginScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { activarAvisos } from './src/avisos';
+import { cargarIdioma, useIdioma } from './src/i18n';
 import { clearToken, readToken, saveToken } from './src/session';
 import { Entrada } from './src/components';
 import { colors } from './src/theme';
@@ -37,6 +38,13 @@ type State =
 
 export default function App() {
   const [state, setState] = useState<State>({ kind: 'comprobando' });
+  const [idiomaListo, setIdiomaListo] = useState(false);
+  const idioma = useIdioma();
+
+  // El idioma se lee antes de pintar nada, para no enseñar una pantalla en otro.
+  useEffect(() => {
+    cargarIdioma().finally(() => setIdiomaListo(true));
+  }, []);
 
   const [fuentesListas] = useFonts({
     Figtree_400Regular,
@@ -81,10 +89,12 @@ export default function App() {
    */
   useEffect(() => {
     if (state.kind !== 'hoy') return;
+    // Registrar el móvil también le dice al servidor su idioma (va en la
+    // petición): por eso se repite si el idioma cambia.
     activarAvisos(state.token).catch(() => {
       // Sin avisos la app funciona igual; no hay nada que contarle a nadie.
     });
-  }, [state]);
+  }, [state, idioma]);
 
   async function entrar(sesion: StartedSession) {
     await saveToken(sesion.token);
@@ -96,7 +106,7 @@ export default function App() {
     setState({ kind: 'intro' });
   }
 
-  if (!fuentesListas || state.kind === 'comprobando') {
+  if (!fuentesListas || !idiomaListo || state.kind === 'comprobando') {
     return (
       <View style={styles.centrado}>
         <ActivityIndicator color={colors.accent} />
@@ -106,8 +116,9 @@ export default function App() {
   }
 
   return (
-    // Cada cambio de pantalla entra con un pequeño muelle.
-    <Entrada key={state.kind} style={styles.pantalla}>
+    // Cada cambio de pantalla entra con un pequeño muelle. Un cambio de idioma
+    // también: la pantalla se vuelve a montar entera, ya traducida.
+    <Entrada key={`${state.kind}-${idioma}`} style={styles.pantalla}>
       {state.kind === 'intro' && <IntroScreen onEmpezar={() => setState({ kind: 'fuera' })} />}
 
       {state.kind === 'fuera' && (

@@ -1,21 +1,25 @@
 import { useEffect, useState } from 'react';
 import { fetchInterests } from './api';
+import { idioma, type Idioma } from './i18n';
 
 /**
  * El backend guarda y devuelve los intereses por su id ("ice-climbing"); el
  * nombre que se enseña ("Escalada en hielo") viene del catálogo de
- * /api/interests. Se pide una sola vez para toda la app.
+ * /api/interests, ya traducido. Se pide una sola vez por idioma para toda la app.
  */
-let catalogo: Promise<Record<string, string>> | null = null;
+const catalogos = new Map<Idioma, Promise<Record<string, string>>>();
 
 function cargarNombres(): Promise<Record<string, string>> {
+  const deEste = idioma();
+  let catalogo = catalogos.get(deEste);
   if (!catalogo) {
     catalogo = fetchInterests()
       .then((lista) => Object.fromEntries(lista.map((i) => [i.name, i.label])))
       .catch((error) => {
-        catalogo = null; // que el siguiente intento vuelva a pedirlo
+        catalogos.delete(deEste); // que el siguiente intento vuelva a pedirlo
         throw error;
       });
+    catalogos.set(deEste, catalogo);
   }
   return catalogo;
 }

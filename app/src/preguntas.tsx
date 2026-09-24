@@ -52,8 +52,10 @@ import {
   rangoSugerido,
   type Borrador,
 } from './borrador';
-import { CONVERSACIONES, RASGOS, edadDe, type Rasgos } from './mapeo';
+import { CONVERSACIONES, RASGOS, edadDe, type Rasgos, type TipoConversacion } from './mapeo';
 import { colors, fonts, radios, text } from './theme';
+import { t } from './i18n';
+import type { Clave } from './idiomas/es';
 
 /**
  * Cada pregunta del registro, suelta.
@@ -73,29 +75,49 @@ export type Props = {
 };
 
 const GENEROS: { valor: Gender; etiqueta: string }[] = [
-  { valor: 'WOMAN', etiqueta: 'Mujer' },
-  { valor: 'MAN', etiqueta: 'Hombre' },
-  { valor: 'NON_BINARY', etiqueta: 'No binarie' },
-  { valor: 'OTHER', etiqueta: 'Otro' },
+  {
+    valor: 'WOMAN',
+    get etiqueta() {
+      return t('genero.WOMAN');
+    },
+  },
+  {
+    valor: 'MAN',
+    get etiqueta() {
+      return t('genero.MAN');
+    },
+  },
+  {
+    valor: 'NON_BINARY',
+    get etiqueta() {
+      return t('genero.NON_BINARY');
+    },
+  },
+  {
+    valor: 'OTHER',
+    get etiqueta() {
+      return t('genero.OTHER');
+    },
+  },
 ];
 
 /**
  * Términos para decirlo con más precisión. Son sugerencias que rellenan el
  * campo, no una lista cerrada: quien no se vea en ninguno lo escribe.
  */
-const GENERO_DETALLE = [
-  'Mujer',
-  'Hombre',
-  'Mujer trans',
-  'Hombre trans',
-  'No binarie',
-  'Género fluido',
-  'Agénero',
-  'Bigénero',
-  'Queer',
-  'Intergénero',
-  'Cuestionándomelo',
-  'Prefiero no decirlo',
+const generoDetalle = () => [
+  t('generoDetalle.0'),
+  t('generoDetalle.1'),
+  t('generoDetalle.2'),
+  t('generoDetalle.3'),
+  t('generoDetalle.4'),
+  t('generoDetalle.5'),
+  t('generoDetalle.6'),
+  t('generoDetalle.7'),
+  t('generoDetalle.8'),
+  t('generoDetalle.9'),
+  t('generoDetalle.10'),
+  t('generoDetalle.11'),
 ];
 
 /**
@@ -104,19 +126,71 @@ const GENERO_DETALLE = [
  * lo elige quiere decir eso y no "solo gente de género no declarado".
  */
 const BUSCO: { valor: Gender; etiqueta: string }[] = [
-  { valor: 'WOMAN', etiqueta: 'Mujeres' },
-  { valor: 'MAN', etiqueta: 'Hombres' },
-  { valor: 'NON_BINARY', etiqueta: 'Personas no binarias' },
-  { valor: 'OTHER', etiqueta: 'Otros géneros' },
+  {
+    valor: 'WOMAN',
+    get etiqueta() {
+      return t('busca.WOMAN');
+    },
+  },
+  {
+    valor: 'MAN',
+    get etiqueta() {
+      return t('busca.MAN');
+    },
+  },
+  {
+    valor: 'NON_BINARY',
+    get etiqueta() {
+      return t('busca.NON_BINARY');
+    },
+  },
+  {
+    valor: 'OTHER',
+    get etiqueta() {
+      return t('busca.OTHER');
+    },
+  },
 ];
 
 const TODOS: Gender[] = ['WOMAN', 'MAN', 'NON_BINARY', 'OTHER'];
 
 const INTENCIONES: { valor: Intent; etiqueta: string; pista: string }[] = [
-  { valor: 'FRIENDSHIP', etiqueta: 'Amistad', pista: 'Gente con quien hablar' },
-  { valor: 'DATING', etiqueta: 'Citas', pista: 'Conocer sin prisa' },
-  { valor: 'RELATIONSHIP', etiqueta: 'Pareja', pista: 'Algo que dure' },
-  { valor: 'CASUAL', etiqueta: 'Algo casual', pista: 'Sin planes a futuro' },
+  {
+    valor: 'FRIENDSHIP',
+    get etiqueta() {
+      return t('intencion.FRIENDSHIP');
+    },
+    get pista() {
+      return t('intencion.FRIENDSHIP.pista');
+    },
+  },
+  {
+    valor: 'DATING',
+    get etiqueta() {
+      return t('intencion.DATING');
+    },
+    get pista() {
+      return t('intencion.DATING.pista');
+    },
+  },
+  {
+    valor: 'RELATIONSHIP',
+    get etiqueta() {
+      return t('intencion.RELATIONSHIP');
+    },
+    get pista() {
+      return t('intencion.RELATIONSHIP.pista');
+    },
+  },
+  {
+    valor: 'CASUAL',
+    get etiqueta() {
+      return t('intencion.CASUAL');
+    },
+    get pista() {
+      return t('intencion.CASUAL.pista');
+    },
+  },
 ];
 
 /**
@@ -124,36 +198,216 @@ const INTENCIONES: { valor: Intent; etiqueta: string; pista: string }[] = [
  * tienen bandera en los emojis estándar, así que llevan un bocadillo.
  */
 export const IDIOMAS = [
-  { code: 'es', bandera: '🇪🇸', etiqueta: 'Español' },
-  { code: 'en', bandera: '🇬🇧', etiqueta: 'Inglés' },
-  { code: 'ca', bandera: '💬', etiqueta: 'Catalán' },
-  { code: 'gl', bandera: '💬', etiqueta: 'Gallego' },
-  { code: 'eu', bandera: '💬', etiqueta: 'Euskera' },
-  { code: 'fr', bandera: '🇫🇷', etiqueta: 'Francés' },
-  { code: 'pt', bandera: '🇵🇹', etiqueta: 'Portugués' },
-  { code: 'it', bandera: '🇮🇹', etiqueta: 'Italiano' },
-  { code: 'de', bandera: '🇩🇪', etiqueta: 'Alemán' },
-  { code: 'ar', bandera: '🇸🇦', etiqueta: 'Árabe' },
-  { code: 'ro', bandera: '🇷🇴', etiqueta: 'Rumano' },
-  { code: 'nl', bandera: '🇳🇱', etiqueta: 'Neerlandés' },
-  { code: 'pl', bandera: '🇵🇱', etiqueta: 'Polaco' },
-  { code: 'ru', bandera: '🇷🇺', etiqueta: 'Ruso' },
-  { code: 'uk', bandera: '🇺🇦', etiqueta: 'Ucraniano' },
-  { code: 'zh', bandera: '🇨🇳', etiqueta: 'Chino' },
-  { code: 'ja', bandera: '🇯🇵', etiqueta: 'Japonés' },
-  { code: 'ko', bandera: '🇰🇷', etiqueta: 'Coreano' },
-  { code: 'hi', bandera: '🇮🇳', etiqueta: 'Hindi' },
-  { code: 'ur', bandera: '🇵🇰', etiqueta: 'Urdu' },
-  { code: 'bn', bandera: '🇧🇩', etiqueta: 'Bengalí' },
-  { code: 'tr', bandera: '🇹🇷', etiqueta: 'Turco' },
-  { code: 'el', bandera: '🇬🇷', etiqueta: 'Griego' },
-  { code: 'sv', bandera: '🇸🇪', etiqueta: 'Sueco' },
-  { code: 'no', bandera: '🇳🇴', etiqueta: 'Noruego' },
-  { code: 'da', bandera: '🇩🇰', etiqueta: 'Danés' },
-  { code: 'fi', bandera: '🇫🇮', etiqueta: 'Finés' },
-  { code: 'cs', bandera: '🇨🇿', etiqueta: 'Checo' },
-  { code: 'hu', bandera: '🇭🇺', etiqueta: 'Húngaro' },
-  { code: 'he', bandera: '🇮🇱', etiqueta: 'Hebreo' },
+  {
+    code: 'es',
+    bandera: '🇪🇸',
+    get etiqueta() {
+      return t('idioma.es');
+    },
+  },
+  {
+    code: 'en',
+    bandera: '🇬🇧',
+    get etiqueta() {
+      return t('idioma.en');
+    },
+  },
+  {
+    code: 'ca',
+    bandera: '💬',
+    get etiqueta() {
+      return t('idioma.ca');
+    },
+  },
+  {
+    code: 'gl',
+    bandera: '💬',
+    get etiqueta() {
+      return t('idioma.gl');
+    },
+  },
+  {
+    code: 'eu',
+    bandera: '💬',
+    get etiqueta() {
+      return t('idioma.eu');
+    },
+  },
+  {
+    code: 'fr',
+    bandera: '🇫🇷',
+    get etiqueta() {
+      return t('idioma.fr');
+    },
+  },
+  {
+    code: 'pt',
+    bandera: '🇵🇹',
+    get etiqueta() {
+      return t('idioma.pt');
+    },
+  },
+  {
+    code: 'it',
+    bandera: '🇮🇹',
+    get etiqueta() {
+      return t('idioma.it');
+    },
+  },
+  {
+    code: 'de',
+    bandera: '🇩🇪',
+    get etiqueta() {
+      return t('idioma.de');
+    },
+  },
+  {
+    code: 'ar',
+    bandera: '🇸🇦',
+    get etiqueta() {
+      return t('idioma.ar');
+    },
+  },
+  {
+    code: 'ro',
+    bandera: '🇷🇴',
+    get etiqueta() {
+      return t('idioma.ro');
+    },
+  },
+  {
+    code: 'nl',
+    bandera: '🇳🇱',
+    get etiqueta() {
+      return t('idioma.nl');
+    },
+  },
+  {
+    code: 'pl',
+    bandera: '🇵🇱',
+    get etiqueta() {
+      return t('idioma.pl');
+    },
+  },
+  {
+    code: 'ru',
+    bandera: '🇷🇺',
+    get etiqueta() {
+      return t('idioma.ru');
+    },
+  },
+  {
+    code: 'uk',
+    bandera: '🇺🇦',
+    get etiqueta() {
+      return t('idioma.uk');
+    },
+  },
+  {
+    code: 'zh',
+    bandera: '🇨🇳',
+    get etiqueta() {
+      return t('idioma.zh');
+    },
+  },
+  {
+    code: 'ja',
+    bandera: '🇯🇵',
+    get etiqueta() {
+      return t('idioma.ja');
+    },
+  },
+  {
+    code: 'ko',
+    bandera: '🇰🇷',
+    get etiqueta() {
+      return t('idioma.ko');
+    },
+  },
+  {
+    code: 'hi',
+    bandera: '🇮🇳',
+    get etiqueta() {
+      return t('idioma.hi');
+    },
+  },
+  {
+    code: 'ur',
+    bandera: '🇵🇰',
+    get etiqueta() {
+      return t('idioma.ur');
+    },
+  },
+  {
+    code: 'bn',
+    bandera: '🇧🇩',
+    get etiqueta() {
+      return t('idioma.bn');
+    },
+  },
+  {
+    code: 'tr',
+    bandera: '🇹🇷',
+    get etiqueta() {
+      return t('idioma.tr');
+    },
+  },
+  {
+    code: 'el',
+    bandera: '🇬🇷',
+    get etiqueta() {
+      return t('idioma.el');
+    },
+  },
+  {
+    code: 'sv',
+    bandera: '🇸🇪',
+    get etiqueta() {
+      return t('idioma.sv');
+    },
+  },
+  {
+    code: 'no',
+    bandera: '🇳🇴',
+    get etiqueta() {
+      return t('idioma.no');
+    },
+  },
+  {
+    code: 'da',
+    bandera: '🇩🇰',
+    get etiqueta() {
+      return t('idioma.da');
+    },
+  },
+  {
+    code: 'fi',
+    bandera: '🇫🇮',
+    get etiqueta() {
+      return t('idioma.fi');
+    },
+  },
+  {
+    code: 'cs',
+    bandera: '🇨🇿',
+    get etiqueta() {
+      return t('idioma.cs');
+    },
+  },
+  {
+    code: 'hu',
+    bandera: '🇭🇺',
+    get etiqueta() {
+      return t('idioma.hu');
+    },
+  },
+  {
+    code: 'he',
+    bandera: '🇮🇱',
+    get etiqueta() {
+      return t('idioma.he');
+    },
+  },
 ];
 
 /**
@@ -162,9 +416,24 @@ export const IDIOMAS = [
  * dos personas que solo comparten ese idioma.
  */
 const NIVELES: { valor: LanguageLevel; etiqueta: string }[] = [
-  { valor: 'BASIC', etiqueta: 'Lo chapurreo' },
-  { valor: 'INTERMEDIATE', etiqueta: 'Me defiendo' },
-  { valor: 'NATIVE', etiqueta: 'Como en casa' },
+  {
+    valor: 'BASIC',
+    get etiqueta() {
+      return t('nivelIdioma.BASIC');
+    },
+  },
+  {
+    valor: 'INTERMEDIATE',
+    get etiqueta() {
+      return t('nivelIdioma.INTERMEDIATE');
+    },
+  },
+  {
+    valor: 'NATIVE',
+    get etiqueta() {
+      return t('nivelIdioma.NATIVE');
+    },
+  },
 ];
 
 const etiquetaDeNivel = (nivel: LanguageLevel) =>
@@ -172,6 +441,23 @@ const etiquetaDeNivel = (nivel: LanguageLevel) =>
 
 const nivelDeEtiqueta = (etiqueta: string): LanguageLevel =>
   NIVELES.find((n) => n.etiqueta === etiqueta)?.valor ?? 'INTERMEDIATE';
+
+/**
+ * Los rasgos y la clase de conversación se guardan en el borrador con su texto
+ * en castellano (de ahí salen los números del servidor, en mapeo.ts). Aquí solo
+ * se traducen para enseñarlos.
+ */
+const RASGO_CLAVE: Record<string, Clave> = {
+  'Mensajes largos': 'rasgo.largos',
+  Depende: 'rasgo.depende',
+  'Cortos y seguidos': 'rasgo.cortos',
+  'Cuando puedo': 'rasgo.cuandoPuedo',
+  'Contesto al momento': 'rasgo.alMomento',
+  'Escucho más': 'rasgo.escucho',
+  'Pregunto mucho': 'rasgo.pregunto',
+};
+export const nombreRasgo = (valor: string) => (RASGO_CLAVE[valor] ? t(RASGO_CLAVE[valor]) : valor);
+export const nombreConversacion = (tipo: TipoConversacion) => t(`conversacion.${tipo}`);
 
 /** "🇫🇷 Francés": el nombre del idioma con su bandera. */
 export const nombreDeIdioma = (code: string) => {
@@ -219,13 +505,11 @@ export function Pregunta({
 
 export function Apodo({ b, cambiar, siguiente }: Props) {
   return (
-    <Pregunta
-      titulo="¿Cómo quieres que te llamen?"
-      ayuda="Aparece en el nivel 1, en cuanto escribáis los dos. Tu nombre real no hace falta.">
+    <Pregunta titulo={t('apodo.titulo')} ayuda={t('apodo.ayuda')}>
       <Campo
         valor={b.apodo}
         onChange={(v) => cambiar({ apodo: v })}
-        placeholder="Tu apodo"
+        placeholder={t('apodo.placeholder')}
         maxLength={APODO_MAX}
         teclaIntro="next"
         onSubmit={b.apodo.trim().length >= APODO_MIN ? siguiente : undefined}
@@ -262,9 +546,7 @@ export function Nacimiento({ b, cambiar, siguiente, enfocar }: Props) {
   }
 
   return (
-    <Pregunta
-      titulo="Tu fecha de nacimiento"
-      ayuda="Solo para mayores de 18. Antes de la beta verificaremos la edad de verdad, no con una casilla.">
+    <Pregunta titulo={t('nacimiento.titulo')} ayuda={t('nacimiento.ayuda')}>
       <Pressable style={estilos.fecha} onPress={() => campo.current?.focus()}>
         <TextInput
           pointerEvents="none"
@@ -306,12 +588,12 @@ export function Nacimiento({ b, cambiar, siguiente, enfocar }: Props) {
 
       <Text style={[estilos.notaEdad, edad !== null && edad < 18 && { color: colors.error }]}>
         {edad === null
-          ? 'Toca las casillas y escribe día, mes y año'
+          ? t('nacimiento.vacio')
           : edad < 0
-            ? 'Esa fecha no existe, revísala'
+            ? t('nacimiento.noExiste')
             : edad < 18
-              ? 'Olimpus es solo para mayores de 18'
-              : `Tienes ${edad} años`}
+              ? t('nacimiento.menor')
+              : t('nacimiento.tienes', { edad })}
       </Text>
     </Pregunta>
   );
@@ -320,9 +602,7 @@ export function Nacimiento({ b, cambiar, siguiente, enfocar }: Props) {
 export function Genero({ b, cambiar }: Props) {
   return (
     <>
-      <Pregunta
-        titulo="Tu género"
-        ayuda="De estos cuatro sale el emparejamiento, y por eso son cuatro. En el nivel 0 solo se ve tu edad, dos intereses y tu zona.">
+      <Pregunta titulo={t('genero.titulo')} ayuda={t('genero.ayuda')}>
         <View style={{ gap: 10 }}>
           {GENEROS.map((g) => (
             <FilaOpcion
@@ -335,11 +615,9 @@ export function Genero({ b, cambiar }: Props) {
         </View>
       </Pregunta>
 
-      <Pregunta
-        titulo="¿Y cómo lo dices tú?"
-        ayuda="Opcional. Esto se lee en el nivel 3 y no se usa para emparejar, así que puedes ser todo lo preciso que quieras.">
+      <Pregunta titulo={t('generoDetalle.titulo')} ayuda={t('generoDetalle.ayuda')}>
         <View style={estilos.rejilla}>
-          {GENERO_DETALLE.map((termino) => (
+          {generoDetalle().map((termino) => (
             <Pastilla
               key={termino}
               texto={termino}
@@ -354,7 +632,7 @@ export function Genero({ b, cambiar }: Props) {
           <Campo
             valor={b.generoEtiqueta}
             onChange={(v) => cambiar({ generoEtiqueta: v })}
-            placeholder="O escríbelo como quieras"
+            placeholder={t('generoDetalle.placeholder')}
             maxLength={GENERO_ETIQUETA_MAX}
           />
         </View>
@@ -367,9 +645,7 @@ export function Busco({ b, cambiar }: Props) {
   const todos = b.busco.length === TODOS.length;
 
   return (
-    <Pregunta
-      titulo="¿Con quién quieres hablar?"
-      ayuda="Puedes marcar varias. Solo emparejamos si encaja por los dos lados.">
+    <Pregunta titulo={t('busco.titulo')} ayuda={t('busco.ayuda')}>
       <View style={{ gap: 10 }}>
         {BUSCO.map((g) => (
           <FilaOpcion
@@ -388,8 +664,8 @@ export function Busco({ b, cambiar }: Props) {
         ))}
 
         <FilaOpcion
-          etiqueta="Todo el mundo"
-          detalle="Marca las cuatro de arriba"
+          etiqueta={t('perfil.todos')}
+          detalle={t('busco.todosDetalle')}
           varias
           elegida={todos}
           onPress={() => cambiar({ busco: todos ? [] : TODOS })}
@@ -413,14 +689,10 @@ export function EdadYDistancia({ b, cambiar }: Props) {
   }, [edad, b.rangoTocado]);
 
   return (
-    <Pregunta
-      titulo="Edad y distancia"
-      ayuda="Si llevas días esperando, ampliamos esto poco a poco y te avisamos.">
+    <Pregunta titulo={t('rango.titulo')} ayuda={t('rango.ayuda')}>
       <View style={estilos.bloqueRango}>
-        <Text style={estilos.rangoEtiqueta}>🎂 Edad de las personas</Text>
-        <Text style={estilos.rangoValor}>
-          De {b.edadMin} a {b.edadMax} años
-        </Text>
+        <Text style={estilos.rangoEtiqueta}>{t('rango.edad')}</Text>
+        <Text style={estilos.rangoValor}>{t('rango.deA', { min: b.edadMin, max: b.edadMax })}</Text>
         <Rango
           min={EDAD_MIN}
           max={EDAD_MAX}
@@ -435,8 +707,8 @@ export function EdadYDistancia({ b, cambiar }: Props) {
       </View>
 
       <View style={[estilos.bloqueRango, { marginTop: 12 }]}>
-        <Text style={estilos.rangoEtiqueta}>📍 Distancia</Text>
-        <Text style={estilos.rangoValor}>Hasta {b.distancia} km</Text>
+        <Text style={estilos.rangoEtiqueta}>{t('rango.distancia')}</Text>
+        <Text style={estilos.rangoValor}>{t('perfil.hastaKm', { km: b.distancia })}</Text>
         <Text style={estilos.rangoPista}>{queAbarca(b.distancia)}</Text>
         <Rango
           min={DISTANCIA_MIN}
@@ -454,9 +726,7 @@ export function EdadYDistancia({ b, cambiar }: Props) {
 
       <View style={{ marginTop: 18 }}>
         <Tarjeta>
-          <Text style={estilos.notaTarjeta}>
-            Tu zona nunca se muestra exacta: la otra persona lee «a 3 km de ti».
-          </Text>
+          <Text style={estilos.notaTarjeta}>{t('rango.zonaNota')}</Text>
         </Tarjeta>
       </View>
     </Pregunta>
@@ -468,10 +738,10 @@ const DISTANCIA_MAX = 120;
 
 /** Qué significan esos kilómetros en la vida real: un número solo no dice mucho. */
 function queAbarca(km: number): string {
-  if (km <= 10) return '🏘️ Tu barrio y alrededores';
-  if (km <= 30) return '🏙️ Tu ciudad';
-  if (km <= 60) return '🚗 Tu zona, a un rato en coche';
-  return '🗺️ Toda tu provincia y más';
+  if (km <= 10) return t('rango.barrio');
+  if (km <= 30) return t('rango.ciudad');
+  if (km <= 60) return t('rango.zona');
+  return t('rango.provincia');
 }
 
 /** Una lectura de hace menos de esto vale igual que una nueva. */
@@ -509,12 +779,12 @@ export function Ubicacion({ b, cambiar, siguiente }: Props) {
     try {
       const permiso = await Location.requestForegroundPermissionsAsync();
       if (permiso.status !== 'granted') {
-        setError('Sin ubicación no podemos calcular la distancia. Puedes darla en Ajustes.');
+        setError(t('ubicacion.sinPermiso'));
         return;
       }
       const posicion = await leerPosicion();
       if (!posicion) {
-        setError('No se pudo leer la ubicación. Comprueba que el GPS está encendido.');
+        setError(t('ubicacion.sinGps'));
         return;
       }
       cambiar({
@@ -522,28 +792,26 @@ export function Ubicacion({ b, cambiar, siguiente }: Props) {
       });
       siguiente?.();
     } catch {
-      setError('No se pudo leer la ubicación.');
+      setError(t('ubicacion.error'));
     } finally {
       setOcupado(false);
     }
   }
 
   return (
-    <Pregunta
-      titulo="¿Dónde estás?"
-      ayuda="Se pide una vez y se guarda redondeada a más de un kilómetro. No se sigue tu recorrido.">
+    <Pregunta titulo={t('ubicacion.titulo')} ayuda={t('ubicacion.ayuda')}>
       {b.ubicacion ? (
         <Tarjeta>
-          <Etiqueta tono="accent">Ubicación tomada</Etiqueta>
-          <Text style={estilos.notaTarjeta}>
-            Guardada con poca precisión a propósito: sirve para la distancia, no para encontrarte.
-          </Text>
+          <Etiqueta tono="accent">{t('ubicacion.tomada')}</Etiqueta>
+          <Text style={estilos.notaTarjeta}>{t('ubicacion.nota')}</Text>
           <Pressable onPress={pedir} disabled={ocupado}>
-            <Text style={estilos.enlace}>{ocupado ? 'Tomando…' : 'Volver a tomarla'}</Text>
+            <Text style={estilos.enlace}>
+              {ocupado ? t('ubicacion.tomando') : t('ubicacion.otraVez')}
+            </Text>
           </Pressable>
         </Tarjeta>
       ) : (
-        <Boton texto="Usar mi ubicación" onPress={pedir} ocupado={ocupado} tono="oscuro" />
+        <Boton texto={t('ubicacion.usar')} onPress={pedir} ocupado={ocupado} tono="oscuro" />
       )}
       {error && <Text style={estilos.error}>{error}</Text>}
     </Pregunta>
@@ -552,9 +820,7 @@ export function Ubicacion({ b, cambiar, siguiente }: Props) {
 
 export function Idiomas({ b, cambiar }: Props) {
   return (
-    <Pregunta
-      titulo="¿En qué idiomas hablas?"
-      ayuda="Aquí todo pasa por escribir, así que hace falta un idioma en común. Di también cómo lo hablas: si lo marcas flojo, no te pondremos con alguien con quien solo compartes ese idioma.">
+    <Pregunta titulo={t('idiomas.titulo')} ayuda={t('idiomas.ayuda')}>
       <View style={estilos.rejilla}>
         {IDIOMAS.map((idioma) => {
           const elegido = b.idiomas.some((i) => i.code === idioma.code);
@@ -609,15 +875,14 @@ export function Idiomas({ b, cambiar }: Props) {
 export function ComoHablas({ b, cambiar, siguiente }: Props) {
   return (
     <>
-      <Pregunta
-        titulo="Cómo te relacionas"
-        ayuda="Sin respuestas buenas ni malas: sirve para no juntar ritmos incompatibles.">
+      <Pregunta titulo={t('perfil.relacionas')} ayuda={t('rasgos.ayuda')}>
         <View style={{ gap: 22 }}>
           {RASGOS.map((rasgo) => (
             <View key={rasgo.clave} style={{ gap: 9 }}>
-              <Etiqueta>{rasgo.titulo}</Etiqueta>
+              <Etiqueta>{t(`rasgo.titulo.${rasgo.clave}`)}</Etiqueta>
               <Opciones
                 opciones={rasgo.opciones}
+                etiqueta={nombreRasgo}
                 elegida={b.rasgos[rasgo.clave]}
                 onElegir={(v) => cambiar({ rasgos: { ...b.rasgos, [rasgo.clave]: v } as Rasgos })}
               />
@@ -626,15 +891,13 @@ export function ComoHablas({ b, cambiar, siguiente }: Props) {
         </View>
       </Pregunta>
 
-      <Pregunta
-        titulo="¿Qué conversación te gusta?"
-        ayuda="De aquí sale la pregunta con la que arranca tu primer chat.">
+      <Pregunta titulo={t('conversacion.titulo')} ayuda={t('conversacion.ayuda')}>
         <View style={{ gap: 10 }}>
           {CONVERSACIONES.map((c) => (
             <FilaOpcion
               key={c.valor}
-              etiqueta={c.valor}
-              detalle={c.pista}
+              etiqueta={nombreConversacion(c.valor)}
+              detalle={t(`conversacion.pista.${c.valor}` as Clave)}
               elegida={b.conversacion === c.valor}
               onPress={() => {
                 cambiar({ conversacion: c.valor });
@@ -650,9 +913,7 @@ export function ComoHablas({ b, cambiar, siguiente }: Props) {
 
 export function Intencion({ b, cambiar }: Props) {
   return (
-    <Pregunta
-      titulo="¿Qué buscas ahora?"
-      ayuda="Elige lo que más pese hoy. Se puede cambiar cuando quieras.">
+    <Pregunta titulo={t('intencion.titulo')} ayuda={t('intencion.ayuda')}>
       <View style={{ gap: 10 }}>
         {INTENCIONES.map((i) => (
           <FilaOpcion
@@ -692,17 +953,17 @@ export function Intereses({ b, cambiar }: Props) {
 
   return (
     <Pregunta
-      titulo={`Entre ${INTERESES_MIN} y ${INTERESES_MAX} intereses`}
+      titulo={t('intereses.titulo', { min: INTERESES_MIN, max: INTERESES_MAX })}
       ayuda={
         b.intereses.length < INTERESES_MIN
-          ? `Llevas ${b.intereses.length}. De aquí sale la primera pregunta de cada conversación.`
-          : `${b.intereses.length} elegidos. Cuanto más raro, más dice de ti.`
+          ? t('intereses.llevas', { n: b.intereses.length })
+          : t('intereses.elegidos', { n: b.intereses.length })
       }>
-      <Campo valor={busca} onChange={setBusca} placeholder="Buscar" />
+      <Campo valor={busca} onChange={setBusca} placeholder={t('intereses.buscar')} />
 
       {b.intereses.length > 0 && (
         <View style={{ marginTop: 14 }}>
-          <Etiqueta>Los tuyos</Etiqueta>
+          <Etiqueta>{t('intereses.tuyos')}</Etiqueta>
           <View style={[estilos.rejilla, { marginTop: 8 }]}>
             {b.intereses.map((elegido) => (
               <Pastilla
@@ -740,7 +1001,7 @@ export function Intereses({ b, cambiar }: Props) {
       </View>
 
       {visibles.length === 0 && catalogo.length > 0 && (
-        <Text style={estilos.notaTarjeta}>Nada con ese nombre.</Text>
+        <Text style={estilos.notaTarjeta}>{t('intereses.nada')}</Text>
       )}
     </Pregunta>
   );
@@ -749,31 +1010,106 @@ export function Intereses({ b, cambiar }: Props) {
 /** Un color por hueco: la tarjeta, su número y su punto de progreso. */
 export const COLOR_HUECO = [colors.accent, colors.sol, colors.menta];
 export const FONDO_HUECO = [colors.accentWash, '#FFF6D9', '#E3FAF1'];
-const ORDINAL = ['primera', 'segunda', 'tercera'];
+const ELIGE_HUECO = ['preguntas.hueco0', 'preguntas.hueco1', 'preguntas.hueco2'] as const;
 
 /** A partir de aquí el contador aparece: antes solo agobia. */
 const AVISO_LARGO = 150;
 
 /** Un emoji y un ejemplo por pregunta: una caja vacía se contesta peor que una con pista. */
 const PISTAS: Record<string, { emoji: string; ejemplo: string }> = {
-  'last-hooked': { emoji: '🎬', ejemplo: 'Ej.: un documental sobre pulpos, me lo vi dos veces' },
-  'always-ask': { emoji: '🙋', ejemplo: 'Ej.: ¿cuál es tu desayuno ideal?' },
-  'weird-habit': { emoji: '🙃', ejemplo: 'Ej.: le pongo nombre a todas mis plantas' },
-  'makes-me-laugh': { emoji: '😂', ejemplo: 'Ej.: los vídeos de gatos que se caen' },
-  'perfect-tuesday': { emoji: '☕', ejemplo: 'Ej.: café, paseo por la playa y una serie' },
-  'learned-late': { emoji: '🐢', ejemplo: 'Ej.: a nadar, con 25 años' },
-  'hill-to-die-on': { emoji: '🏔️', ejemplo: 'Ej.: la tortilla, con cebolla' },
-  'surprisingly-good-at': { emoji: '🦸', ejemplo: 'Ej.: aparcar a la primera' },
-  'always-return': { emoji: '📍', ejemplo: 'Ej.: un bar de mi barrio con las mejores bravas' },
-  'changed-my-mind': { emoji: '🔄', ejemplo: 'Ej.: antes odiaba correr' },
-  'too-much-internet': { emoji: '📱', ejemplo: 'Ej.: los vídeos de diez segundos' },
-  'want-to-try': { emoji: '🎯', ejemplo: 'Ej.: hacer surf de una vez' },
-  'worst-recommendation': { emoji: '🙈', ejemplo: 'Ej.: una peli que nadie aguantó entera' },
-  'gives-me-away': { emoji: '🕵️', ejemplo: 'Ej.: mi risa, se oye desde la otra punta' },
-  'not-in-my-interests': { emoji: '🧩', ejemplo: 'Ej.: colecciono postales antiguas' },
+  'last-hooked': {
+    emoji: '🎬',
+    get ejemplo() {
+      return t('pregunta.last-hooked.ejemplo');
+    },
+  },
+  'always-ask': {
+    emoji: '🙋',
+    get ejemplo() {
+      return t('pregunta.always-ask.ejemplo');
+    },
+  },
+  'weird-habit': {
+    emoji: '🙃',
+    get ejemplo() {
+      return t('pregunta.weird-habit.ejemplo');
+    },
+  },
+  'makes-me-laugh': {
+    emoji: '😂',
+    get ejemplo() {
+      return t('pregunta.makes-me-laugh.ejemplo');
+    },
+  },
+  'perfect-tuesday': {
+    emoji: '☕',
+    get ejemplo() {
+      return t('pregunta.perfect-tuesday.ejemplo');
+    },
+  },
+  'learned-late': {
+    emoji: '🐢',
+    get ejemplo() {
+      return t('pregunta.learned-late.ejemplo');
+    },
+  },
+  'hill-to-die-on': {
+    emoji: '🏔️',
+    get ejemplo() {
+      return t('pregunta.hill-to-die-on.ejemplo');
+    },
+  },
+  'surprisingly-good-at': {
+    emoji: '🦸',
+    get ejemplo() {
+      return t('pregunta.surprisingly-good-at.ejemplo');
+    },
+  },
+  'always-return': {
+    emoji: '📍',
+    get ejemplo() {
+      return t('pregunta.always-return.ejemplo');
+    },
+  },
+  'changed-my-mind': {
+    emoji: '🔄',
+    get ejemplo() {
+      return t('pregunta.changed-my-mind.ejemplo');
+    },
+  },
+  'too-much-internet': {
+    emoji: '📱',
+    get ejemplo() {
+      return t('pregunta.too-much-internet.ejemplo');
+    },
+  },
+  'want-to-try': {
+    emoji: '🎯',
+    get ejemplo() {
+      return t('pregunta.want-to-try.ejemplo');
+    },
+  },
+  'worst-recommendation': {
+    emoji: '🙈',
+    get ejemplo() {
+      return t('pregunta.worst-recommendation.ejemplo');
+    },
+  },
+  'gives-me-away': {
+    emoji: '🕵️',
+    get ejemplo() {
+      return t('pregunta.gives-me-away.ejemplo');
+    },
+  },
+  'not-in-my-interests': {
+    emoji: '🧩',
+    get ejemplo() {
+      return t('pregunta.not-in-my-interests.ejemplo');
+    },
+  },
 };
 export const pistaDe = (question: string) =>
-  PISTAS[question] ?? { emoji: '💬', ejemplo: 'Termina la frase a tu manera' };
+  PISTAS[question] ?? { emoji: '💬', ejemplo: t('pregunta.ejemploGenerico') };
 
 /**
  * Las tres preguntas que sustituyen a la bio.
@@ -836,9 +1172,7 @@ export function Preguntas({ b, cambiar }: Props) {
   }
 
   return (
-    <Pregunta
-      titulo="Tus tres preguntas"
-      ayuda="Elige tres y termina la frase. Es lo que la otra persona leerá en el nivel 2, y le da algo a lo que responder.">
+    <Pregunta titulo={t('perfil.preguntas')} ayuda={t('preguntas.ayuda')}>
       <View style={estilos.progreso}>
         {COLOR_HUECO.map((color, i) => (
           <View
@@ -872,7 +1206,7 @@ export function Preguntas({ b, cambiar }: Props) {
                     style={{ marginLeft: 'auto' }}
                     hitSlop={10}
                     onPress={() => abrirHoja(hueco)}>
-                    <Text style={estilos.enlace}>Cambiar ›</Text>
+                    <Text style={estilos.enlace}>{t('preguntas.cambiar')}</Text>
                   </Pressable>
                 </View>
                 <Text style={estilos.preguntaGrande}>{textoDe(puesta.question)}…</Text>
@@ -908,9 +1242,7 @@ export function Preguntas({ b, cambiar }: Props) {
             <Flotar distancia={3} giro={0} duracion={1800}>
               <View style={estilos.huecoLibre}>
                 <Text style={estilos.huecoMas}>＋</Text>
-                <Text style={estilos.huecoLibreTexto}>
-                  Elige tu {ORDINAL[b.preguntas.length]} pregunta
-                </Text>
+                <Text style={estilos.huecoLibreTexto}>{t(ELIGE_HUECO[b.preguntas.length])}</Text>
               </View>
             </Flotar>
           </Rebote>
@@ -919,19 +1251,19 @@ export function Preguntas({ b, cambiar }: Props) {
 
       {completas && (
         <Rebote style={estilos.verMuestra} onPress={() => setViendoMuestra(true)}>
-          <Text style={estilos.verMuestraTexto}>👀 Así lo verá la otra persona</Text>
+          <Text style={estilos.verMuestraTexto}>{t('preguntas.verMuestra')}</Text>
         </Rebote>
       )}
 
       <Hoja visible={eligiendo !== null} onCerrar={() => setEligiendo(null)}>
-        <Text style={estilos.hojaTitulo}>Elige una pregunta</Text>
+        <Text style={estilos.hojaTitulo}>{t('preguntas.elige')}</Text>
         <Rebote
           style={estilos.sorpresa}
           onPress={() =>
             disponibles.length > 0 &&
             elegir(disponibles[Math.floor(Math.random() * disponibles.length)].name)
           }>
-          <Text style={estilos.sorpresaTexto}>🎲 Sorpréndeme</Text>
+          <Text style={estilos.sorpresaTexto}>{t('preguntas.sorpresa')}</Text>
         </Rebote>
         <View style={estilos.rejillaPreguntas}>
           {disponibles.map((q) => (
@@ -948,9 +1280,9 @@ export function Preguntas({ b, cambiar }: Props) {
       </Hoja>
 
       <Hoja visible={viendoMuestra} onCerrar={() => setViendoMuestra(false)}>
-        <Text style={estilos.hojaTitulo}>En su pantalla, en el nivel 2</Text>
+        <Text style={estilos.hojaTitulo}>{t('preguntas.enSuPantalla')}</Text>
         <Tarjeta>
-          <Etiqueta>Sus preguntas</Etiqueta>
+          <Etiqueta>{t('perfilOtro.preguntas')}</Etiqueta>
           {b.preguntas.map((p) => (
             <View key={p.question} style={{ gap: 3 }}>
               <Text style={estilos.muestraPregunta}>{textoDe(p.question)}</Text>
@@ -988,43 +1320,41 @@ function Hoja({
 
 export function TrabajoYSitio({ b, cambiar }: Props) {
   return (
-    <Pregunta titulo="Un poco más de ti">
+    <Pregunta titulo={t('perfil.masDeTi')}>
       <View style={estilos.chipsInfo}>
         <View style={estilos.chipInfo}>
-          <Text style={estilos.chipInfoTexto}>Opcional</Text>
+          <Text style={estilos.chipInfoTexto}>{t('masDeTi.opcional')}</Text>
         </View>
         <View style={estilos.chipInfo}>
-          <Text style={estilos.chipInfoTexto}>🔒 Se ve a partir del nivel 3</Text>
+          <Text style={estilos.chipInfoTexto}>{t('masDeTi.nivel3')}</Text>
         </View>
       </View>
 
       <View style={{ gap: 12 }}>
         <View style={estilos.campoTarjeta}>
-          <Text style={estilos.campoTitulo}>💼 A qué te dedicas</Text>
+          <Text style={estilos.campoTitulo}>{t('perfil.dedicas')}</Text>
           <TextInput
             style={estilos.campoLibre}
             value={b.trabajo}
             onChangeText={(v) => cambiar({ trabajo: v })}
-            placeholder="Ej.: enfermera, estudio diseño…"
+            placeholder={t('masDeTi.dedicasEjemplo')}
             placeholderTextColor={colors.ink5}
             maxLength={TRABAJO_MAX}
           />
         </View>
         <View style={estilos.campoTarjeta}>
-          <Text style={estilos.campoTitulo}>🏡 De dónde eres</Text>
+          <Text style={estilos.campoTitulo}>{t('perfil.deDonde')}</Text>
           <TextInput
             style={estilos.campoLibre}
             value={b.sitio}
             onChangeText={(v) => cambiar({ sitio: v })}
-            placeholder="Ej.: Girona, aunque vivo en Barcelona"
+            placeholder={t('masDeTi.deDondeEjemplo')}
             placeholderTextColor={colors.ink5}
             maxLength={SITIO_MAX}
           />
         </View>
       </View>
-      <Text style={estilos.notaOpcional}>
-        No se usan para emparejar: solo para que te conozcan.
-      </Text>
+      <Text style={estilos.notaOpcional}>{t('masDeTi.nota')}</Text>
     </Pregunta>
   );
 }
@@ -1043,18 +1373,14 @@ export function Foto({
       const elegida = await elegirFoto();
       if (elegida) cambiar({ foto: elegida });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo abrir la galería.');
+      setError(e instanceof Error ? e.message : t('fotoPropia.errorGaleria'));
     }
   }
 
   return (
     <Pregunta
-      titulo="Una foto tuya"
-      ayuda={
-        yaHayUna
-          ? 'Ya tienes una guardada. Tócala solo si quieres cambiarla.'
-          : 'Nadie la ve al emparejar. Aparece en el nivel 3, y solo si los dos habéis dicho que queréis veros.'
-      }>
+      titulo={t('fotoPropia.titulo')}
+      ayuda={yaHayUna ? t('fotoPropia.yaTienes') : t('fotoPropia.ayuda')}>
       <View style={{ alignItems: 'center', gap: 18, marginTop: 10 }}>
         <Pressable style={estilos.marco} onPress={escoger}>
           {b.foto ? (
@@ -1063,24 +1389,20 @@ export function Foto({
             <Image source={ownPhotoSource(token)} style={estilos.previa} />
           ) : (
             <View style={estilos.marcoVacio}>
-              <Text style={estilos.marcoTexto}>Tocar para elegir</Text>
+              <Text style={estilos.marcoTexto}>{t('fotoPropia.tocar')}</Text>
             </View>
           )}
         </Pressable>
 
         {(b.foto || yaHayUna) && (
           <Pressable onPress={escoger}>
-            <Text style={estilos.enlace}>Elegir otra</Text>
+            <Text style={estilos.enlace}>{t('fotoPropia.otra')}</Text>
           </Pressable>
         )}
 
         <Tarjeta>
-          <Etiqueta>Qué hacemos con ella</Etiqueta>
-          <Text style={estilos.notaTarjeta}>
-            Se reduce en tu móvil antes de enviarla, y al reescribirla se pierden los datos ocultos
-            que llevan las fotos, incluido el lugar donde se hizo. En el servidor no hay ningún
-            enlace público: cada vez que alguien la pide, se comprueba si tiene derecho a verla.
-          </Text>
+          <Etiqueta>{t('fotoPropia.queHacemos')}</Etiqueta>
+          <Text style={estilos.notaTarjeta}>{t('fotoPropia.nota')}</Text>
         </Tarjeta>
 
         {error && <Text style={estilos.error}>{error}</Text>}

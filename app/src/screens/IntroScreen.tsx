@@ -12,8 +12,10 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { Boton, BotonPlano, Flotar } from '../components';
+import { Boton, BotonPlano, Flotar, Puntos } from '../components';
 import { colors, fonts } from '../theme';
+import { PastillaIdioma } from '../components/SelectorIdioma';
+import { t } from '../i18n';
 
 const PANELES = 4;
 
@@ -86,9 +88,10 @@ export function IntroScreen({ onEmpezar }: { onEmpezar: () => void }) {
             />
           ))}
         </View>
+        <PastillaIdioma />
         {!ultimo && (
           <Pressable onPress={() => irA(PANELES - 1)} hitSlop={10}>
-            <Text style={estilos.saltar}>Saltar</Text>
+            <Text style={estilos.saltar}>{t('intro.saltar')}</Text>
           </Pressable>
         )}
       </View>
@@ -104,38 +107,26 @@ export function IntroScreen({ onEmpezar }: { onEmpezar: () => void }) {
           useNativeDriver: true,
         })}
         style={{ flex: 1 }}>
-        <Panel
-          ancho={ancho}
-          titulo="Habla primero. Ver viene después."
-          frase="La foto no es lo primero: se va aclarando conforme la conversación va bien.">
+        <Panel ancho={ancho} titulo={t('intro.1.titulo')} frase={t('intro.1.frase')}>
           <HablaPrimero activo={panel === 0} />
         </Panel>
-        <Panel
-          ancho={ancho}
-          titulo="Una persona al día."
-          frase="Cada mañana te toca alguien, y tenéis hasta las 22:00 para hablar.">
+        <Panel ancho={ancho} titulo={t('intro.2.titulo')} frase={t('intro.2.frase')}>
           <UnaAlDia activo={panel === 1} />
         </Panel>
-        <Panel
-          ancho={ancho}
-          titulo="Se desbloquea hablando."
-          frase="Cuanto más habláis, más os conocéis. Y la foto, solo si los dos queréis.">
+        <Panel ancho={ancho} titulo={t('intro.3.titulo')} frase={t('intro.3.frase')}>
           <Escalera activo={panel === 2} />
         </Panel>
-        <Panel
-          ancho={ancho}
-          titulo="Al final, decidís los dos."
-          frase="Si los dos decís que sí, es una conexión, y ya no caduca.">
+        <Panel ancho={ancho} titulo={t('intro.4.titulo')} frase={t('intro.4.frase')}>
           <Decision activo={panel === 3} />
         </Panel>
       </Animated.ScrollView>
 
       <View style={estilos.pie}>
         <Boton
-          texto={ultimo ? 'Crear mi cuenta' : 'Siguiente'}
+          texto={ultimo ? t('intro.crearCuenta') : t('intro.siguiente')}
           onPress={() => (ultimo ? onEmpezar() : irA(panel + 1))}
         />
-        <BotonPlano texto="Ya tengo cuenta" onPress={onEmpezar} />
+        <BotonPlano texto={t('intro.yaTengo')} onPress={onEmpezar} />
       </View>
     </View>
   );
@@ -221,11 +212,11 @@ function HablaPrimero({ activo }: { activo: boolean }) {
       </View>
 
       <Animated.View style={[estilos.burbujaSuya, aparece(b1)]}>
-        <Text style={estilos.textoSuyo}>¿Montaña o rocódromo?</Text>
+        <Text style={estilos.textoSuyo}>{t('intro.chat1')}</Text>
       </Animated.View>
       <View>
         <Animated.View style={[estilos.burbujaMia, aparece(b2)]}>
-          <Text style={estilos.textoMio}>Montaña, siempre 🏔️</Text>
+          <Text style={estilos.textoMio}>{t('intro.chat2')}</Text>
         </Animated.View>
         <Animated.View style={[estilos.escribiendo, estilos.escribiendoMio, { opacity: d2 }]}>
           <Puntos />
@@ -233,7 +224,7 @@ function HablaPrimero({ activo }: { activo: boolean }) {
       </View>
       <View>
         <Animated.View style={[estilos.burbujaSuya, aparece(b3)]}>
-          <Text style={estilos.textoSuyo}>¡Por fin alguien con criterio!</Text>
+          <Text style={estilos.textoSuyo}>{t('intro.chat3')}</Text>
         </Animated.View>
         <Animated.View style={[estilos.escribiendo, { opacity: d3 }]}>
           <Puntos />
@@ -243,93 +234,50 @@ function HablaPrimero({ activo }: { activo: boolean }) {
   );
 }
 
-/** Los tres puntitos de "escribiendo…", botando uno detrás de otro. */
-function Puntos() {
-  const v = useRef(valor()).current;
-  useEffect(() => {
-    const bucle = Animated.loop(
-      Animated.timing(v, {
-        toValue: 1,
-        duration: 900,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    );
-    bucle.start();
-    return () => bucle.stop();
-  }, [v]);
-  return (
-    <View style={estilos.puntos}>
-      {[0, 1, 2].map((i) => (
-        <Animated.View
-          key={i}
-          style={[
-            estilos.punto,
-            {
-              transform: [
-                {
-                  translateY: v.interpolate({
-                    inputRange: [0, 0.15 + i * 0.2, 0.3 + i * 0.2, 1],
-                    outputRange: [0, -5, 0, 0],
-                    extrapolate: 'clamp',
-                  }),
-                },
-              ],
-            },
-          ]}
-        />
-      ))}
-    </View>
-  );
-}
-
 // ---------- 2. Una persona al día ----------
 
 const MOMENTOS = [
-  { hora: '04:00', emoji: '☀️', texto: 'Llega tu persona del día' },
-  { hora: 'Durante el día', emoji: '💬', texto: 'Habláis a vuestro ritmo' },
-  { hora: '22:00', emoji: '🌙', texto: 'La conversación se cierra' },
+  { hora: () => '04:00', emoji: '☀️', texto: () => t('intro.momento1') },
+  { hora: () => t('intro.duranteElDia'), emoji: '💬', texto: () => t('intro.momento2') },
+  { hora: () => '22:00', emoji: '🌙', texto: () => t('intro.momento3') },
 ];
 
 function UnaAlDia({ activo }: { activo: boolean }) {
   const filas = useRef([valor(), valor(), valor()]).current;
   const tarjeta = useRef(valor()).current;
-  // La barra cambia de alto: eso no lo puede animar el hilo nativo.
   const barra = useRef(valor()).current;
 
+  // La barra avanza a tramos y llega a cada momento del día a la vez que su fila.
   useAlLlegar(activo, () => {
     [...filas, tarjeta, barra].forEach((v) => v.setValue(0));
-    return Animated.parallel([
-      Animated.timing(barra, { toValue: 1, duration: 3200, useNativeDriver: false }),
-      Animated.sequence([
-        Animated.delay(200),
-        muelle(filas[0]),
-        Animated.spring(tarjeta, { toValue: 1, useNativeDriver: true, speed: 8, bounciness: 12 }),
-        Animated.delay(500),
-        muelle(filas[1]),
-        Animated.delay(900),
-        muelle(filas[2]),
-      ]),
+    return Animated.sequence([
+      Animated.delay(200),
+      Animated.parallel([muelle(filas[0]), hasta(barra, 0.15, 500)]),
+      Animated.spring(tarjeta, { toValue: 1, useNativeDriver: true, speed: 8, bounciness: 12 }),
+      Animated.delay(300),
+      Animated.parallel([muelle(filas[1]), hasta(barra, 0.6, 900)]),
+      Animated.delay(400),
+      Animated.parallel([muelle(filas[2]), hasta(barra, 1, 900)]),
     ]);
   });
 
   return (
     <View style={estilos.dia}>
       <View style={estilos.carril}>
-        <Animated.View
-          style={[
-            estilos.carrilLleno,
-            { height: barra.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
-          ]}
-        />
+        {/*
+          Ocupa todo el carril y crece escalándose desde arriba. Con un alto en
+          porcentaje dependía del alto de las filas, que aún no se conoce al
+          empezar, y la barra salía vacía o a saltos.
+        */}
+        <Animated.View style={[estilos.carrilLleno, { transform: [{ scaleY: barra }] }]} />
       </View>
       <View style={{ flex: 1, gap: 22 }}>
         {MOMENTOS.map((m, i) => (
-          <Animated.View key={m.hora} style={[estilos.momento, aparece(filas[i])]}>
+          <Animated.View key={m.emoji} style={[estilos.momento, aparece(filas[i])]}>
             <Text style={estilos.momentoEmoji}>{m.emoji}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={estilos.momentoHora}>{m.hora}</Text>
-              <Text style={estilos.momentoTexto}>{m.texto}</Text>
+              <Text style={estilos.momentoHora}>{m.hora()}</Text>
+              <Text style={estilos.momentoTexto}>{m.texto()}</Text>
               {i === 0 && (
                 <Animated.View
                   style={[
@@ -350,7 +298,9 @@ function UnaAlDia({ activo }: { activo: boolean }) {
                   <View style={estilos.miniBola}>
                     <Text style={estilos.miniInterrogante}>?</Text>
                   </View>
-                  <Text style={estilos.miniTexto}>27 años · a 4 km</Text>
+                  <Text style={estilos.miniTexto}>
+                    {t('comun.edadYDistancia', { edad: 27, km: 4 })}
+                  </Text>
                 </Animated.View>
               )}
             </View>
@@ -364,11 +314,11 @@ function UnaAlDia({ activo }: { activo: boolean }) {
 // ---------- 3. La escalera ----------
 
 const PELDANOS = [
-  { emoji: '🎂', texto: 'Edad y dos intereses', color: colors.accent },
-  { emoji: '🏷️', texto: 'Su apodo, al escribiros', color: colors.sol },
-  { emoji: '💬', texto: 'Sus tres preguntas', color: colors.menta },
-  { emoji: '📸', texto: 'Su foto, si los dos queréis', color: colors.cielo },
-  { emoji: '💖', texto: 'Lo que queráis compartir', color: colors.uva },
+  { emoji: '🎂', texto: () => t('intro.peldano0'), color: colors.accent },
+  { emoji: '🏷️', texto: () => t('intro.peldano1'), color: colors.sol },
+  { emoji: '💬', texto: () => t('intro.peldano2'), color: colors.menta },
+  { emoji: '📸', texto: () => t('intro.peldano3'), color: colors.cielo },
+  { emoji: '💖', texto: () => t('intro.peldano4'), color: colors.uva },
 ];
 
 function Escalera({ activo }: { activo: boolean }) {
@@ -419,7 +369,7 @@ function Escalera({ activo }: { activo: boolean }) {
             <Text style={estilos.peldanoNumero}>{i}</Text>
           </Animated.View>
           <Text style={estilos.peldanoTexto}>
-            {p.emoji} {p.texto}
+            {p.emoji} {p.texto()}
           </Text>
         </Animated.View>
       ))}
@@ -508,10 +458,10 @@ function Decision({ activo }: { activo: boolean }) {
       })}
 
       <Animated.View style={[estilos.si, estilos.siTu, burbuja(-1)]}>
-        <Text style={estilos.siTexto}>¿Sí?</Text>
+        <Text style={estilos.siTexto}>{t('intro.si')}</Text>
       </Animated.View>
       <Animated.View style={[estilos.si, estilos.siOtro, burbuja(1)]}>
-        <Text style={[estilos.siTexto, { color: colors.ink }]}>¿Sí?</Text>
+        <Text style={[estilos.siTexto, { color: colors.ink }]}>{t('intro.si')}</Text>
       </Animated.View>
 
       <Animated.Text
@@ -614,8 +564,6 @@ const estilos = StyleSheet.create({
     paddingVertical: 14,
   },
   escribiendoMio: { left: undefined, right: 0, backgroundColor: colors.accentWash },
-  puntos: { flexDirection: 'row', gap: 5 },
-  punto: { width: 8, height: 8, borderRadius: 999, backgroundColor: colors.ink4 },
 
   // 2
   dia: { flexDirection: 'row', gap: 18 },
@@ -625,7 +573,12 @@ const estilos = StyleSheet.create({
     backgroundColor: 'rgba(42,23,71,0.1)',
     overflow: 'hidden',
   },
-  carrilLleno: { width: 6, borderRadius: 999, backgroundColor: colors.uva },
+  carrilLleno: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 999,
+    backgroundColor: colors.uva,
+    transformOrigin: 'top',
+  },
   momento: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   momentoEmoji: { fontSize: 30 },
   momentoHora: { fontFamily: fonts.sansNegrita, fontSize: 13, color: colors.uva },

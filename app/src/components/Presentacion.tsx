@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '../theme';
+import { t } from '../i18n';
 
 const CONFETI = ['✨', '💬', '💖', '⭐', '🎉', '🌈', '💫', '🔥', '🎈', '😄', '🌟', '💌'];
 
@@ -60,8 +61,18 @@ export function Presentacion({
 
   const circulo = (lado: 1 | -1) => ({
     transform: [
-      { translateX: llegada.interpolate({ inputRange: [0, 1], outputRange: [lado * 240, lado * 46] }) },
-      { rotate: llegada.interpolate({ inputRange: [0, 1], outputRange: [`${lado * 40}deg`, '0deg'] }) },
+      {
+        translateX: llegada.interpolate({
+          inputRange: [0, 1],
+          outputRange: [lado * 240, lado * 46],
+        }),
+      },
+      {
+        rotate: llegada.interpolate({
+          inputRange: [0, 1],
+          outputRange: [`${lado * 40}deg`, '0deg'],
+        }),
+      },
       { scale: choque.interpolate({ inputRange: [0, 1], outputRange: [1, 1.18] }) },
     ],
   });
@@ -72,7 +83,9 @@ export function Presentacion({
         estilos.fondo,
         {
           opacity: salida.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
-          transform: [{ scale: salida.interpolate({ inputRange: [0, 1], outputRange: [1, 1.15] }) }],
+          transform: [
+            { scale: salida.interpolate({ inputRange: [0, 1], outputRange: [1, 1.15] }) },
+          ],
         },
       ]}>
       <Pressable style={StyleSheet.absoluteFill} onPress={salir} />
@@ -134,16 +147,20 @@ export function Presentacion({
             opacity: explosion.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0, 1, 1] }),
             transform: [
               {
-                translateY: explosion.interpolate({ inputRange: [0, 0.4], outputRange: [30, 0], extrapolate: 'clamp' }),
+                translateY: explosion.interpolate({
+                  inputRange: [0, 0.4],
+                  outputRange: [30, 0],
+                  extrapolate: 'clamp',
+                }),
               },
             ],
           },
         ]}>
-        <Text style={estilos.titulo}>¡Empieza vuestra{'\n'}conversación!</Text>
-        <Text style={estilos.detalle}>{detalle}. El resto se descubre hablando.</Text>
+        <Text style={estilos.titulo}>{t('presentacion.titulo')}</Text>
+        <Text style={estilos.detalle}>{t('presentacion.detalle', { detalle })}</Text>
       </Animated.View>
 
-      <Text style={estilos.saltar}>Toca para empezar</Text>
+      <Text style={estilos.saltar}>{t('presentacion.toca')}</Text>
     </Animated.View>
   );
 }

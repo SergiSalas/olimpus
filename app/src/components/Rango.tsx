@@ -118,7 +118,12 @@ function Pomo({
 const estilos = StyleSheet.create({
   // Margen a los lados para que los tiradores quepan enteros en los extremos.
   caja: { paddingHorizontal: POMO / 2, paddingVertical: 14 },
-  pista: { height: 10, borderRadius: 999, backgroundColor: colors.surface2, justifyContent: 'center' },
+  pista: {
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: colors.surface2,
+    justifyContent: 'center',
+  },
   relleno: { position: 'absolute', top: 0, bottom: 0, borderRadius: 999 },
   pomo: {
     position: 'absolute',

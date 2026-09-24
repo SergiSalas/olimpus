@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } fro
 import { ApiError, requestLoginCode, verifyLoginCode, type StartedSession } from '../api';
 import { Boton, Campo, Etiqueta } from '../components';
 import { colors, fonts, text } from '../theme';
+import { t } from '../i18n';
 
 type Paso = 'email' | 'codigo';
 
@@ -60,20 +61,18 @@ export function LoginScreen({
 
         {paso === 'email' ? (
           <>
-            <Text style={[text.titulo, { marginBottom: 8 }]}>Tu email</Text>
-            <Text style={[text.ayuda, { marginBottom: 18 }]}>
-              Te mandamos un código de seis cifras. No hay contraseñas que recordar ni que perder.
-            </Text>
+            <Text style={[text.titulo, { marginBottom: 8 }]}>{t('login.email')}</Text>
+            <Text style={[text.ayuda, { marginBottom: 18 }]}>{t('login.emailAyuda')}</Text>
             <Campo
               valor={email}
               onChange={setEmail}
-              placeholder="tu@email.com"
+              placeholder={t('login.emailEjemplo')}
               keyboardType="email-address"
               onSubmit={pedirCodigo}
             />
             <View style={{ height: 16 }} />
             <Boton
-              texto="Enviarme el código"
+              texto={t('login.enviarCodigo')}
               onPress={pedirCodigo}
               ocupado={ocupado}
               deshabilitado={!email.includes('@')}
@@ -81,9 +80,9 @@ export function LoginScreen({
           </>
         ) : (
           <>
-            <Text style={[text.titulo, { marginBottom: 8 }]}>El código que te hemos enviado</Text>
+            <Text style={[text.titulo, { marginBottom: 8 }]}>{t('login.codigo')}</Text>
             <Text style={[text.ayuda, { marginBottom: 18 }]}>
-              A {email}. Caduca en diez minutos.
+              {t('login.codigoAyuda', { email })}
             </Text>
             <View style={estilos.casillas}>
               {[0, 1, 2, 3, 4, 5].map((i) => (
@@ -106,7 +105,7 @@ export function LoginScreen({
             </View>
             <View style={{ height: 16 }} />
             <Boton
-              texto="Entrar"
+              texto={t('login.entrar')}
               onPress={entrar}
               ocupado={ocupado}
               deshabilitado={codigo.length < 6}
@@ -118,7 +117,7 @@ export function LoginScreen({
                 setCodigo('');
                 setError(null);
               }}>
-              <Text style={estilos.enlace}>Cambiar de email o pedir otro código</Text>
+              <Text style={estilos.enlace}>{t('login.otroCodigo')}</Text>
             </Pressable>
           </>
         )}
@@ -127,7 +126,7 @@ export function LoginScreen({
       </View>
 
       <View style={estilos.pie}>
-        <Etiqueta>Hablar primero, ver después</Etiqueta>
+        <Etiqueta>{t('login.lema')}</Etiqueta>
       </View>
     </KeyboardAvoidingView>
   );
@@ -135,7 +134,7 @@ export function LoginScreen({
 
 function mensaje(e: unknown): string {
   if (e instanceof ApiError) return e.message;
-  return 'No se pudo conectar con el servidor.';
+  return t('comun.sinConexion');
 }
 
 const estilos = StyleSheet.create({

@@ -13,6 +13,7 @@ import com.sergisalas.olimpus.chat.application.CloseFinishedConversations;
 import com.sergisalas.olimpus.chat.application.GetChat;
 import com.sergisalas.olimpus.chat.application.LikeMessage;
 import com.sergisalas.olimpus.chat.application.SendMessage;
+import com.sergisalas.olimpus.chat.application.SignalTyping;
 import com.sergisalas.olimpus.chat.domain.MessageLikes;
 import com.sergisalas.olimpus.chat.domain.MessageModerator;
 import com.sergisalas.olimpus.chat.domain.MessageRepository;
@@ -42,7 +43,6 @@ import com.sergisalas.olimpus.insights.application.MeasureOutcomes;
 import com.sergisalas.olimpus.insights.domain.InsightsQueries;
 import com.sergisalas.olimpus.notifications.application.Announce;
 import com.sergisalas.olimpus.notifications.domain.Notifier;
-import com.sergisalas.olimpus.shared.adapter.Messages;
 import com.sergisalas.olimpus.shared.domain.Hasher;
 import java.time.Clock;
 import java.time.ZoneId;
@@ -164,8 +164,8 @@ public class DomainBeans {
      * other text a person reads; the use case only knows the keys.
      */
     @Bean
-    Announce announce(Notifier notifier, Messages messages) {
-        return new Announce(notifier, messages::get);
+    Announce announce(Notifier notifier) {
+        return new Announce(notifier);
     }
 
     @Bean
@@ -189,6 +189,11 @@ public class DomainBeans {
             RoundSchedule schedule,
             Clock clock) {
         return new GetChat(conversations, messages, likes, profiles, schedule, clock);
+    }
+
+    @Bean
+    SignalTyping signalTyping(ConversationRepository conversations, Clock clock) {
+        return new SignalTyping(conversations, clock);
     }
 
     @Bean
