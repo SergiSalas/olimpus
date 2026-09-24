@@ -1,23 +1,33 @@
 import { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiError, deleteAccount, ownPhotoSource, type Me, type Profile } from '../api';
-import { Boton, Etiqueta, Pastilla, Tarjeta } from '../components';
+import { Entrada, Flotar, Pastilla, Rebote } from '../components';
+import { COLOR_NIVEL, NIVELES } from '../components/Escalera';
 import { useNombreInteres } from '../interests';
+import {
+  COLOR_HUECO,
+  FONDO_HUECO,
+  IDIOMAS,
+  nombreDeIdioma,
+  nombreDeNivel,
+  pistaDe,
+  useCatalogoPreguntas,
+} from '../preguntas';
 import { tipoDeProfundidad } from '../mapeo';
-import { colors, fonts, text } from '../theme';
+import { colors, fonts } from '../theme';
 
 const GENEROS: Record<string, string> = {
   WOMAN: 'Mujer',
   MAN: 'Hombre',
   NON_BINARY: 'No binarie',
-  OTHER: 'Prefiero no decirlo',
+  OTHER: 'Otro',
 };
 
 const BUSCA: Record<string, string> = {
-  WOMAN: 'mujeres',
-  MAN: 'hombres',
-  NON_BINARY: 'personas no binarias',
-  OTHER: 'todo el mundo',
+  WOMAN: 'Mujeres',
+  MAN: 'Hombres',
+  NON_BINARY: 'Personas no binarias',
+  OTHER: 'Otros géneros',
 };
 
 const INTENCIONES: Record<string, string> = {
@@ -25,19 +35,6 @@ const INTENCIONES: Record<string, string> = {
   DATING: 'Citas',
   RELATIONSHIP: 'Pareja',
   CASUAL: 'Algo casual',
-};
-
-const IDIOMAS: Record<string, string> = {
-  es: 'Español',
-  en: 'Inglés',
-  ca: 'Catalán',
-  gl: 'Gallego',
-  eu: 'Euskera',
-  fr: 'Francés',
-  pt: 'Portugués',
-  it: 'Italiano',
-  de: 'Alemán',
-  ar: 'Árabe',
 };
 
 const SOCIABILIDAD = [
@@ -48,7 +45,10 @@ const SOCIABILIDAD = [
   'Hablo con cualquiera',
 ];
 
-/** Lo que se guardó en el registro, para poder repasarlo y cambiarlo. */
+/**
+ * Tu perfil: cómo eres para la app, cómo te ve la otra persona en cada nivel, y
+ * los ajustes de la cuenta al final.
+ */
 export function HomeScreen({
   me,
   perfil,
@@ -65,6 +65,8 @@ export function HomeScreen({
   onSalir: () => void;
 }) {
   const nombreInteres = useNombreInteres();
+  const catalogoPreguntas = useCatalogoPreguntas();
+  const nombrePregunta = (id: string) => catalogoPreguntas.find((q) => q.name === id)?.label ?? id;
   const [borrando, setBorrando] = useState(false);
 
   /**
@@ -101,125 +103,510 @@ export function HomeScreen({
     );
   }
 
+  const baldosas = [
+    { emoji: '🎂', titulo: 'Edad', valor: `${perfil.age} años` },
+    {
+      emoji: '🙂',
+      titulo: 'Género',
+      valor: perfil.genderLabel || (GENEROS[perfil.gender] ?? perfil.gender),
+    },
+    {
+      emoji: '💘',
+      titulo: 'Quieres hablar con',
+      valor:
+        perfil.seeking.length === 4
+          ? 'Todo el mundo'
+          : perfil.seeking.map((g) => BUSCA[g] ?? g).join(', '),
+    },
+    { emoji: '📏', titulo: 'Edades', valor: `${perfil.ageMin} – ${perfil.ageMax} años` },
+    { emoji: '📍', titulo: 'Distancia', valor: `Hasta ${perfil.maxDistanceKm} km` },
+    { emoji: '🎯', titulo: 'Buscas', valor: INTENCIONES[perfil.intent] ?? perfil.intent },
+    { emoji: '💬', titulo: 'Conversación', valor: tipoDeProfundidad(perfil.conversationDepth) },
+    { emoji: '🫶', titulo: 'Cómo te relacionas', valor: SOCIABILIDAD[perfil.sociability - 1] },
+  ];
+
+  const banderas = perfil.languages
+    .map((l) => IDIOMAS.find((i) => i.code === l.code)?.bandera)
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <ScrollView style={estilos.pantalla} contentContainerStyle={estilos.contenido}>
-      <Pressable style={estilos.redondo} onPress={onVolver}>
-        <Text style={estilos.flecha}>←</Text>
-      </Pressable>
+    <ScrollView style={estilos.pantalla} contentContainerStyle={{ paddingBottom: 40 }}>
+      <Entrada>
+        <View style={estilos.cabecera}>
+          <View style={estilos.filaCabecera}>
+            <Rebote style={estilos.redondo} onPress={onVolver}>
+              <Text style={estilos.flecha}>←</Text>
+            </Rebote>
+            <Rebote style={estilos.editar} onPress={onEditar}>
+              <Text style={estilos.editarTexto}>✏️ Editar</Text>
+            </Rebote>
+          </View>
 
-      <Text style={text.titulo}>Tu registro</Text>
-      <Text style={[text.ayuda, { marginBottom: 4 }]}>
-        Es solo el punto de partida: después pesa más con quién sigues hablando de verdad.
-      </Text>
-
-      <Tarjeta>
-        <Etiqueta>Tu foto · nadie la ve hasta el nivel 3</Etiqueta>
-        <View style={{ alignItems: 'center', paddingVertical: 4 }}>
-          <Image source={ownPhotoSource(token)} style={estilos.foto} />
+          <Flotar distancia={5} giro={2} duracion={3200}>
+            <Image source={ownPhotoSource(token)} style={estilos.foto} />
+          </Flotar>
+          <Text style={estilos.nombre}>
+            {perfil.nickname}, {perfil.age}
+          </Text>
+          <View style={estilos.chipsCabecera}>
+            <Chip texto={`📍 hasta ${perfil.maxDistanceKm} km`} />
+            <Chip texto={`🎯 ${INTENCIONES[perfil.intent] ?? perfil.intent}`} />
+            {banderas ? <Chip texto={banderas} /> : null}
+          </View>
         </View>
-      </Tarjeta>
+      </Entrada>
 
-      <Tarjeta>
-        <Etiqueta>Lo básico</Etiqueta>
-        <Fila clave="Apodo" valor={perfil.nickname} />
-        <Fila clave="Edad" valor={`${perfil.age} años`} />
-        <Fila clave="Género" valor={GENEROS[perfil.gender] ?? perfil.gender} />
-        <Fila
-          clave="Quieres hablar con"
-          valor={perfil.seeking.map((g) => BUSCA[g] ?? g).join(', ')}
-        />
-        <Fila clave="Edades" valor={`${perfil.ageMin} – ${perfil.ageMax} años`} />
-        <Fila clave="Distancia" valor={`hasta ${perfil.maxDistanceKm} km`} />
-      </Tarjeta>
+      <View style={estilos.cuerpo}>
+        <Entrada retraso={120}>
+          <ComoTeVen
+            perfil={perfil}
+            token={token}
+            nombreInteres={nombreInteres}
+            nombrePregunta={nombrePregunta}
+          />
+        </Entrada>
 
-      <Tarjeta>
-        <Etiqueta>Compatibilidad</Etiqueta>
-        <Fila
-          clave="Idiomas"
-          valor={perfil.languages.map((l) => IDIOMAS[l.code] ?? l.code).join(', ')}
-        />
-        <Fila clave="Cómo te relacionas" valor={SOCIABILIDAD[perfil.sociability - 1]} />
-        <Fila clave="Conversación" valor={tipoDeProfundidad(perfil.conversationDepth)} />
-        <Fila clave="Buscas" valor={INTENCIONES[perfil.intent] ?? perfil.intent} />
-      </Tarjeta>
+        <Seccion titulo="Lo básico" retraso={200}>
+          <View style={estilos.rejilla}>
+            {baldosas.map((b, i) => (
+              <Entrada key={b.titulo} retraso={240 + i * 50} style={estilos.baldosa}>
+                <Text style={estilos.baldosaEmoji}>{b.emoji}</Text>
+                <Text style={estilos.baldosaTitulo}>{b.titulo}</Text>
+                <Text style={estilos.baldosaValor}>{b.valor}</Text>
+              </Entrada>
+            ))}
+          </View>
+          <View style={estilos.idiomas}>
+            <Text style={estilos.baldosaTitulo}>🗣️ Idiomas</Text>
+            {perfil.languages.map((l) => (
+              <View key={l.code} style={estilos.filaIdioma}>
+                <Text style={estilos.baldosaValor}>{nombreDeIdioma(l.code)}</Text>
+                <Text style={estilos.nivelIdioma}>{nombreDeNivel(l.level)}</Text>
+              </View>
+            ))}
+          </View>
+        </Seccion>
 
-      <Tarjeta>
-        <Etiqueta>Tus intereses</Etiqueta>
-        <View style={estilos.rejilla}>
-          {perfil.interests.map((interes) => (
-            <Pastilla key={interes} texto={nombreInteres(interes)} elegida tono="suave" />
-          ))}
-        </View>
-        {perfil.bio.length > 0 && (
-          <>
-            <Etiqueta>Tu bio · se ve en el nivel 2</Etiqueta>
-            <Text style={estilos.bio}>{perfil.bio}</Text>
-          </>
+        <Seccion titulo="Tus intereses" retraso={300}>
+          <View style={estilos.chips}>
+            {perfil.interests.map((interes, i) => (
+              <Entrada key={interes} retraso={350 + i * 50}>
+                <Pastilla texto={nombreInteres(interes)} elegida tono="suave" />
+              </Entrada>
+            ))}
+          </View>
+        </Seccion>
+
+        <Seccion titulo="Tus tres preguntas" retraso={380}>
+          <View style={{ gap: 10 }}>
+            {perfil.prompts.map((p, i) => (
+              <View
+                key={p.question}
+                style={[
+                  estilos.tarjetaPregunta,
+                  { backgroundColor: FONDO_HUECO[i], borderColor: COLOR_HUECO[i] },
+                ]}>
+                <Text style={estilos.preguntaTexto}>
+                  {pistaDe(p.question).emoji} {nombrePregunta(p.question)}…
+                </Text>
+                <Text style={estilos.respuesta}>{p.answer}</Text>
+              </View>
+            ))}
+          </View>
+        </Seccion>
+
+        {(perfil.occupation || perfil.fromPlace) && (
+          <Seccion titulo="Un poco más de ti" retraso={440}>
+            <View style={{ gap: 10 }}>
+              {perfil.occupation ? (
+                <View style={estilos.filaMas}>
+                  <Text style={estilos.baldosaTitulo}>💼 A qué te dedicas</Text>
+                  <Text style={estilos.baldosaValor}>{perfil.occupation}</Text>
+                </View>
+              ) : null}
+              {perfil.fromPlace ? (
+                <View style={estilos.filaMas}>
+                  <Text style={estilos.baldosaTitulo}>🏡 De dónde eres</Text>
+                  <Text style={estilos.baldosaValor}>{perfil.fromPlace}</Text>
+                </View>
+              ) : null}
+            </View>
+          </Seccion>
         )}
-      </Tarjeta>
 
-      <Boton texto="Cambiar mis respuestas" onPress={onEditar} tono="oscuro" />
-
-      <Pressable style={{ paddingVertical: 14 }} onPress={onSalir}>
-        <Text style={estilos.enlaceFlojo}>Cerrar sesión ({me.email})</Text>
-      </Pressable>
-
-      <Pressable
-        style={{ paddingVertical: 10, paddingBottom: 20 }}
-        onPress={confirmarBorrado}
-        disabled={borrando}>
-        <Text style={estilos.borrar}>
-          {borrando ? 'Borrando…' : 'Borrar mi cuenta'}
-        </Text>
-      </Pressable>
+        <Seccion titulo="Ajustes" retraso={500}>
+          <View style={estilos.ajustes}>
+            <FilaAjuste emoji="✏️" texto="Cambiar mis respuestas" onPress={onEditar} />
+            <View style={estilos.separador} />
+            <FilaAjuste emoji="🚪" texto="Cerrar sesión" detalle={me.email} onPress={onSalir} />
+            <View style={estilos.separador} />
+            <FilaAjuste
+              emoji="🗑️"
+              texto={borrando ? 'Borrando…' : 'Borrar mi cuenta'}
+              peligro
+              onPress={confirmarBorrado}
+              deshabilitada={borrando}
+            />
+          </View>
+        </Seccion>
+      </View>
     </ScrollView>
   );
 }
 
-function Fila({ clave, valor }: { clave: string; valor: string }) {
+/**
+ * Tu perfil visto desde fuera, nivel a nivel. Enseña qué se destapa en cada
+ * uno, así la escalera se entiende mirándote a ti mismo.
+ */
+function ComoTeVen({
+  perfil,
+  token,
+  nombreInteres,
+  nombrePregunta,
+}: {
+  perfil: Profile;
+  token: string;
+  nombreInteres: (id: string) => string;
+  nombrePregunta: (id: string) => string;
+}) {
+  const [nivel, setNivel] = useState(0);
+  const color = COLOR_NIVEL[nivel];
+
   return (
-    <View style={estilos.fila}>
-      <Text style={estilos.claveTexto}>{clave}</Text>
-      <Text style={estilos.valorTexto}>{valor}</Text>
+    <View style={estilos.comoTeVen}>
+      <Text style={estilos.seccionTitulo}>Cómo te ven los demás</Text>
+      <Text style={estilos.pista}>Toca un nivel para ver qué descubren de ti en él.</Text>
+
+      <View style={estilos.escalera}>
+        <View style={estilos.lineaEscalera} />
+        {NIVELES.map((n) => (
+          <Rebote
+            key={n.n}
+            pop={nivel === n.n}
+            onPress={() => setNivel(n.n)}
+            style={[
+              estilos.peldano,
+              { backgroundColor: COLOR_NIVEL[n.n] },
+              nivel === n.n ? estilos.peldanoActivo : { opacity: 0.35 },
+            ]}>
+            <Text style={[estilos.peldanoTexto, (n.n === 1 || n.n === 2) && { color: colors.ink }]}>
+              {n.n}
+            </Text>
+          </Rebote>
+        ))}
+      </View>
+
+      <Entrada key={nivel} style={[estilos.nivelCaja, { borderColor: color }]}>
+        <Text style={[estilos.nivelTitulo, { color: nivel === 1 ? '#A87A00' : color }]}>
+          Nivel {nivel} · {NIVELES[nivel].titulo}
+        </Text>
+
+        {nivel === 0 && (
+          <>
+            <Text style={estilos.respuesta}>
+              {perfil.age} años, a unos pocos km. Ni tu nombre ni tu foto.
+            </Text>
+            <View style={estilos.chips}>
+              {perfil.interests.slice(0, 2).map((i) => (
+                <Pastilla key={i} texto={nombreInteres(i)} elegida tono="suave" />
+              ))}
+            </View>
+            <Text style={estilos.pista}>Solo dos de tus intereses, los que más tengáis en común.</Text>
+          </>
+        )}
+
+        {nivel === 1 && (
+          <>
+            <Text style={estilos.respuesta}>
+              Tu apodo, <Text style={estilos.negrita}>«{perfil.nickname}»</Text>, y todos tus
+              intereses:
+            </Text>
+            <View style={estilos.chips}>
+              {perfil.interests.map((i) => (
+                <Pastilla key={i} texto={nombreInteres(i)} elegida tono="suave" />
+              ))}
+            </View>
+          </>
+        )}
+
+        {nivel === 2 &&
+          perfil.prompts.map((p) => (
+            <View key={p.question} style={{ gap: 2 }}>
+              <Text style={estilos.negrita}>{nombrePregunta(p.question)}</Text>
+              <Text style={estilos.respuesta}>{p.answer}</Text>
+            </View>
+          ))}
+
+        {nivel === 3 && (
+          <View style={estilos.filaNivel3}>
+            <Image source={ownPhotoSource(token)} style={estilos.fotoPequena} />
+            <View style={{ flexShrink: 1, gap: 3 }}>
+              <Text style={estilos.negrita}>Tu foto, si los dos lo pedís</Text>
+              {[perfil.genderLabel, perfil.occupation, perfil.fromPlace]
+                .filter(Boolean)
+                .map((dato) => (
+                  <Text key={dato} style={estilos.respuesta}>
+                    {dato}
+                  </Text>
+                ))}
+              <Text style={estilos.respuesta}>
+                {perfil.languages.map((l) => nombreDeIdioma(l.code)).join(', ')}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {nivel === 4 && (
+          <Text style={estilos.respuesta}>
+            💖 Lo que cada uno quiera compartir. Llega si los dos decís que sí al final del día, y
+            ya no caduca.
+          </Text>
+        )}
+
+        {nivel < 4 && (
+          <Text style={estilos.pista}>
+            🔒 Siguiente: {NIVELES[nivel + 1].desc.toLowerCase()}
+          </Text>
+        )}
+      </Entrada>
     </View>
+  );
+}
+
+function Seccion({
+  titulo,
+  retraso,
+  children,
+}: {
+  titulo: string;
+  retraso: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <Entrada retraso={retraso} style={{ gap: 10 }}>
+      <Text style={estilos.seccionTitulo}>{titulo}</Text>
+      {children}
+    </Entrada>
+  );
+}
+
+function Chip({ texto }: { texto: string }) {
+  return (
+    <View style={estilos.chip}>
+      <Text style={estilos.chipTexto}>{texto}</Text>
+    </View>
+  );
+}
+
+function FilaAjuste({
+  emoji,
+  texto,
+  detalle,
+  peligro,
+  deshabilitada,
+  onPress,
+}: {
+  emoji: string;
+  texto: string;
+  detalle?: string;
+  peligro?: boolean;
+  deshabilitada?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Rebote style={estilos.filaAjuste} onPress={onPress} disabled={deshabilitada}>
+      <Text style={estilos.ajusteEmoji}>{emoji}</Text>
+      <View style={{ flex: 1, gap: 1 }}>
+        <Text style={[estilos.ajusteTexto, peligro && { color: colors.error }]}>{texto}</Text>
+        {detalle ? <Text style={estilos.pista}>{detalle}</Text> : null}
+      </View>
+      <Text style={estilos.ajusteFlecha}>›</Text>
+    </Rebote>
   );
 }
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.bg },
-  contenido: { paddingHorizontal: 26, paddingTop: 58, paddingBottom: 40, gap: 14 },
-  redondo: {
-    width: 36,
-    height: 36,
-    borderRadius: 999,
-    backgroundColor: colors.surface2,
+
+  cabecera: {
+    backgroundColor: colors.uva,
+    paddingTop: 54,
+    paddingBottom: 26,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
+    borderBottomWidth: 6,
+    borderColor: '#6A3FD1',
     alignItems: 'center',
-    justifyContent: 'center',
+  },
+  filaCabecera: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 6,
   },
-  flecha: { fontFamily: fonts.sansNegrita, fontSize: 17, color: colors.ink2 },
-  fila: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14 },
-  claveTexto: { fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink3 },
-  valorTexto: {
-    fontFamily: fonts.sansNegrita,
-    fontSize: 14.5,
-    color: colors.ink,
-    textAlign: 'right',
-    flexShrink: 1,
+  redondo: {
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  foto: { width: 150, aspectRatio: 3 / 4, borderRadius: 14, backgroundColor: colors.surface2 },
-  bio: { fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 21, color: colors.ink2 },
-  borrar: {
-    fontFamily: fonts.sansMedia,
-    fontSize: 13,
-    color: colors.error,
-    textAlign: 'center',
+  flecha: { fontFamily: fonts.sansNegrita, fontSize: 18, color: '#FFFFFF' },
+  editar: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderBottomWidth: 3,
+    borderColor: colors.trazo,
   },
-  enlaceFlojo: {
-    fontFamily: fonts.sansMedia,
-    fontSize: 13.5,
-    color: colors.ink4,
-    textAlign: 'center',
+  editarTexto: { fontFamily: fonts.sansNegrita, fontSize: 14, color: colors.uva },
+  foto: {
+    width: 130,
+    height: 130,
+    borderRadius: 999,
+    borderWidth: 5,
+    borderColor: colors.sol,
+    backgroundColor: colors.surface2,
   },
+  nombre: { fontFamily: fonts.displayFuerte, fontSize: 32, color: '#FFFFFF', marginTop: 12 },
+  chipsCabecera: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 7,
+    marginTop: 10,
+  },
+  chip: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  chipTexto: { fontFamily: fonts.sansNegrita, fontSize: 13, color: '#FFFFFF' },
+
+  cuerpo: { paddingHorizontal: 20, paddingTop: 22, gap: 26 },
+  seccionTitulo: { fontFamily: fonts.display, fontSize: 22, color: colors.ink },
+  pista: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 19, color: colors.ink3 },
+  respuesta: { fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 21, color: colors.ink2 },
+  negrita: { fontFamily: fonts.sansNegrita, fontSize: 14.5, color: colors.ink },
+
+  comoTeVen: {
+    backgroundColor: colors.surface,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderBottomWidth: 5,
+    borderColor: colors.line,
+    padding: 18,
+    gap: 6,
+  },
+  escalera: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 12,
+    paddingHorizontal: 4,
+  },
+  lineaEscalera: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: colors.surface2,
+  },
+  peldano: {
+    width: 38,
+    height: 38,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
+  // Tamaño y no escala: la escala la usa el rebote y la pisaría.
+  peldanoActivo: { width: 46, height: 46, borderColor: colors.ink },
+  peldanoTexto: { fontFamily: fonts.displayFuerte, fontSize: 16, color: '#FFFFFF' },
+  nivelCaja: {
+    borderRadius: 18,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    padding: 14,
+    gap: 8,
+  },
+  nivelTitulo: { fontFamily: fonts.sansNegrita, fontSize: 14 },
+  filaNivel3: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  fotoPequena: {
+    width: 64,
+    height: 80,
+    borderRadius: 14,
+    borderWidth: 3,
+    borderColor: colors.sol,
+    backgroundColor: colors.surface2,
+  },
+
+  rejilla: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
+  baldosa: {
+    width: '48.5%',
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderBottomWidth: 4,
+    borderColor: colors.line,
+    padding: 14,
+    gap: 2,
+  },
+  baldosaEmoji: { fontSize: 22, marginBottom: 2 },
+  baldosaTitulo: { fontFamily: fonts.sansMedia, fontSize: 12.5, color: colors.ink3 },
+  baldosaValor: { fontFamily: fonts.sansNegrita, fontSize: 15, color: colors.ink },
+  idiomas: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderBottomWidth: 4,
+    borderColor: colors.line,
+    padding: 14,
+    gap: 8,
+  },
+  filaIdioma: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  nivelIdioma: { fontFamily: fonts.sansMedia, fontSize: 13, color: colors.uva },
+
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+
+  tarjetaPregunta: { borderRadius: 20, borderWidth: 2, borderBottomWidth: 4, padding: 14, gap: 6 },
+  preguntaTexto: { fontFamily: fonts.display, fontSize: 17, lineHeight: 22, color: colors.ink },
+
+  filaMas: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderBottomWidth: 4,
+    borderColor: colors.line,
+    padding: 14,
+    gap: 2,
+  },
+
+  ajustes: {
+    backgroundColor: colors.surface,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderBottomWidth: 4,
+    borderColor: colors.line,
+    overflow: 'hidden',
+  },
+  filaAjuste: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+  },
+  ajusteEmoji: { fontSize: 20 },
+  ajusteTexto: { fontFamily: fonts.sansNegrita, fontSize: 15.5, color: colors.ink },
+  ajusteFlecha: { fontFamily: fonts.sansNegrita, fontSize: 20, color: colors.ink4 },
+  separador: { height: 1.5, backgroundColor: colors.lineSuave, marginLeft: 48 },
 });
