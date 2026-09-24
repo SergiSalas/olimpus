@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * Turns domain errors into HTTP responses with a plain message, in the user's
@@ -41,6 +42,14 @@ public class ApiErrors {
         if (e instanceof UserFacingError error) {
             return ResponseEntity.status(statusFor(error.kind()))
                     .body(new ApiError(messages.of(error)));
+        }
+
+        if (e instanceof MaxUploadSizeExceededException) {
+            // The plumbing cuts the request off before any rule of ours sees it,
+            // so the person deserves the same sentence they would have got from
+            // the domain.
+            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                    .body(new ApiError(messages.get("photo.too-big", 5)));
         }
 
         if (e instanceof IllegalArgumentException) {

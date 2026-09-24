@@ -43,10 +43,16 @@ public class ChatController {
             List<String> interests,
             int approxDistanceKm,
             String nickname,
-            String bio,
+            List<PromptResponse> prompts,
             List<String> languages,
             String intent,
+            String genderLabel,
+            String occupation,
+            String fromPlace,
             boolean photoAvailable) {}
+
+    /** The question already worded in the reader's language, with the answer. */
+    public record PromptResponse(String question, String label, String answer) {}
 
     public record ChatResponse(
             UUID conversationId,
@@ -125,9 +131,19 @@ public class ChatController {
                         chat.partner().interestsShown(),
                         chat.partner().approxDistanceKm(),
                         chat.partner().nickname(),
-                        chat.partner().bio(),
+                        chat.partner().prompts().stream()
+                                .map(
+                                        prompt ->
+                                                new PromptResponse(
+                                                        prompt.question(),
+                                                        messages.promptLabel(prompt.question()),
+                                                        prompt.answer()))
+                                .toList(),
                         chat.partner().languages(),
                         chat.partner().intent() == null ? null : chat.partner().intent().name(),
+                        chat.partner().genderLabel(),
+                        chat.partner().occupation(),
+                        chat.partner().fromPlace(),
                         chat.partner().photoAvailable()),
                 chat.sharedInterests(),
                 conversation.bothHaveWritten(),

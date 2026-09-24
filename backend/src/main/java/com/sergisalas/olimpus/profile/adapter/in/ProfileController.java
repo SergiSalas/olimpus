@@ -11,6 +11,8 @@ import com.sergisalas.olimpus.profile.domain.LanguageSkill;
 import com.sergisalas.olimpus.profile.domain.Location;
 import com.sergisalas.olimpus.profile.domain.Profile;
 import com.sergisalas.olimpus.profile.domain.ProfileNotFoundException;
+import com.sergisalas.olimpus.profile.domain.PromptAnswer;
+import com.sergisalas.olimpus.profile.domain.PromptCatalog;
 import com.sergisalas.olimpus.shared.adapter.Messages;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -30,9 +32,9 @@ public class ProfileController {
     /** What the phone sends when the sign-up is finished. */
     public record ProfileRequest(
             String nickname,
-            String bio,
             LocalDate birthDate,
             Gender gender,
+            String genderLabel,
             Set<Gender> seeking,
             int ageMin,
             int ageMax,
@@ -43,16 +45,21 @@ public class ProfileController {
             int sociability,
             int conversationDepth,
             Intent intent,
-            Set<String> interests) {}
+            Set<String> interests,
+            List<PromptRequest> prompts,
+            String occupation,
+            String fromPlace) {}
 
     public record LanguageRequest(String code, LanguageSkill.Level level) {}
 
+    public record PromptRequest(String question, String answer) {}
+
     public record ProfileResponse(
             String nickname,
-            String bio,
             LocalDate birthDate,
             int age,
             Gender gender,
+            String genderLabel,
             Set<Gender> seeking,
             int ageMin,
             int ageMax,
@@ -63,10 +70,16 @@ public class ProfileController {
             int sociability,
             int conversationDepth,
             Intent intent,
-            Set<String> interests) {}
+            Set<String> interests,
+            List<PromptRequest> prompts,
+            String occupation,
+            String fromPlace) {}
 
     /** An interest with its label in the user's language, ready to show in the app. */
     public record InterestResponse(String name, String label) {}
+
+    /** A question from the catalogue, with its wording in the user's language. */
+    public record PromptQuestionResponse(String name, String label) {}
 
     private final SaveProfile saveProfile;
     private final GetProfile getProfile;
@@ -88,6 +101,13 @@ public class ProfileController {
                 .toList();
     }
 
+    @GetMapping("/prompts")
+    public List<PromptQuestionResponse> prompts() {
+        return PromptCatalog.QUESTIONS.stream()
+                .map(name -> new PromptQuestionResponse(name, messages.promptLabel(name)))
+                .toList();
+    }
+
     @GetMapping("/profile")
     public ProfileResponse profile(@CurrentAccount Account account) {
         return getProfile
@@ -102,9 +122,9 @@ public class ProfileController {
                 new Profile(
                         account.id(),
                         body.nickname(),
-                        body.bio(),
                         body.birthDate(),
                         body.gender(),
+                        body.genderLabel(),
                         body.seeking(),
                         body.ageMin(),
                         body.ageMax(),
@@ -120,7 +140,14 @@ public class ProfileController {
                         body.sociability(),
                         body.conversationDepth(),
                         body.intent(),
-                        body.interests());
+                        body.interests(),
+                        body.prompts() == null
+                                ? List.of()
+                                : body.prompts().stream()
+                                        .map(p -> new PromptAnswer(p.question(), p.answer()))
+                                        .toList(),
+                        body.occupation(),
+                        body.fromPlace());
 
         return toResponse(saveProfile.execute(profile));
     }
@@ -128,10 +155,10 @@ public class ProfileController {
     private ProfileResponse toResponse(Profile profile) {
         return new ProfileResponse(
                 profile.nickname(),
-                profile.bio(),
                 profile.birthDate(),
                 profile.ageOn(LocalDate.ofInstant(clock.instant(), ZoneOffset.UTC)),
                 profile.gender(),
+                profile.genderLabel(),
                 profile.seeking(),
                 profile.ageMin(),
                 profile.ageMax(),
@@ -144,6 +171,11 @@ public class ProfileController {
                 profile.sociability(),
                 profile.conversationDepth(),
                 profile.intent(),
-                profile.interests());
+                profile.interests(),
+                profile.prompts().stream()
+                        .map(p -> new PromptRequest(p.question(), p.answer()))
+                        .toList(),
+                profile.occupation(),
+                profile.fromPlace());
     }
 }

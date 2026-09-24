@@ -60,11 +60,52 @@ class ProfileTest {
     }
 
     @Test
-    void the_bio_has_a_limit() {
-        assertThatThrownBy(() -> TestProfiles.valid().bio("x".repeat(201)).build())
+    void exactly_three_questions_have_to_be_answered() {
+        assertThatThrownBy(
+                        () ->
+                                TestProfiles.valid()
+                                        .prompts(List.of(new PromptAnswer("last-hooked", "A book.")))
+                                        .build())
                 .isInstanceOf(RuleViolationException.class)
                 .extracting("messageKey")
-                .isEqualTo("profile.bio.too-long");
+                .isEqualTo("profile.prompts.count");
+    }
+
+    @Test
+    void the_same_question_cannot_be_answered_twice() {
+        assertThatThrownBy(
+                        () ->
+                                TestProfiles.valid()
+                                        .prompts(
+                                                List.of(
+                                                        new PromptAnswer("last-hooked", "A book."),
+                                                        new PromptAnswer("last-hooked", "A film."),
+                                                        new PromptAnswer("always-ask", "Why?")))
+                                        .build())
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("profile.prompts.duplicate");
+    }
+
+    @Test
+    void an_answer_has_a_limit_and_cannot_be_blank() {
+        assertThatThrownBy(() -> new PromptAnswer("last-hooked", "x".repeat(201)))
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("prompt.answer.too-long");
+
+        assertThatThrownBy(() -> new PromptAnswer("last-hooked", "   "))
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("prompt.answer.empty");
+    }
+
+    @Test
+    void a_question_outside_the_catalogue_is_rejected() {
+        assertThatThrownBy(() -> new PromptAnswer("what-is-your-salary", "None of your business."))
+                .isInstanceOf(RuleViolationException.class)
+                .extracting("messageKey")
+                .isEqualTo("prompt.question.unknown");
     }
 
     @Test

@@ -85,7 +85,7 @@ class GetTodaysConversationTest {
 
         assertThat(view.level()).isZero();
         assertThat(view.nickname()).isNull();
-        assertThat(view.bio()).isNull();
+        assertThat(view.prompts()).isEmpty();
         assertThat(view.languages()).isEmpty();
         assertThat(view.intent()).isNull();
         assertThat(view.photoAvailable()).isFalse();

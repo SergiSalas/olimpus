@@ -2,6 +2,7 @@ package com.sergisalas.olimpus.matching.domain;
 
 import com.sergisalas.olimpus.profile.domain.Intent;
 import com.sergisalas.olimpus.profile.domain.Profile;
+import com.sergisalas.olimpus.profile.domain.PromptAnswer;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,12 +26,18 @@ public record PartnerView(
         int approxDistanceKm,
         /** Level 1 and up. Null below. */
         String nickname,
-        /** Level 2 and up. Null below, and empty when the person wrote none. */
-        String bio,
+        /** Level 2 and up: the three answered questions. Empty below. */
+        List<PromptAnswer> prompts,
         /** Level 3: the wider profile. Empty below. */
         List<String> languages,
         /** Level 3. Null below. */
         Intent intent,
+        /** Level 3. Null below, and empty when the person did not say it. */
+        String genderLabel,
+        /** Level 3. Null below. */
+        String occupation,
+        /** Level 3. Null below. */
+        String fromPlace,
         /** Level 3: the photo can now be asked for. */
         boolean photoAvailable) {
 
@@ -62,11 +69,14 @@ public record PartnerView(
                 interests,
                 (int) Math.round(viewer.location().distanceKmTo(partner.location())),
                 firstMessage ? partner.nickname() : null,
-                conversation ? partner.bio() : null,
+                conversation ? partner.prompts() : List.of(),
                 goodConnection
                         ? partner.languages().stream().map(l -> l.code()).sorted().toList()
                         : List.of(),
                 goodConnection ? partner.intent() : null,
+                goodConnection ? partner.genderLabel() : null,
+                goodConnection ? partner.occupation() : null,
+                goodConnection ? partner.fromPlace() : null,
                 goodConnection);
     }
 

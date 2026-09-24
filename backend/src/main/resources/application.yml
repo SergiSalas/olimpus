@@ -12,6 +12,13 @@ spring:
     # Dates always travel in UTC (ISO-8601). The phone shows them in the
     # local time of whoever is looking.
     time-zone: UTC
+  servlet:
+    multipart:
+      # Spring's default is 1 MB, and the domain allows 5 (Photo.MAX_BYTES). With
+      # the default, a photo the app considers fine was rejected by the plumbing
+      # before any rule of ours ran.
+      max-file-size: 5MB
+      max-request-size: 6MB
   messages:
     # Texts for people live in messages.properties. Without this, a server with
     # a system locale that has its own file would answer in that language.

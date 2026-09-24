@@ -44,13 +44,14 @@ class PartnerViewTest {
     }
 
     @Test
-    void level_zero_hides_the_nickname_the_bio_and_the_photo() {
+    void level_zero_hides_the_nickname_the_answers_and_the_photo() {
         PartnerView view = at(UnlockLevel.MATCH);
 
         assertThat(view.nickname()).isNull();
-        assertThat(view.bio()).isNull();
+        assertThat(view.prompts()).isEmpty();
         assertThat(view.languages()).isEmpty();
         assertThat(view.intent()).isNull();
+        assertThat(view.occupation()).isNull();
         assertThat(view.photoAvailable()).isFalse();
     }
 
@@ -65,17 +66,19 @@ class PartnerViewTest {
 
         assertThat(view.nickname()).isEqualTo("Leo");
         assertThat(view.interestsShown()).hasSize(5);
-        assertThat(view.bio()).isNull();
+        assertThat(view.prompts()).isEmpty();
         assertThat(view.photoAvailable()).isFalse();
     }
 
     @Test
-    void level_two_adds_the_bio_and_still_no_photo() {
+    void level_two_adds_the_answered_questions_and_still_no_photo() {
         PartnerView view = at(UnlockLevel.CONVERSATION);
 
-        assertThat(view.bio()).isNotNull();
+        assertThat(view.prompts()).hasSize(3);
         assertThat(view.photoAvailable()).isFalse();
         assertThat(view.languages()).isEmpty();
+        // The wider profile is level 3, not this one.
+        assertThat(view.occupation()).isNull();
     }
 
     @Test
@@ -86,7 +89,10 @@ class PartnerViewTest {
         assertThat(view.languages()).isNotEmpty();
         assertThat(view.intent()).isNotNull();
         assertThat(view.nickname()).isEqualTo("Leo");
-        assertThat(view.bio()).isNotNull();
+        assertThat(view.prompts()).hasSize(3);
+        assertThat(view.occupation()).isNotNull();
+        assertThat(view.fromPlace()).isNotNull();
+        assertThat(view.genderLabel()).isNotNull();
     }
 
     @Test
@@ -104,9 +110,12 @@ class PartnerViewTest {
                         "interestsShown",
                         "approxDistanceKm",
                         "nickname",
-                        "bio",
+                        "prompts",
                         "languages",
                         "intent",
+                        "genderLabel",
+                        "occupation",
+                        "fromPlace",
                         "photoAvailable");
     }
 }
