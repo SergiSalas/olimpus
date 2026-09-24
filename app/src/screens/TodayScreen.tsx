@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
   Easing,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -11,13 +10,18 @@ import {
   View,
 } from 'react-native';
 import { fetchConnections, fetchToday, type Connection, type Profile, type Today } from '../api';
-import { Boton, Etiqueta, Pastilla, Tarjeta } from '../components';
+import { Entrada, Etiqueta, Flotar, Rebote, Tarjeta } from '../components';
 import { useNombreInteres } from '../interests';
+import { Conexiones, Consejo, TuDia } from '../components/Hoy';
+import { PanelPruebas } from '../components/PanelPruebas';
+import { presentacionVista } from '../session';
 import { colors, fonts, text } from '../theme';
-import { useRef } from 'react';
 
 /**
  * La pantalla principal: con quién hablas hoy.
+ *
+ * Como solo hay una conversación al día, no hay lista ni botón aparte: la
+ * tarjeta de la persona ES el botón que abre el chat.
  *
  * De la otra persona solo llega lo del nivel 0 (edad, dos intereses y a qué
  * distancia está). El apodo, la bio y la foto no están ni en la respuesta del
@@ -28,27 +32,21 @@ export function TodayScreen({
   perfil,
   onAbrirChat,
   onPerfil,
-  onSalir,
 }: {
   token: string;
   perfil: Profile;
   onAbrirChat: (conversationId: string) => void;
   onPerfil: () => void;
-  onSalir: () => void;
 }) {
   const [today, setToday] = useState<Today | null>(null);
   const [conexiones, setConexiones] = useState<Connection[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const nombreInteres = useNombreInteres();
 
   const cargar = useCallback(async () => {
     setError(null);
     try {
-      const [hoy, misConexiones] = await Promise.all([
-        fetchToday(token),
-        fetchConnections(token),
-      ]);
+      const [hoy, misConexiones] = await Promise.all([fetchToday(token), fetchConnections(token)]);
       setToday(hoy);
       setConexiones(misConexiones);
     } catch {
@@ -63,106 +61,179 @@ export function TodayScreen({
   }, [cargar]);
 
   return (
-    <ScrollView
-      style={estilos.pantalla}
-      contentContainerStyle={estilos.contenido}
-      refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}>
-      <View style={estilos.cabecera}>
-        <Text style={estilos.marca}>Olimpus</Text>
-        <Pressable onPress={onPerfil}>
-          <Text style={estilos.enlaceCabecera}>{perfil.nickname}</Text>
-        </Pressable>
-      </View>
-
-      {cargando && !today && <ActivityIndicator style={{ marginTop: 40 }} color={colors.accent} />}
-      {error && <Text style={estilos.error}>{error}</Text>}
-
-      {today?.hasConversation && today.partner && (
-        <View style={{ gap: 18 }}>
-          <Etiqueta>Hoy · nivel 0</Etiqueta>
-          <Text style={text.tituloGrande}>
-            Tu conversación{'\n'}de hoy
-          </Text>
-
-          <Tarjeta>
-            <View style={estilos.filaPersona}>
-              <View style={estilos.circuloFoto}>
-                <Text style={estilos.interrogante}>?</Text>
-              </View>
-              <View style={{ gap: 3, flexShrink: 1 }}>
-                <Text style={estilos.persona}>
-                  {today.partner.age} años · a {today.partner.approxDistanceKm} km
-                </Text>
-                <Text style={estilos.pistaPersona}>Foto y apodo, todavía no</Text>
-              </View>
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        style={estilos.pantalla}
+        contentContainerStyle={estilos.contenido}
+        refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}>
+        <View style={estilos.cabecera}>
+          <Text style={estilos.marca}>Olimpus</Text>
+          <Rebote style={estilos.yo} onPress={onPerfil}>
+            <Text style={estilos.yoTexto}>Mi perfil</Text>
+            <View style={estilos.yoCirculo}>
+              <Text style={estilos.yoInicial}>{perfil.nickname.charAt(0).toUpperCase()}</Text>
             </View>
-
-            <View style={estilos.separador} />
-
-            <View style={estilos.rejilla}>
-              {today.partner.interests.map((interes) => (
-                <Pastilla key={interes} texto={nombreInteres(interes)} elegida tono="suave" />
-              ))}
-            </View>
-
-            <Text style={estilos.pistaPersona}>
-              {today.sharedInterests.length > 0
-                ? `${today.sharedInterests.length === 1 ? 'Un interés' : 'Dos intereses'} en común contigo. El resto se desbloquea hablando.`
-                : 'El resto de su perfil se desbloquea hablando.'}
-            </Text>
-          </Tarjeta>
-
-          <Boton
-            texto="Empezar a hablar"
-            tono="oscuro"
-            onPress={() => today.conversationId && onAbrirChat(today.conversationId)}
-          />
-          <Text style={estilos.cierre}>
-            Cierra hoy a las {hora(today.closesAt)}, para los dos.
-          </Text>
+          </Rebote>
         </View>
-      )}
 
-      {today && !today.hasConversation && <Buscando today={today} />}
+        {cargando && !today && (
+          <ActivityIndicator style={{ marginTop: 40 }} color={colors.accent} />
+        )}
+        {error && <Text style={estilos.error}>{error}</Text>}
 
-      {conexiones.length > 0 && (
-        <View style={{ gap: 10, marginTop: 8 }}>
-          <Etiqueta>
-            {conexiones.length === 1 ? 'Tu conexión' : `Tus ${conexiones.length} conexiones`}
-          </Etiqueta>
-          {conexiones.map((conexion) => (
-            <Pressable key={conexion.conversationId} onPress={() => onAbrirChat(conexion.conversationId)}>
-              <Tarjeta>
-                <View style={estilos.filaConexion}>
-                  <View style={estilos.circuloConexion}>
-                    <Text style={estilos.inicial}>
-                      {(conexion.nickname ?? '?').charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={{ flexShrink: 1, gap: 2 }}>
-                    <Text style={estilos.persona}>
-                      {conexion.nickname}, {conexion.age}
-                    </Text>
-                    <Text style={estilos.pistaPersona} numberOfLines={1}>
-                      {conexion.lastMessage ?? 'Sin mensajes todavía'}
-                    </Text>
-                  </View>
-                </View>
-              </Tarjeta>
-            </Pressable>
-          ))}
-          <Text style={estilos.cierre}>
-            Las conexiones no caducan ni ocupan tu conversación del día.
-          </Text>
-        </View>
-      )}
+        {today?.hasConversation && today.partner && today.conversationId && (
+          <View style={{ gap: 14 }}>
+            <Entrada>
+              <Text style={estilos.titular}>Hoy hablas con…</Text>
+            </Entrada>
+            <TarjetaHoy
+              today={today}
+              onAbrir={() => today.conversationId && onAbrirChat(today.conversationId)}
+            />
+          </View>
+        )}
 
-      <View style={{ flex: 1 }} />
-      <Pressable style={{ paddingVertical: 14 }} onPress={onSalir}>
-        <Text style={estilos.enlaceFlojo}>Cerrar sesión</Text>
-      </Pressable>
-    </ScrollView>
+        {today && !today.hasConversation && <Buscando today={today} />}
+
+        {today?.hasConversation && today.closesAt && (
+          <Entrada retraso={250}>
+            <TuDia closesAt={today.closesAt} />
+          </Entrada>
+        )}
+
+        {today && (
+          <Entrada retraso={320}>
+            <Conexiones conexiones={conexiones} onAbrir={onAbrirChat} />
+          </Entrada>
+        )}
+
+        {today && (
+          <Entrada retraso={400}>
+            <Consejo />
+          </Entrada>
+        )}
+      </ScrollView>
+      <PanelPruebas token={token} onHecho={cargar} />
+    </View>
   );
+}
+
+/**
+ * La persona de hoy, y a la vez el botón que abre la conversación. Late, flota
+ * y cuenta el tiempo que queda: tiene que apetecer tocarla.
+ */
+function TarjetaHoy({ today, onAbrir }: { today: Today; onAbrir: () => void }) {
+  const nombreInteres = useNombreInteres();
+  const [empezada, setEmpezada] = useState(false);
+  const [, setReloj] = useState(0);
+  const partner = today.partner!;
+
+  useEffect(() => {
+    if (today.conversationId) presentacionVista(today.conversationId).then(setEmpezada);
+  }, [today.conversationId]);
+
+  // La cuenta atrás se refresca cada medio minuto.
+  useEffect(() => {
+    const t = setInterval(() => setReloj((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const comunes = today.sharedInterests.length;
+
+  return (
+    <Entrada retraso={120}>
+      <Rebote style={estilos.tarjetaHoy} onPress={onAbrir}>
+        <View style={estilos.filaArriba}>
+          <Text style={estilos.etiquetaHoy}>NIVEL 0 · MATCH</Text>
+          {today.closesAt && (
+            <View style={estilos.quedan}>
+              <Text style={estilos.quedanTexto}>⏳ quedan {quedanHasta(today.closesAt)}</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={estilos.centroHoy}>
+          <Halo />
+          <Halo retraso={900} />
+          <Flotar distancia={6} giro={4}>
+            <View style={estilos.bola}>
+              <Text style={estilos.bolaTexto}>?</Text>
+            </View>
+          </Flotar>
+        </View>
+
+        <Text style={estilos.edad}>{partner.age} años</Text>
+        <Text style={estilos.distancia}>
+          a unos {partner.approxDistanceKm} km · foto y apodo, todavía no
+        </Text>
+
+        <View style={estilos.chips}>
+          {partner.interests.map((interes) => {
+            const comun = today.sharedInterests.includes(interes);
+            return (
+              <View key={interes} style={[estilos.chip, comun && estilos.chipComun]}>
+                <Text style={[estilos.chipTexto, comun && { color: colors.ink }]}>
+                  {nombreInteres(interes)}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+        {comunes > 0 && (
+          <Text style={estilos.comunes}>
+            {comunes === 1 ? 'Un interés' : `${comunes} intereses`} en común contigo
+          </Text>
+        )}
+
+        <View style={estilos.boton}>
+          <Text style={estilos.botonTexto}>
+            {empezada ? 'Seguir hablando' : 'Toca para empezar a hablar'}
+          </Text>
+          <Flotar distancia={3} giro={0} duracion={1200}>
+            <Text style={estilos.botonTexto}>→</Text>
+          </Flotar>
+        </View>
+      </Rebote>
+    </Entrada>
+  );
+}
+
+/** Un aro que sale de la bola y se desvanece, en bucle: la tarjeta "late". */
+function Halo({ retraso = 0 }: { retraso?: number }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const bucle = Animated.loop(
+      Animated.timing(v, {
+        toValue: 1,
+        duration: 1800,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    );
+    const t = setTimeout(() => bucle.start(), retraso);
+    return () => {
+      clearTimeout(t);
+      bucle.stop();
+    };
+  }, [v, retraso]);
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        estilos.halo,
+        {
+          opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0] }),
+          transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 1.8] }) }],
+        },
+      ]}
+    />
+  );
+}
+
+function quedanHasta(iso: string): string {
+  const minutos = Math.max(0, Math.round((Date.parse(iso) - Date.now()) / 60_000));
+  const horas = Math.floor(minutos / 60);
+  return horas > 0 ? `${horas} h ${minutos % 60} min` : `${minutos} min`;
 }
 
 /**
@@ -171,6 +242,7 @@ export function TodayScreen({
  */
 function Buscando({ today }: { today: Today }) {
   const pulso = useRef(new Animated.Value(0)).current;
+  const giro = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const animacion = Animated.loop(
@@ -189,17 +261,33 @@ function Buscando({ today }: { today: Today }) {
         }),
       ]),
     );
+    const vuelta = Animated.loop(
+      Animated.timing(giro, {
+        toValue: 1,
+        duration: 9000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
     animacion.start();
-    return () => animacion.stop();
-  }, [pulso]);
+    vuelta.start();
+    return () => {
+      animacion.stop();
+      vuelta.stop();
+    };
+  }, [pulso, giro]);
 
   const escala = pulso.interpolate({ inputRange: [0, 1], outputRange: [1, 1.07] });
-  const opacidad = pulso.interpolate({ inputRange: [0, 1], outputRange: [1, 0.55] });
+  const opacidad = pulso.interpolate({ inputRange: [0, 1], outputRange: [1, 0.7] });
+  const rotacion = giro.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
   return (
     <View style={estilos.buscando}>
       <Animated.View
-        style={[estilos.aroGrande, { transform: [{ scale: escala }], opacity: opacidad }]}>
+        style={[
+          estilos.aroGrande,
+          { transform: [{ scale: escala }, { rotate: rotacion }], opacity: opacidad },
+        ]}>
         <View style={estilos.aroMedio}>
           <View style={estilos.nucleo} />
         </View>
@@ -224,11 +312,6 @@ function Buscando({ today }: { today: Today }) {
   );
 }
 
-function hora(iso: string | null): string {
-  if (!iso) return '';
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
 function fechaYHora(iso: string): string {
   const fecha = new Date(iso);
   const texto = fecha.toLocaleString([], {
@@ -241,51 +324,134 @@ function fechaYHora(iso: string): string {
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.bg },
-  contenido: { paddingHorizontal: 26, paddingTop: 58, paddingBottom: 40, gap: 16, flexGrow: 1 },
+  contenido: { paddingHorizontal: 22, paddingTop: 58, paddingBottom: 40, gap: 16, flexGrow: 1 },
   cabecera: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  marca: { fontFamily: fonts.serif, fontSize: 24, color: colors.accent },
-  enlaceCabecera: { fontFamily: fonts.sansMedia, fontSize: 14, color: colors.ink2 },
+  marca: { fontFamily: fonts.displayFuerte, fontSize: 30, color: colors.accent },
+  yo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.surface,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderBottomWidth: 3,
+    borderColor: colors.line,
+    paddingLeft: 14,
+    padding: 4,
+  },
+  yoTexto: { fontFamily: fonts.sansNegrita, fontSize: 13, color: colors.ink2 },
+  yoCirculo: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    backgroundColor: colors.uva,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  yoInicial: { fontFamily: fonts.displayFuerte, fontSize: 16, color: '#FFFFFF' },
+  titular: { fontFamily: fonts.display, fontSize: 30, color: colors.ink },
 
-  filaPersona: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  circuloFoto: {
-    width: 56,
-    height: 56,
+  tarjetaHoy: {
+    backgroundColor: colors.uva,
+    borderRadius: 32,
+    borderBottomWidth: 7,
+    borderColor: '#6A3FD1',
+    padding: 22,
+    alignItems: 'center',
+    shadowColor: colors.uva,
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+  filaArriba: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  etiquetaHoy: {
+    fontFamily: fonts.sansNegrita,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    color: colors.onInk2,
+  },
+  quedan: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderRadius: 999,
-    backgroundColor: colors.surface2,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+  },
+  quedanTexto: { fontFamily: fonts.sansNegrita, fontSize: 12, color: '#FFFFFF' },
+  centroHoy: { height: 170, width: 170, alignItems: 'center', justifyContent: 'center' },
+  halo: {
+    position: 'absolute',
+    width: 104,
+    height: 104,
+    borderRadius: 999,
+    borderWidth: 3,
+    borderColor: colors.sol,
+  },
+  bola: {
+    width: 104,
+    height: 104,
+    borderRadius: 999,
+    backgroundColor: colors.sol,
+    borderWidth: 5,
+    borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  interrogante: { fontFamily: fonts.sansNegrita, fontSize: 15, color: colors.ink5 },
-  persona: { fontFamily: fonts.sansNegrita, fontSize: 16, color: colors.ink },
-  pistaPersona: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 19, color: colors.ink3 },
-  separador: { height: 1, backgroundColor: colors.lineSuave },
-  rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  filaConexion: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  circuloConexion: {
-    width: 46,
-    height: 46,
-    borderRadius: 999,
-    backgroundColor: colors.accentWash,
-    borderWidth: 1,
-    borderColor: colors.accentBorde,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inicial: { fontFamily: fonts.serif, fontSize: 20, color: colors.accent },
-  cierre: {
-    fontFamily: fonts.sans,
-    fontSize: 13,
-    color: colors.ink3,
+  bolaTexto: { fontFamily: fonts.displayFuerte, fontSize: 48, color: colors.ink },
+  edad: { fontFamily: fonts.displayFuerte, fontSize: 34, color: '#FFFFFF' },
+  distancia: {
+    fontFamily: fonts.sansMedia,
+    fontSize: 14,
+    color: colors.onInk2,
     textAlign: 'center',
+    marginTop: 2,
   },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 7,
+    marginTop: 16,
+  },
+  chip: {
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderRadius: 999,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+  },
+  chipComun: { backgroundColor: colors.sol },
+  chipTexto: { fontFamily: fonts.sansNegrita, fontSize: 13.5, color: '#FFFFFF' },
+  comunes: { fontFamily: fonts.sansMedia, fontSize: 12.5, color: colors.onInk2, marginTop: 8 },
+  boton: {
+    alignSelf: 'stretch',
+    marginTop: 20,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 4,
+    borderColor: colors.trazo,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  botonTexto: { fontFamily: fonts.sansNegrita, fontSize: 16, color: colors.uva },
+
+  pistaPersona: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 19, color: colors.ink3 },
 
   buscando: { alignItems: 'center', gap: 22, paddingVertical: 24 },
   aroGrande: {
     width: 150,
     height: 150,
     borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: '#E0D4C2',
+    borderWidth: 4,
+    borderStyle: 'dashed',
+    borderColor: colors.sol,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -293,12 +459,20 @@ const estilos = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: '#DCCFBB',
+    borderWidth: 4,
+    borderStyle: 'dotted',
+    borderColor: colors.uva,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nucleo: { width: 44, height: 44, borderRadius: 999, backgroundColor: colors.accent },
+  nucleo: {
+    width: 48,
+    height: 48,
+    borderRadius: 999,
+    backgroundColor: colors.accent,
+    borderWidth: 5,
+    borderColor: colors.accentBorde,
+  },
   cuando: { fontFamily: fonts.sansNegrita, fontSize: 15.5, color: colors.ink },
 
   error: {
@@ -307,5 +481,4 @@ const estilos = StyleSheet.create({
     color: colors.error,
     textAlign: 'center',
   },
-  enlaceFlojo: { fontFamily: fonts.sansMedia, fontSize: 13.5, color: colors.ink4, textAlign: 'center' },
 });
