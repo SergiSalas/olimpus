@@ -1,4 +1,6 @@
 import Constants from 'expo-constants';
+import { fetch as subirFetch } from 'expo/fetch';
+import { File } from 'expo-file-system';
 
 /**
  * Durante el desarrollo, el movil carga la app desde este mismo ordenador.
@@ -102,12 +104,19 @@ export type LanguageSkill = { code: string; level: LanguageLevel };
 /** `name` es el id que se guarda ("ice-climbing"); `label`, lo que se enseña ("Escalada en hielo"). */
 export type Interest = { name: string; label: string };
 
+/** La pregunta elegida del catálogo y lo que se contestó. */
+export type PromptAnswer = { question: string; answer: string };
+
+/** `name` es el id que se guarda ("always-ask"); `label`, la pregunta escrita. */
+export type PromptQuestion = { name: string; label: string };
+
 export type ProfileData = {
   nickname: string;
-  bio: string;
   /** "1995-03-20" */
   birthDate: string;
   gender: Gender;
+  /** Cómo lo dice la persona. Se enseña en el nivel 3, no se usa para emparejar. */
+  genderLabel: string;
   seeking: Gender[];
   ageMin: number;
   ageMax: number;
@@ -119,11 +128,17 @@ export type ProfileData = {
   conversationDepth: number;
   intent: Intent;
   interests: string[];
+  /** Las tres preguntas contestadas. Es lo que se abre en el nivel 2. */
+  prompts: PromptAnswer[];
+  occupation: string;
+  fromPlace: string;
 };
 
 export type Profile = ProfileData & { age: number };
 
 export const fetchInterests = () => request<Interest[]>('/api/interests');
+
+export const fetchPrompts = () => request<PromptQuestion[]>('/api/prompts');
 
 /** Devuelve null si esa cuenta todavía no ha hecho el registro. */
 export async function fetchProfile(token: string): Promise<Profile | null> {
@@ -149,16 +164,19 @@ export type PhotoState = {
 /**
  * La foto viaja como formulario, no como JSON: así no hay que convertirla a
  * texto y crecer un tercio por el camino.
+ *
+ * El fichero se manda con el `File` de expo-file-system, que implementa Blob.
+ * El apaño de toda la vida —pasarle a FormData un objeto `{uri, name, type}`—
+ * ya no vale: el FormData de React Native pasó a seguir el estándar y lo
+ * rechaza con «Unsupported FormDataPart implementation», que es un error que
+ * solo se ve al subir de verdad, nunca al compilar. Y el fetch es el de
+ * `expo/fetch`, que es el que la documentación de la v57 usa para subir.
  */
 export async function uploadPhoto(token: string, uri: string): Promise<PhotoState> {
   const formulario = new FormData();
-  formulario.append('file', {
-    uri,
-    name: 'foto.jpg',
-    type: 'image/jpeg',
-  } as unknown as Blob);
+  formulario.append('file', new File(uri));
 
-  const response = await fetch(`${backendUrl()}/api/profile/photo`, {
+  const response = await subirFetch(`${backendUrl()}/api/profile/photo`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formulario,
@@ -199,11 +217,14 @@ export type Partner = {
   approxDistanceKm: number;
   /** Desde el nivel 1. */
   nickname: string | null;
-  /** Desde el nivel 2. */
-  bio: string | null;
+  /** Desde el nivel 2: las tres preguntas contestadas, con la pregunta ya escrita. */
+  prompts: { question: string; label: string; answer: string }[];
   /** Desde el nivel 3. */
   languages: string[];
   intent: string | null;
+  genderLabel: string | null;
+  occupation: string | null;
+  fromPlace: string | null;
   /** Nivel 3: la foto ya se puede pedir. */
   photoAvailable: boolean;
 };
@@ -358,3 +379,16 @@ export function openChatSocket(
 
   return socket;
 }
+
+// ---------- modo de pruebas (solo en desarrollo) ----------
+
+/** Qué paso del día adelantar en la conversación de prueba. */
+export type PasoDemo = 'HOUR' | 'PHOTO' | 'DECISION' | 'CLOSE';
+
+/** Crea una persona de prueba que encaja contigo y te da la conversación de hoy con ella. */
+export const startDemo = (token: string) =>
+  request<{ conversationId: string; nickname: string }>('/api/dev/demo', { method: 'POST' }, token);
+
+/** Mueve el reloj de la conversación de prueba: las reglas no cambian, solo las horas. */
+export const advanceDemo = (token: string, step: PasoDemo) =>
+  request<unknown>(`/api/dev/demo/advance?step=${step}`, { method: 'POST' }, token);
