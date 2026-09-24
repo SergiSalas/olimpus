@@ -218,7 +218,8 @@ export function ChatScreen({
     );
   }
 
-  const cerrada = chat.state !== 'OPEN';
+  // Una conexión no cierra nunca: se sigue escribiendo aunque su estado ya no sea OPEN.
+  const cerrada = chat.state !== 'OPEN' && !chat.connected;
   const { partner } = chat;
   const pedirFoto = !cerrada && chat.canAskForPhoto && !partner.photoAvailable;
   const puedeEnviar = texto.trim().length > 0 && !enviando;
