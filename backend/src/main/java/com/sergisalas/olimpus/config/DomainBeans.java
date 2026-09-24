@@ -11,7 +11,9 @@ import com.sergisalas.olimpus.auth.domain.Secrets;
 import com.sergisalas.olimpus.auth.domain.SessionRepository;
 import com.sergisalas.olimpus.chat.application.CloseFinishedConversations;
 import com.sergisalas.olimpus.chat.application.GetChat;
+import com.sergisalas.olimpus.chat.application.LikeMessage;
 import com.sergisalas.olimpus.chat.application.SendMessage;
+import com.sergisalas.olimpus.chat.domain.MessageLikes;
 import com.sergisalas.olimpus.chat.domain.MessageModerator;
 import com.sergisalas.olimpus.chat.domain.MessageRepository;
 import com.sergisalas.olimpus.safety.application.ReportAndBlock;
@@ -182,10 +184,20 @@ public class DomainBeans {
     GetChat getChat(
             ConversationRepository conversations,
             MessageRepository messages,
+            MessageLikes likes,
             ProfileDirectory profiles,
             RoundSchedule schedule,
             Clock clock) {
-        return new GetChat(conversations, messages, profiles, schedule, clock);
+        return new GetChat(conversations, messages, likes, profiles, schedule, clock);
+    }
+
+    @Bean
+    LikeMessage likeMessage(
+            ConversationRepository conversations,
+            MessageRepository messages,
+            MessageLikes likes,
+            Clock clock) {
+        return new LikeMessage(conversations, messages, likes, clock);
     }
 
     @Bean

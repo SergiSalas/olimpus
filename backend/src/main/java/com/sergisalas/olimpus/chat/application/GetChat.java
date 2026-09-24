@@ -1,6 +1,7 @@
 package com.sergisalas.olimpus.chat.application;
 
 import com.sergisalas.olimpus.chat.domain.Message;
+import com.sergisalas.olimpus.chat.domain.MessageLikes;
 import com.sergisalas.olimpus.chat.domain.MessageRepository;
 import com.sergisalas.olimpus.chat.domain.NotYourConversationException;
 import com.sergisalas.olimpus.matching.domain.Conversation;
@@ -14,6 +15,7 @@ import com.sergisalas.olimpus.matching.domain.RoundSchedule;
 import com.sergisalas.olimpus.profile.domain.Profile;
 import java.time.Clock;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /** Use case: open the chat. Returns the messages and the little that is visible of the other person. */
@@ -24,6 +26,8 @@ public class GetChat {
             PartnerView partner,
             List<String> sharedInterests,
             List<Message> messages,
+            /** The messages that have a heart. */
+            Set<UUID> liked,
             /** Whether the "I want to see you" button belongs on the screen yet. */
             boolean canAskForPhoto,
             /** Whether this viewer already asked. The other one's answer is never told. */
@@ -34,6 +38,7 @@ public class GetChat {
 
     private final ConversationRepository conversations;
     private final MessageRepository messages;
+    private final MessageLikes likes;
     private final ProfileDirectory profiles;
     private final RoundSchedule schedule;
     private final Clock clock;
@@ -41,11 +46,13 @@ public class GetChat {
     public GetChat(
             ConversationRepository conversations,
             MessageRepository messages,
+            MessageLikes likes,
             ProfileDirectory profiles,
             RoundSchedule schedule,
             Clock clock) {
         this.conversations = conversations;
         this.messages = messages;
+        this.likes = likes;
         this.profiles = profiles;
         this.schedule = schedule;
         this.clock = clock;
@@ -78,6 +85,7 @@ public class GetChat {
                 view,
                 shared,
                 written,
+                likes.likedIn(conversationId),
                 UnlockLadder.canAskForPhoto(conversation, written, now),
                 conversation.photoWantedBy(viewer),
                 conversation.acceptsDecisionAt(now),
