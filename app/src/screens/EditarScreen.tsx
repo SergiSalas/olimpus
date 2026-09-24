@@ -19,6 +19,7 @@ import {
   Ubicacion,
 } from '../preguntas';
 import { colors, espacios, fonts, text } from '../theme';
+import { t } from '../i18n';
 
 /**
  * Cambiar lo ya respondido, todo en una pantalla.
@@ -53,9 +54,9 @@ export function EditarScreen({
       onGuardado(await guardar(token, b));
     } catch (e) {
       if (e instanceof FotoFallida) {
-        setError(`Tus cambios están guardados, pero la foto no subió: ${e.message}`);
+        setError(t('editar.fotoFallo', { motivo: e.message }));
       } else {
-        setError(e instanceof ApiError ? e.message : 'No se pudieron guardar los cambios.');
+        setError(e instanceof ApiError ? e.message : t('editar.error'));
       }
     } finally {
       setOcupado(false);
@@ -68,7 +69,7 @@ export function EditarScreen({
         <Rebote style={estilos.redondo} onPress={onVolver}>
           <Text style={estilos.flecha}>←</Text>
         </Rebote>
-        <Text style={estilos.cabeceraTexto}>Cambiar mis respuestas</Text>
+        <Text style={estilos.cabeceraTexto}>{t('perfil.cambiarRespuestas')}</Text>
       </View>
 
       <View style={estilos.cuerpo}>
@@ -77,44 +78,42 @@ export function EditarScreen({
           contentContainerStyle={{ paddingBottom: 24 }}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets>
-          <Text style={[text.ayuda, { marginBottom: 22 }]}>
-            Toca solo lo que quieras cambiar. Se guarda todo junto al darle abajo.
-          </Text>
+          <Text style={[text.ayuda, { marginBottom: 22 }]}>{t('editar.ayuda')}</Text>
 
-          <Seccion nombre="Quién eres" emoji="👋" orden={0}>
+          <Seccion nombre={t('bloque.quien')} emoji="👋" orden={0}>
             <Apodo {...props} />
             <Nacimiento {...props} />
             <Genero {...props} />
           </Seccion>
 
-          <Seccion nombre="A quién buscas" emoji="🔍" orden={1}>
+          <Seccion nombre={t('bloque.busca')} emoji="🔍" orden={1}>
             <Busco {...props} />
             <EdadYDistancia {...props} />
           </Seccion>
 
-          <Seccion nombre="Dónde y en qué idioma" emoji="🌍" orden={2}>
+          <Seccion nombre={t('bloque.donde')} emoji="🌍" orden={2}>
             <Ubicacion {...props} />
             <Idiomas {...props} />
           </Seccion>
 
-          <Seccion nombre="Cómo hablas" emoji="🗣️" orden={3}>
+          <Seccion nombre={t('bloque.hablas')} emoji="🗣️" orden={3}>
             <ComoHablas {...props} />
             <Intencion {...props} />
           </Seccion>
 
-          <Seccion nombre="Qué cuentas de ti" emoji="💫" orden={4}>
+          <Seccion nombre={t('bloque.cuentas')} emoji="💫" orden={4}>
             <Intereses {...props} />
             <Preguntas {...props} />
             <TrabajoYSitio {...props} />
           </Seccion>
 
-          <Seccion nombre="Tu foto" emoji="📸" orden={5}>
+          <Seccion nombre={t('bloque.foto')} emoji="📸" orden={5}>
             <Foto {...props} token={token} yaHayUna />
           </Seccion>
         </ScrollView>
 
         <Boton
-          texto="Guardar cambios"
+          texto={t('editar.guardar')}
           onPress={aplicar}
           deshabilitado={!completo(b)}
           ocupado={ocupado}

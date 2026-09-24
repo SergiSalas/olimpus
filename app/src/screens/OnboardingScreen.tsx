@@ -20,6 +20,7 @@ import {
   type Props,
 } from '../preguntas';
 import { colors, espacios, text } from '../theme';
+import { t } from '../i18n';
 
 /**
  * El registro de la primera vez, en seis bloques.
@@ -98,37 +99,37 @@ export function OnboardingScreen({
     listo: boolean;
   }[] = [
     {
-      nombre: 'Quién eres',
+      nombre: t('bloque.quien'),
       emoji: '👋',
       contenido: [Apodo, Nacimiento, Genero],
       listo: BLOQUES_LISTOS[0](b),
     },
     {
-      nombre: 'A quién buscas',
+      nombre: t('bloque.busca'),
       emoji: '🔍',
       contenido: [Busco, EdadYDistancia],
       listo: BLOQUES_LISTOS[1](b),
     },
     {
-      nombre: 'Dónde y en qué idioma',
+      nombre: t('bloque.donde'),
       emoji: '🌍',
       contenido: [Ubicacion, Idiomas],
       listo: BLOQUES_LISTOS[2](b),
     },
     {
-      nombre: 'Cómo hablas',
+      nombre: t('bloque.hablas'),
       emoji: '🗣️',
       contenido: [ComoHablas, Intencion],
       listo: BLOQUES_LISTOS[3](b),
     },
     {
-      nombre: 'Qué cuentas de ti',
+      nombre: t('bloque.cuentas'),
       emoji: '💫',
       contenido: [Intereses, Preguntas, TrabajoYSitio],
       listo: BLOQUES_LISTOS[4](b),
     },
     {
-      nombre: 'Tu foto',
+      nombre: t('bloque.foto'),
       emoji: '📸',
       contenido: [(p) => <Foto {...p} token={token} yaHayUna={false} />],
       listo: b.foto !== null,
@@ -147,9 +148,9 @@ export function OnboardingScreen({
       // El registro quedó guardado y solo falló la foto: se dice tal cual, con
       // el motivo, en vez de mandar a nadie a rehacer seis bloques para nada.
       if (e instanceof FotoFallida) {
-        setError(`Tu registro está guardado, pero la foto no subió: ${e.message}`);
+        setError(t('registro.fotoFallo', { motivo: e.message }));
       } else {
-        setError(e instanceof ApiError ? e.message : 'No se pudo guardar el registro.');
+        setError(e instanceof ApiError ? e.message : t('registro.error'));
       }
     } finally {
       setOcupado(false);
@@ -215,7 +216,7 @@ export function OnboardingScreen({
         </ScrollView>
 
         <Boton
-          texto={ultimo ? 'Terminar registro' : 'Continuar'}
+          texto={ultimo ? t('registro.terminar') : t('registro.continuar')}
           onPress={ultimo ? terminar : () => irA(bloque + 1)}
           deshabilitado={!actual.listo}
           ocupado={ocupado}

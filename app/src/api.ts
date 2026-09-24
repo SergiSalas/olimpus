@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import { fetch as subirFetch } from 'expo/fetch';
 import { File } from 'expo-file-system';
+import { locale, t } from './i18n';
 
 /**
  * Durante el desarrollo, el movil carga la app desde este mismo ordenador.
@@ -35,6 +36,8 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      // Así los errores, los intereses y las preguntas llegan en el idioma de la app.
+      'Accept-Language': locale(),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -46,7 +49,10 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   const data = body ? JSON.parse(body) : null;
 
   if (!response.ok) {
-    throw new ApiError(data?.error ?? `El servidor respondió ${response.status}`, response.status);
+    throw new ApiError(
+      data?.error ?? t('comun.servidorRespondio', { estado: response.status }),
+      response.status,
+    );
   }
   return data as T;
 }
@@ -178,14 +184,17 @@ export async function uploadPhoto(token: string, uri: string): Promise<PhotoStat
 
   const response = await subirFetch(`${backendUrl()}/api/profile/photo`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${token}`, 'Accept-Language': locale() },
     body: formulario,
   });
 
   const body = await response.text();
   const data = body ? JSON.parse(body) : null;
   if (!response.ok) {
-    throw new ApiError(data?.error ?? `El servidor respondió ${response.status}`, response.status);
+    throw new ApiError(
+      data?.error ?? t('comun.servidorRespondio', { estado: response.status }),
+      response.status,
+    );
   }
   return data as PhotoState;
 }

@@ -3,14 +3,12 @@ import { Animated, Easing, ScrollView, StyleSheet, Text, View } from 'react-nati
 import type { Connection } from '../api';
 import { Entrada, Rebote } from '../components';
 import { colors, fonts } from '../theme';
+import { horaCorta as hora, t } from '../i18n';
 
 /** El reparto es a las 4:00 y el cierre a las 22:00: dieciocho horas de día. */
 const DURACION_DIA_MS = 18 * 60 * 60 * 1000;
 /** La pregunta final llega media hora antes del cierre. */
 const ANTES_DE_DECIDIR_MS = 30 * 60 * 1000;
-
-const hora = (ms: number) =>
-  new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 /**
  * El día en una línea: del reparto al cierre, con un punto que marca dónde
@@ -40,7 +38,7 @@ export function TuDia({ closesAt }: { closesAt: string }) {
 
   return (
     <View style={estilos.tarjeta}>
-      <Text style={estilos.titulo}>Tu día</Text>
+      <Text style={estilos.titulo}>{t('dia.titulo')}</Text>
 
       <View style={estilos.pista}>
         <View style={[estilos.relleno, { width: `${avance * 100}%` }]} />
@@ -64,24 +62,27 @@ export function TuDia({ closesAt }: { closesAt: string }) {
       <View style={estilos.etiquetas}>
         <Text style={estilos.etiqueta}>
           {hora(reparto)}
-          {'\n'}Reparto ✓
+          {'\n'}
+          {t('dia.reparto')}
         </Text>
         <Text style={[estilos.etiqueta, { textAlign: 'center' }]}>
           {hora(decision)}
-          {'\n'}Decisión
+          {'\n'}
+          {t('dia.decision')}
         </Text>
         <Text style={[estilos.etiqueta, { textAlign: 'right' }]}>
           {hora(cierre)}
-          {'\n'}Cierre
+          {'\n'}
+          {t('dia.cierre')}
         </Text>
       </View>
 
       <Text style={estilos.frase}>
         {ahora >= cierre
-          ? '🌙 El día ya ha cerrado. Mañana a las 4:00 hay reparto nuevo.'
+          ? t('dia.cerrado')
           : decidiendo
-            ? '⏳ Es la última media hora: entra al chat y di si quieres seguir.'
-            : `A las ${hora(decision)} te preguntaremos si quieres seguir conociendo a esta persona.`}
+            ? t('dia.decidiendo')
+            : t('dia.preguntaremos', { hora: hora(decision) })}
       </Text>
     </View>
   );
@@ -102,7 +103,7 @@ export function Conexiones({
 }) {
   return (
     <View style={{ gap: 10 }}>
-      <Text style={estilos.titulo}>Tus conexiones 💖</Text>
+      <Text style={estilos.titulo}>{t('conexiones.titulo')}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -129,26 +130,24 @@ export function Conexiones({
         ))}
       </ScrollView>
       <Text style={estilos.nota}>
-        {conexiones.length === 0
-          ? 'Si al final del día los dos decís que sí, aparecerá aquí. Las conexiones no caducan.'
-          : 'Las conexiones no caducan ni ocupan tu conversación del día.'}
+        {conexiones.length === 0 ? t('conexiones.vacio') : t('conexiones.nota')}
       </Text>
     </View>
   );
 }
 
 const CONSEJOS = [
-  'Pregunta por algo de sus intereses: es lo que mejor arranca una conversación.',
-  'Las preguntas abiertas dan más juego que las de sí o no.',
-  'No hay prisa por la foto: cuanto más habléis antes, más os apetecerá veros.',
-  'Decir que no al final del día es anónimo: nadie sabrá qué respondiste.',
-  'Contesta a lo que te cuenta antes de cambiar de tema: se nota que escuchas.',
-  'El humor ayuda, pero lo que engancha es la curiosidad de verdad.',
-  'Si la conversación no fluye, pregunta por su plan perfecto de un martes.',
-  'Tus tres preguntas se leen en el nivel 2: que den algo a lo que responder.',
-  'Un mensaje largo de vez en cuando dice más que diez de una palabra.',
-  'Si alguien te hace sentir incómodo, reportar corta la conversación al momento.',
-];
+  'consejo.0',
+  'consejo.1',
+  'consejo.2',
+  'consejo.3',
+  'consejo.4',
+  'consejo.5',
+  'consejo.6',
+  'consejo.7',
+  'consejo.8',
+  'consejo.9',
+] as const;
 
 /** Un consejo distinto cada día, igual para todo el día. */
 export function Consejo() {
@@ -156,7 +155,7 @@ export function Consejo() {
   return (
     <View style={estilos.consejo}>
       <Text style={estilos.consejoEmoji}>💡</Text>
-      <Text style={estilos.consejoTexto}>{CONSEJOS[dia % CONSEJOS.length]}</Text>
+      <Text style={estilos.consejoTexto}>{t(CONSEJOS[dia % CONSEJOS.length])}</Text>
     </View>
   );
 }

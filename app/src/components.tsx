@@ -13,6 +13,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { colors, fonts, radios, text } from './theme';
+import { t } from './i18n';
 
 const muelle = { useNativeDriver: true, speed: 30, bounciness: 14 };
 
@@ -98,7 +99,9 @@ export function Entrada({
           opacity: v.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 1, 1] }),
           transform: [
             { translateX: v.interpolate({ inputRange: [0, 1], outputRange: [desdeX, 0] }) },
-            { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [desdeX ? 0 : 28, 0] }) },
+            {
+              translateY: v.interpolate({ inputRange: [0, 1], outputRange: [desdeX ? 0 : 28, 0] }),
+            },
             { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) },
           ],
         },
@@ -142,7 +145,12 @@ export function Flotar({
         {
           transform: [
             { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -distancia] }) },
-            { rotate: v.interpolate({ inputRange: [0, 1], outputRange: [`-${giro}deg`, `${giro}deg`] }) },
+            {
+              rotate: v.interpolate({
+                inputRange: [0, 1],
+                outputRange: [`-${giro}deg`, `${giro}deg`],
+              }),
+            },
           ],
         },
       ]}>
@@ -281,10 +289,13 @@ export function Opciones({
   opciones,
   elegida,
   onElegir,
+  etiqueta = (v) => v,
 }: {
   opciones: string[];
   elegida: string;
   onElegir: (v: string) => void;
+  /** Lo que se enseña de cada opción, si no es la opción tal cual (una traducción). */
+  etiqueta?: (v: string) => string;
 }) {
   return (
     <View style={{ flexDirection: 'row', gap: 9 }}>
@@ -300,7 +311,7 @@ export function Opciones({
               estilos.segmentoTexto,
               opcion === elegida && { color: colors.ink, fontFamily: fonts.sansNegrita },
             ]}>
-            {opcion}
+            {etiqueta(opcion)}
           </Text>
         </Rebote>
       ))}
@@ -399,9 +410,7 @@ export function CabeceraPaso({
           ]}
         />
       </View>
-      <Text style={estilos.pasoTexto}>
-        {paso} de {total}
-      </Text>
+      <Text style={estilos.pasoTexto}>{t('comun.pasoDe', { paso, total })}</Text>
     </View>
   );
 }

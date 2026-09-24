@@ -9,41 +9,22 @@ import {
   FONDO_HUECO,
   IDIOMAS,
   nombreDeIdioma,
+  nombreConversacion,
   nombreDeNivel,
   pistaDe,
   useCatalogoPreguntas,
 } from '../preguntas';
 import { tipoDeProfundidad } from '../mapeo';
 import { colors, fonts } from '../theme';
+import { HojaIdioma } from '../components/SelectorIdioma';
+import { IDIOMAS_APP, idioma, t } from '../i18n';
+import type { Clave } from '../idiomas/es';
 
-const GENEROS: Record<string, string> = {
-  WOMAN: 'Mujer',
-  MAN: 'Hombre',
-  NON_BINARY: 'No binarie',
-  OTHER: 'Otro',
-};
-
-const BUSCA: Record<string, string> = {
-  WOMAN: 'Mujeres',
-  MAN: 'Hombres',
-  NON_BINARY: 'Personas no binarias',
-  OTHER: 'Otros géneros',
-};
-
-const INTENCIONES: Record<string, string> = {
-  FRIENDSHIP: 'Amistad',
-  DATING: 'Citas',
-  RELATIONSHIP: 'Pareja',
-  CASUAL: 'Algo casual',
-};
-
-const SOCIABILIDAD = [
-  'Me cuesta arrancar',
-  'Más bien reservado',
-  'Según el día',
-  'Bastante sociable',
-  'Hablo con cualquiera',
-];
+// Los valores del servidor (WOMAN, DATING, 1-5) a palabras, en el idioma de la app.
+const genero = (g: string) => t(`genero.${g}` as Clave);
+const busca = (g: string) => t(`busca.${g}` as Clave);
+const intencion = (i: string) => t(`intencion.${i}` as Clave);
+const sociabilidad = (n: number) => t(`sociabilidad.${n}` as Clave);
 
 /**
  * Tu perfil: cómo eres para la app, cómo te ve la otra persona en cada nivel, y
@@ -68,6 +49,8 @@ export function HomeScreen({
   const catalogoPreguntas = useCatalogoPreguntas();
   const nombrePregunta = (id: string) => catalogoPreguntas.find((q) => q.name === id)?.label ?? id;
   const [borrando, setBorrando] = useState(false);
+  const [eligiendoIdioma, setEligiendoIdioma] = useState(false);
+  const idiomaApp = IDIOMAS_APP.find((i) => i.codigo === idioma());
 
   /**
    * Se avisa de lo que se pierde ANTES de preguntar, con las palabras claras:
@@ -75,54 +58,58 @@ export function HomeScreen({
    * de alguien que creía que solo cerraba sesión.
    */
   function confirmarBorrado() {
-    Alert.alert(
-      '¿Borrar tu cuenta?',
-      'Se va todo: tu registro, tu foto, tus conversaciones y tus conexiones. ' +
-        'También desaparecen para las personas con las que hablaste. No se puede deshacer.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Borrar para siempre',
-          style: 'destructive',
-          onPress: async () => {
-            setBorrando(true);
-            try {
-              await deleteAccount(token);
-              onSalir();
-            } catch (e) {
-              Alert.alert(
-                'No se pudo borrar',
-                e instanceof ApiError ? e.message : 'Inténtalo de nuevo en un momento.',
-              );
-            } finally {
-              setBorrando(false);
-            }
-          },
+    Alert.alert(t('perfil.borrarTitulo'), t('perfil.borrarAviso'), [
+      { text: t('comun.cancelar'), style: 'cancel' },
+      {
+        text: t('perfil.borrarSiempre'),
+        style: 'destructive',
+        onPress: async () => {
+          setBorrando(true);
+          try {
+            await deleteAccount(token);
+            onSalir();
+          } catch (e) {
+            Alert.alert(
+              t('perfil.noSeBorro'),
+              e instanceof ApiError ? e.message : t('comun.reintentar'),
+            );
+          } finally {
+            setBorrando(false);
+          }
         },
-      ],
-    );
+      },
+    ]);
   }
 
   const baldosas = [
-    { emoji: '🎂', titulo: 'Edad', valor: `${perfil.age} años` },
+    { emoji: '🎂', titulo: t('perfil.edad'), valor: t('comun.anos', { edad: perfil.age }) },
     {
       emoji: '🙂',
-      titulo: 'Género',
-      valor: perfil.genderLabel || (GENEROS[perfil.gender] ?? perfil.gender),
+      titulo: t('perfil.genero'),
+      valor: perfil.genderLabel || genero(perfil.gender),
     },
     {
       emoji: '💘',
-      titulo: 'Quieres hablar con',
-      valor:
-        perfil.seeking.length === 4
-          ? 'Todo el mundo'
-          : perfil.seeking.map((g) => BUSCA[g] ?? g).join(', '),
+      titulo: t('perfil.hablarCon'),
+      valor: perfil.seeking.length === 4 ? t('perfil.todos') : perfil.seeking.map(busca).join(', '),
     },
-    { emoji: '📏', titulo: 'Edades', valor: `${perfil.ageMin} – ${perfil.ageMax} años` },
-    { emoji: '📍', titulo: 'Distancia', valor: `Hasta ${perfil.maxDistanceKm} km` },
-    { emoji: '🎯', titulo: 'Buscas', valor: INTENCIONES[perfil.intent] ?? perfil.intent },
-    { emoji: '💬', titulo: 'Conversación', valor: tipoDeProfundidad(perfil.conversationDepth) },
-    { emoji: '🫶', titulo: 'Cómo te relacionas', valor: SOCIABILIDAD[perfil.sociability - 1] },
+    {
+      emoji: '📏',
+      titulo: t('perfil.edades'),
+      valor: t('perfil.rangoEdad', { min: perfil.ageMin, max: perfil.ageMax }),
+    },
+    {
+      emoji: '📍',
+      titulo: t('perfil.distancia'),
+      valor: t('perfil.hastaKm', { km: perfil.maxDistanceKm }),
+    },
+    { emoji: '🎯', titulo: t('perfil.buscas'), valor: intencion(perfil.intent) },
+    {
+      emoji: '💬',
+      titulo: t('perfil.conversacion'),
+      valor: nombreConversacion(tipoDeProfundidad(perfil.conversationDepth)),
+    },
+    { emoji: '🫶', titulo: t('perfil.relacionas'), valor: sociabilidad(perfil.sociability) },
   ];
 
   const banderas = perfil.languages
@@ -139,7 +126,7 @@ export function HomeScreen({
               <Text style={estilos.flecha}>←</Text>
             </Rebote>
             <Rebote style={estilos.editar} onPress={onEditar}>
-              <Text style={estilos.editarTexto}>✏️ Editar</Text>
+              <Text style={estilos.editarTexto}>{t('perfil.editar')}</Text>
             </Rebote>
           </View>
 
@@ -150,8 +137,8 @@ export function HomeScreen({
             {perfil.nickname}, {perfil.age}
           </Text>
           <View style={estilos.chipsCabecera}>
-            <Chip texto={`📍 hasta ${perfil.maxDistanceKm} km`} />
-            <Chip texto={`🎯 ${INTENCIONES[perfil.intent] ?? perfil.intent}`} />
+            <Chip texto={`📍 ${t('perfil.hastaKm', { km: perfil.maxDistanceKm })}`} />
+            <Chip texto={`🎯 ${intencion(perfil.intent)}`} />
             {banderas ? <Chip texto={banderas} /> : null}
           </View>
         </View>
@@ -167,7 +154,7 @@ export function HomeScreen({
           />
         </Entrada>
 
-        <Seccion titulo="Lo básico" retraso={200}>
+        <Seccion titulo={t('perfil.basico')} retraso={200}>
           <View style={estilos.rejilla}>
             {baldosas.map((b, i) => (
               <Entrada key={b.titulo} retraso={240 + i * 50} style={estilos.baldosa}>
@@ -178,7 +165,7 @@ export function HomeScreen({
             ))}
           </View>
           <View style={estilos.idiomas}>
-            <Text style={estilos.baldosaTitulo}>🗣️ Idiomas</Text>
+            <Text style={estilos.baldosaTitulo}>{t('perfil.idiomas')}</Text>
             {perfil.languages.map((l) => (
               <View key={l.code} style={estilos.filaIdioma}>
                 <Text style={estilos.baldosaValor}>{nombreDeIdioma(l.code)}</Text>
@@ -188,7 +175,7 @@ export function HomeScreen({
           </View>
         </Seccion>
 
-        <Seccion titulo="Tus intereses" retraso={300}>
+        <Seccion titulo={t('perfil.intereses')} retraso={300}>
           <View style={estilos.chips}>
             {perfil.interests.map((interes, i) => (
               <Entrada key={interes} retraso={350 + i * 50}>
@@ -198,7 +185,7 @@ export function HomeScreen({
           </View>
         </Seccion>
 
-        <Seccion titulo="Tus tres preguntas" retraso={380}>
+        <Seccion titulo={t('perfil.preguntas')} retraso={380}>
           <View style={{ gap: 10 }}>
             {perfil.prompts.map((p, i) => (
               <View
@@ -217,17 +204,17 @@ export function HomeScreen({
         </Seccion>
 
         {(perfil.occupation || perfil.fromPlace) && (
-          <Seccion titulo="Un poco más de ti" retraso={440}>
+          <Seccion titulo={t('perfil.masDeTi')} retraso={440}>
             <View style={{ gap: 10 }}>
               {perfil.occupation ? (
                 <View style={estilos.filaMas}>
-                  <Text style={estilos.baldosaTitulo}>💼 A qué te dedicas</Text>
+                  <Text style={estilos.baldosaTitulo}>{t('perfil.dedicas')}</Text>
                   <Text style={estilos.baldosaValor}>{perfil.occupation}</Text>
                 </View>
               ) : null}
               {perfil.fromPlace ? (
                 <View style={estilos.filaMas}>
-                  <Text style={estilos.baldosaTitulo}>🏡 De dónde eres</Text>
+                  <Text style={estilos.baldosaTitulo}>{t('perfil.deDonde')}</Text>
                   <Text style={estilos.baldosaValor}>{perfil.fromPlace}</Text>
                 </View>
               ) : null}
@@ -235,15 +222,27 @@ export function HomeScreen({
           </Seccion>
         )}
 
-        <Seccion titulo="Ajustes" retraso={500}>
+        <Seccion titulo={t('perfil.ajustes')} retraso={500}>
           <View style={estilos.ajustes}>
-            <FilaAjuste emoji="✏️" texto="Cambiar mis respuestas" onPress={onEditar} />
+            <FilaAjuste emoji="✏️" texto={t('perfil.cambiarRespuestas')} onPress={onEditar} />
             <View style={estilos.separador} />
-            <FilaAjuste emoji="🚪" texto="Cerrar sesión" detalle={me.email} onPress={onSalir} />
+            <FilaAjuste
+              emoji="🌐"
+              texto={t('idiomaApp.titulo')}
+              detalle={`${idiomaApp?.bandera} ${idiomaApp?.nombre}`}
+              onPress={() => setEligiendoIdioma(true)}
+            />
+            <View style={estilos.separador} />
+            <FilaAjuste
+              emoji="🚪"
+              texto={t('perfil.cerrarSesion')}
+              detalle={me.email}
+              onPress={onSalir}
+            />
             <View style={estilos.separador} />
             <FilaAjuste
               emoji="🗑️"
-              texto={borrando ? 'Borrando…' : 'Borrar mi cuenta'}
+              texto={borrando ? t('perfil.borrando') : t('perfil.borrar')}
               peligro
               onPress={confirmarBorrado}
               deshabilitada={borrando}
@@ -251,6 +250,7 @@ export function HomeScreen({
           </View>
         </Seccion>
       </View>
+      <HojaIdioma visible={eligiendoIdioma} onCerrar={() => setEligiendoIdioma(false)} />
     </ScrollView>
   );
 }
@@ -275,8 +275,8 @@ function ComoTeVen({
 
   return (
     <View style={estilos.comoTeVen}>
-      <Text style={estilos.seccionTitulo}>Cómo te ven los demás</Text>
-      <Text style={estilos.pista}>Toca un nivel para ver qué descubren de ti en él.</Text>
+      <Text style={estilos.seccionTitulo}>{t('comoTeVen.titulo')}</Text>
+      <Text style={estilos.pista}>{t('comoTeVen.pista')}</Text>
 
       <View style={estilos.escalera}>
         <View style={estilos.lineaEscalera} />
@@ -299,28 +299,25 @@ function ComoTeVen({
 
       <Entrada key={nivel} style={[estilos.nivelCaja, { borderColor: color }]}>
         <Text style={[estilos.nivelTitulo, { color: nivel === 1 ? '#A87A00' : color }]}>
-          Nivel {nivel} · {NIVELES[nivel].titulo}
+          {t('comun.nivelTitulo', { nivel, titulo: NIVELES[nivel].titulo })}
         </Text>
 
         {nivel === 0 && (
           <>
-            <Text style={estilos.respuesta}>
-              {perfil.age} años, a unos pocos km. Ni tu nombre ni tu foto.
-            </Text>
+            <Text style={estilos.respuesta}>{t('comoTeVen.nivel0', { edad: perfil.age })}</Text>
             <View style={estilos.chips}>
               {perfil.interests.slice(0, 2).map((i) => (
                 <Pastilla key={i} texto={nombreInteres(i)} elegida tono="suave" />
               ))}
             </View>
-            <Text style={estilos.pista}>Solo dos de tus intereses, los que más tengáis en común.</Text>
+            <Text style={estilos.pista}>{t('comoTeVen.dosIntereses')}</Text>
           </>
         )}
 
         {nivel === 1 && (
           <>
             <Text style={estilos.respuesta}>
-              Tu apodo, <Text style={estilos.negrita}>«{perfil.nickname}»</Text>, y todos tus
-              intereses:
+              {t('comoTeVen.nivel1', { apodo: perfil.nickname })}
             </Text>
             <View style={estilos.chips}>
               {perfil.interests.map((i) => (
@@ -342,7 +339,7 @@ function ComoTeVen({
           <View style={estilos.filaNivel3}>
             <Image source={ownPhotoSource(token)} style={estilos.fotoPequena} />
             <View style={{ flexShrink: 1, gap: 3 }}>
-              <Text style={estilos.negrita}>Tu foto, si los dos lo pedís</Text>
+              <Text style={estilos.negrita}>{t('comoTeVen.foto')}</Text>
               {[perfil.genderLabel, perfil.occupation, perfil.fromPlace]
                 .filter(Boolean)
                 .map((dato) => (
@@ -357,16 +354,11 @@ function ComoTeVen({
           </View>
         )}
 
-        {nivel === 4 && (
-          <Text style={estilos.respuesta}>
-            💖 Lo que cada uno quiera compartir. Llega si los dos decís que sí al final del día, y
-            ya no caduca.
-          </Text>
-        )}
+        {nivel === 4 && <Text style={estilos.respuesta}>{t('comoTeVen.nivel4')}</Text>}
 
         {nivel < 4 && (
           <Text style={estilos.pista}>
-            🔒 Siguiente: {NIVELES[nivel + 1].desc.toLowerCase()}
+            {t('comoTeVen.siguiente', { desc: NIVELES[nivel + 1].desc.toLowerCase() })}
           </Text>
         )}
       </Entrada>

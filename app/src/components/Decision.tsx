@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Etiqueta, Rebote, Tarjeta } from '../components';
 import { colors, fonts, radios } from '../theme';
+import { t } from '../i18n';
 
 /**
  * La pregunta del final del día.
@@ -23,24 +24,20 @@ export function PreguntaFinal({
   if (respondido) {
     return (
       <Tarjeta>
-        <Etiqueta tono="accent">Respondido</Etiqueta>
+        <Etiqueta tono="accent">{t('decision.respondido')}</Etiqueta>
         <Text style={estilos.texto}>
-          {respondido === 'YES'
-            ? 'Has dicho que sí. A las 22:00 sabrás si la otra persona también quiso seguir.'
-            : 'Has dicho que no. La otra persona no sabrá qué respondiste.'}
+          {respondido === 'YES' ? t('decision.dijisteSi') : t('decision.dijisteNo')}
         </Text>
-        <Text style={estilos.pista}>Puedes cambiar de idea hasta las 22:00.</Text>
+        <Text style={estilos.pista}>{t('decision.cambiarIdea')}</Text>
       </Tarjeta>
     );
   }
 
   return (
     <Tarjeta>
-      <Etiqueta tono="accent">⏳ Últimos minutos</Etiqueta>
-      <Text style={estilos.pregunta}>¿Quieres seguir conociendo a esta persona?</Text>
-      <Text style={estilos.pista}>
-        Cada uno responde por su cuenta. Si no coincidís, nadie sabe qué respondió el otro.
-      </Text>
+      <Etiqueta tono="accent">{t('decision.ultimosMinutos')}</Etiqueta>
+      <Text style={estilos.pregunta}>{t('decision.pregunta')}</Text>
+      <Text style={estilos.pista}>{t('decision.anonimo')}</Text>
 
       <View style={{ flexDirection: 'row', gap: 9, marginTop: 4 }}>
         <Rebote
@@ -48,14 +45,14 @@ export function PreguntaFinal({
           style={[estilos.si, ocupado && estilos.apagado]}
           onPress={() => onResponder('YES')}
           disabled={ocupado}>
-          <Text style={estilos.siTexto}>Sí, seguir 💖</Text>
+          <Text style={estilos.siTexto}>{t('decision.si')}</Text>
         </Rebote>
         <Rebote
           fuera={{ flex: 1 }}
           style={[estilos.no, ocupado && estilos.apagado]}
           onPress={() => onResponder('NO')}
           disabled={ocupado}>
-          <Text style={estilos.noTexto}>Aquí lo dejo</Text>
+          <Text style={estilos.noTexto}>{t('decision.no')}</Text>
         </Rebote>
       </View>
     </Tarjeta>

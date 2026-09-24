@@ -6,9 +6,10 @@ import java.util.UUID;
 /** Where each person's phones are reachable. Someone may have more than one. */
 public interface PushTokenRepository {
 
-    void save(UUID accountId, String token);
+    /** @param language the language the app is in on that phone, like "es" */
+    void save(UUID accountId, String token, String language);
 
-    List<String> tokensOf(UUID accountId);
+    List<PushTarget> tokensOf(UUID accountId);
 
     /** A token the push service says is dead: it is dropped, not retried forever. */
     void delete(String token);

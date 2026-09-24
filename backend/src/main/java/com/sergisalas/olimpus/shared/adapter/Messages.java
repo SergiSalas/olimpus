@@ -44,6 +44,11 @@ public class Messages {
         return getOrDefault("prompt." + question, question);
     }
 
+    /** For texts nobody asked for (notifications): the language is given, not read. */
+    public String getIn(Locale locale, String key, Object... args) {
+        return source.getMessage(key, args, locale);
+    }
+
     public Locale locale() {
         return LocaleContextHolder.getLocale();
     }

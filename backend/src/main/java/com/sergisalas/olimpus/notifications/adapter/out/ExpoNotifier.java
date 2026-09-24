@@ -3,7 +3,9 @@ package com.sergisalas.olimpus.notifications.adapter.out;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sergisalas.olimpus.notifications.domain.Notice;
 import com.sergisalas.olimpus.notifications.domain.Notifier;
+import com.sergisalas.olimpus.notifications.domain.PushTarget;
 import com.sergisalas.olimpus.notifications.domain.PushTokenRepository;
+import com.sergisalas.olimpus.shared.adapter.Messages;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -12,6 +14,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +40,7 @@ public class ExpoNotifier implements Notifier {
     private static final int BATCH = 100;
 
     private final PushTokenRepository tokens;
+    private final Messages messages;
     private final ObjectMapper json;
     private final boolean enabled;
     private final HttpClient http =
@@ -44,39 +48,43 @@ public class ExpoNotifier implements Notifier {
 
     public ExpoNotifier(
             PushTokenRepository tokens,
+            Messages messages,
             ObjectMapper json,
             @Value("${olimpus.notifications.enabled:true}") boolean enabled) {
         this.tokens = tokens;
+        this.messages = messages;
         this.json = json;
         this.enabled = enabled;
     }
 
     @Override
     public void send(List<Notice> notices) {
-        List<Map<String, Object>> messages = new ArrayList<>();
+        List<Map<String, Object>> outgoing = new ArrayList<>();
 
         for (Notice notice : notices) {
-            for (String token : tokens.tokensOf(notice.accountId())) {
+            for (PushTarget target : tokens.tokensOf(notice.accountId())) {
+                // Each phone gets it in the language its app is in.
+                Locale language = Locale.forLanguageTag(target.language());
                 Map<String, Object> message = new LinkedHashMap<>();
-                message.put("to", token);
-                message.put("title", notice.title());
-                message.put("body", notice.body());
+                message.put("to", target.token());
+                message.put("title", messages.getIn(language, notice.titleKey()));
+                message.put("body", messages.getIn(language, notice.bodyKey()));
                 message.put("sound", "default");
                 message.put("data", Map.of("kind", notice.kind().name(),
                         "deepLink", notice.deepLink() == null ? "" : notice.deepLink()));
-                messages.add(message);
+                outgoing.add(message);
             }
         }
 
-        if (messages.isEmpty()) return;
+        if (outgoing.isEmpty()) return;
 
         if (!enabled) {
-            log.info("Notifications are off: {} would have been sent.", messages.size());
+            log.info("Notifications are off: {} would have been sent.", outgoing.size());
             return;
         }
 
-        for (int from = 0; from < messages.size(); from += BATCH) {
-            postQuietly(messages.subList(from, Math.min(from + BATCH, messages.size())));
+        for (int from = 0; from < outgoing.size(); from += BATCH) {
+            postQuietly(outgoing.subList(from, Math.min(from + BATCH, outgoing.size())));
         }
     }
 

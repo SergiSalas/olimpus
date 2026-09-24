@@ -1,5 +1,6 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { t } from './i18n';
 
 /**
  * Elegir una foto de la galería y dejarla lista para enviar.
@@ -13,7 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 export async function elegirFoto(): Promise<string | null> {
   const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permiso.granted) {
-    throw new Error('Sin permiso no podemos abrir tus fotos. Puedes dárnoslo en Ajustes.');
+    throw new Error(t('fotoPropia.sinPermiso'));
   }
 
   const eleccion = await ImagePicker.launchImageLibraryAsync({

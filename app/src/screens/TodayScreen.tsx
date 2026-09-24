@@ -16,6 +16,7 @@ import { Conexiones, Consejo, TuDia } from '../components/Hoy';
 import { PanelPruebas } from '../components/PanelPruebas';
 import { presentacionVista } from '../session';
 import { colors, fonts, text } from '../theme';
+import { locale, t } from '../i18n';
 
 /**
  * La pantalla principal: con quién hablas hoy.
@@ -50,7 +51,7 @@ export function TodayScreen({
       setToday(hoy);
       setConexiones(misConexiones);
     } catch {
-      setError('No se pudo hablar con el servidor.');
+      setError(t('comun.sinServidor'));
     } finally {
       setCargando(false);
     }
@@ -69,7 +70,7 @@ export function TodayScreen({
         <View style={estilos.cabecera}>
           <Text style={estilos.marca}>Olimpus</Text>
           <Rebote style={estilos.yo} onPress={onPerfil}>
-            <Text style={estilos.yoTexto}>Mi perfil</Text>
+            <Text style={estilos.yoTexto}>{t('hoy.miPerfil')}</Text>
             <View style={estilos.yoCirculo}>
               <Text style={estilos.yoInicial}>{perfil.nickname.charAt(0).toUpperCase()}</Text>
             </View>
@@ -84,7 +85,7 @@ export function TodayScreen({
         {today?.hasConversation && today.partner && today.conversationId && (
           <View style={{ gap: 14 }}>
             <Entrada>
-              <Text style={estilos.titular}>Hoy hablas con…</Text>
+              <Text style={estilos.titular}>{t('hoy.titular')}</Text>
             </Entrada>
             <TarjetaHoy
               today={today}
@@ -144,10 +145,12 @@ function TarjetaHoy({ today, onAbrir }: { today: Today; onAbrir: () => void }) {
     <Entrada retraso={120}>
       <Rebote style={estilos.tarjetaHoy} onPress={onAbrir}>
         <View style={estilos.filaArriba}>
-          <Text style={estilos.etiquetaHoy}>NIVEL 0 · MATCH</Text>
+          <Text style={estilos.etiquetaHoy}>{t('hoy.etiqueta')}</Text>
           {today.closesAt && (
             <View style={estilos.quedan}>
-              <Text style={estilos.quedanTexto}>⏳ quedan {quedanHasta(today.closesAt)}</Text>
+              <Text style={estilos.quedanTexto}>
+                {t('hoy.quedan', { tiempo: quedanHasta(today.closesAt) })}
+              </Text>
             </View>
           )}
         </View>
@@ -162,9 +165,9 @@ function TarjetaHoy({ today, onAbrir }: { today: Today; onAbrir: () => void }) {
           </Flotar>
         </View>
 
-        <Text style={estilos.edad}>{partner.age} años</Text>
+        <Text style={estilos.edad}>{t('comun.anos', { edad: partner.age })}</Text>
         <Text style={estilos.distancia}>
-          a unos {partner.approxDistanceKm} km · foto y apodo, todavía no
+          {t('hoy.distancia', { km: partner.approxDistanceKm })}
         </Text>
 
         <View style={estilos.chips}>
@@ -181,14 +184,12 @@ function TarjetaHoy({ today, onAbrir }: { today: Today; onAbrir: () => void }) {
         </View>
         {comunes > 0 && (
           <Text style={estilos.comunes}>
-            {comunes === 1 ? 'Un interés' : `${comunes} intereses`} en común contigo
+            {comunes === 1 ? t('hoy.unoEnComun') : t('hoy.variosEnComun', { n: comunes })}
           </Text>
         )}
 
         <View style={estilos.boton}>
-          <Text style={estilos.botonTexto}>
-            {empezada ? 'Seguir hablando' : 'Toca para empezar a hablar'}
-          </Text>
+          <Text style={estilos.botonTexto}>{empezada ? t('hoy.seguir') : t('hoy.empezar')}</Text>
           <Flotar distancia={3} giro={0} duracion={1200}>
             <Text style={estilos.botonTexto}>→</Text>
           </Flotar>
@@ -293,20 +294,17 @@ function Buscando({ today }: { today: Today }) {
         </View>
       </Animated.View>
 
-      <Text style={[text.titulo, { textAlign: 'center' }]}>Tu emparejamiento de hoy</Text>
+      <Text style={[text.titulo, { textAlign: 'center' }]}>{t('buscando.titulo')}</Text>
       <Text style={[text.cuerpo, { textAlign: 'center', maxWidth: 300 }]}>
-        Se hace solo, una vez al día y a la misma hora. No eliges tú: se mira que le convenga a los
-        dos.
+        {t('buscando.cuerpo')}
       </Text>
 
       <Tarjeta>
-        <Etiqueta>Cuándo</Etiqueta>
+        <Etiqueta>{t('buscando.cuando')}</Etiqueta>
         <Text style={estilos.cuando}>
-          {today.nextRoundAt ? fechaYHora(today.nextRoundAt) : 'Pronto'}
+          {today.nextRoundAt ? fechaYHora(today.nextRoundAt) : t('buscando.pronto')}
         </Text>
-        <Text style={estilos.pistaPersona}>
-          Si llevas días sin encaje, ampliamos la búsqueda poco a poco y te avisamos.
-        </Text>
+        <Text style={estilos.pistaPersona}>{t('buscando.ampliamos')}</Text>
       </Tarjeta>
     </View>
   );
@@ -314,7 +312,7 @@ function Buscando({ today }: { today: Today }) {
 
 function fechaYHora(iso: string): string {
   const fecha = new Date(iso);
-  const texto = fecha.toLocaleString([], {
+  const texto = fecha.toLocaleString(locale(), {
     weekday: 'long',
     hour: '2-digit',
     minute: '2-digit',

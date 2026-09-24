@@ -6,24 +6,20 @@ import com.sergisalas.olimpus.notifications.domain.Notifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.BiFunction;
 
 /**
  * The five moments Olimpus speaks, and what it says at each.
  *
  * <p>Wording lives outside, in messages.properties, like every other text a
- * person reads. What lives here is the rule: who gets told, and when.
+ * person reads, and is picked in each phone's language when sending. What lives
+ * here is the rule: who gets told, and when.
  */
 public class Announce {
 
-    /** Gets the text for a key, in the reader's language. */
-    private final BiFunction<String, Object[], String> words;
-
     private final Notifier notifier;
 
-    public Announce(Notifier notifier, BiFunction<String, Object[], String> words) {
+    public Announce(Notifier notifier) {
         this.notifier = notifier;
-        this.words = words;
     }
 
     /** 8:00, or whenever the round handed out conversations. */
@@ -35,8 +31,8 @@ public class Announce {
                         new Notice(
                                 account,
                                 Notice.Kind.NEW_MATCH,
-                                text("notice.new-match.title"),
-                                text("notice.new-match.body"),
+                                "notice.new-match.title",
+                                "notice.new-match.body",
                                 "/today"));
             }
         }
@@ -52,8 +48,8 @@ public class Announce {
                         new Notice(
                                 account,
                                 Notice.Kind.SECOND_CHANCE,
-                                text("notice.second-chance.title"),
-                                text("notice.second-chance.body"),
+                                "notice.second-chance.title",
+                                "notice.second-chance.body",
                                 "/today"));
             }
         }
@@ -70,8 +66,8 @@ public class Announce {
                         new Notice(
                                 conversation.partnerOf(sender),
                                 Notice.Kind.NEW_MESSAGE,
-                                text("notice.new-message.title"),
-                                text("notice.new-message.body"),
+                                "notice.new-message.title",
+                                "notice.new-message.body",
                                 "/chat/" + conversation.id())));
     }
 
@@ -84,8 +80,8 @@ public class Announce {
                         new Notice(
                                 account,
                                 Notice.Kind.CLOSING_SOON,
-                                text("notice.closing-soon.title"),
-                                text("notice.closing-soon.body"),
+                                "notice.closing-soon.title",
+                                "notice.closing-soon.body",
                                 "/chat/" + conversation.id()));
             }
         }
@@ -105,15 +101,11 @@ public class Announce {
                         new Notice(
                                 account,
                                 Notice.Kind.CONNECTION,
-                                text("notice.connection.title"),
-                                text("notice.connection.body"),
+                                "notice.connection.title",
+                                "notice.connection.body",
                                 "/chat/" + conversation.id()));
             }
         }
         notifier.send(notices);
-    }
-
-    private String text(String key) {
-        return words.apply(key, new Object[0]);
     }
 }

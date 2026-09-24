@@ -4,13 +4,55 @@ import { Boton, Etiqueta, Pastilla, Tarjeta } from '../components';
 import { useNombreInteres } from '../interests';
 import { nombreDeIdioma } from '../preguntas';
 import { colors, fonts } from '../theme';
+import { t } from '../i18n';
 
+/** Los textos se leen al usarlos, para que salgan en el idioma del momento. */
 export const NIVELES = [
-  { n: 0, titulo: 'Match', desc: 'Edad, dos intereses, zona' },
-  { n: 1, titulo: 'Primer mensaje', desc: 'Apodo y todos los intereses' },
-  { n: 2, titulo: 'Conversación', desc: 'Sus tres preguntas' },
-  { n: 3, titulo: 'Buena conexión', desc: 'Foto, si los dos aceptáis' },
-  { n: 4, titulo: 'Confianza', desc: 'Lo que cada uno quiera' },
+  {
+    n: 0,
+    get titulo() {
+      return t('nivel.0.titulo');
+    },
+    get desc() {
+      return t('nivel.0.desc');
+    },
+  },
+  {
+    n: 1,
+    get titulo() {
+      return t('nivel.1.titulo');
+    },
+    get desc() {
+      return t('nivel.1.desc');
+    },
+  },
+  {
+    n: 2,
+    get titulo() {
+      return t('nivel.2.titulo');
+    },
+    get desc() {
+      return t('nivel.2.desc');
+    },
+  },
+  {
+    n: 3,
+    get titulo() {
+      return t('nivel.3.titulo');
+    },
+    get desc() {
+      return t('nivel.3.desc');
+    },
+  },
+  {
+    n: 4,
+    get titulo() {
+      return t('nivel.4.titulo');
+    },
+    get desc() {
+      return t('nivel.4.desc');
+    },
+  },
 ];
 
 /** Un color de juego por nivel, del primero al último. */
@@ -57,30 +99,38 @@ export function LoQueSeVe({ chat, token }: { chat: Chat; token: string }) {
           </View>
         )}
         <Text style={estilos.nombre}>
-          {partner.nickname ? `${partner.nickname}, ${partner.age}` : `${partner.age} años`}
+          {partner.nickname
+            ? `${partner.nickname}, ${partner.age}`
+            : t('comun.anos', { edad: partner.age })}
         </Text>
-        <Text style={estilos.pista}>a unos {partner.approxDistanceKm} km</Text>
+        <Text style={estilos.pista}>{t('comun.aUnosKm', { km: partner.approxDistanceKm })}</Text>
         {partner.occupation ? <Text style={estilos.respuesta}>{partner.occupation}</Text> : null}
       </View>
 
       <Tarjeta>
         <View style={estilos.filaNivel}>
           <Etiqueta tono="accent">
-            {`Nivel ${partner.level} · ${NIVELES[partner.level]?.titulo ?? ''}`}
+            {t('comun.nivelTitulo', {
+              nivel: partner.level,
+              titulo: NIVELES[partner.level]?.titulo ?? '',
+            })}
           </Etiqueta>
           <Escalones nivel={partner.level} />
         </View>
         {siguiente && (
           <Text style={estilos.pista}>
-            {`Siguiente: ${siguiente.titulo.toLowerCase()} · ${siguiente.desc.toLowerCase()}`}
+            {t('perfilOtro.siguiente', {
+              titulo: siguiente.titulo.toLowerCase(),
+              desc: siguiente.desc.toLowerCase(),
+            })}
           </Text>
         )}
       </Tarjeta>
 
       <Tarjeta>
-        <Etiqueta>Sus intereses</Etiqueta>
+        <Etiqueta>{t('perfilOtro.intereses')}</Etiqueta>
         {chat.sharedInterests.length > 0 && (
-          <Text style={estilos.pista}>En morado, los que tenéis en común</Text>
+          <Text style={estilos.pista}>{t('perfilOtro.enComun')}</Text>
         )}
         <View style={estilos.rejilla}>
           {partner.interests.map((interes) => (
@@ -96,7 +146,7 @@ export function LoQueSeVe({ chat, token }: { chat: Chat; token: string }) {
 
       {partner.prompts.length > 0 ? (
         <Tarjeta>
-          <Etiqueta>Sus preguntas</Etiqueta>
+          <Etiqueta>{t('perfilOtro.preguntas')}</Etiqueta>
           {partner.prompts.map((pregunta) => (
             <View key={pregunta.question} style={{ gap: 3 }}>
               <Text style={estilos.pregunta}>{pregunta.label}</Text>
@@ -106,14 +156,14 @@ export function LoQueSeVe({ chat, token }: { chat: Chat; token: string }) {
         </Tarjeta>
       ) : (
         <View style={estilos.bloqueado}>
-          <Text style={estilos.pista}>🔒 Sus tres preguntas llegan en el nivel 2</Text>
+          <Text style={estilos.pista}>{t('perfilOtro.preguntasBloqueadas')}</Text>
         </View>
       )}
 
       {partner.level >= 3 &&
       (partner.genderLabel || partner.fromPlace || partner.languages.length > 0) ? (
         <Tarjeta>
-          <Etiqueta>Más de su perfil</Etiqueta>
+          <Etiqueta>{t('perfilOtro.mas')}</Etiqueta>
           {partner.genderLabel || partner.fromPlace ? (
             <Text style={estilos.respuesta}>
               {[partner.genderLabel, partner.fromPlace].filter(Boolean).join(' · ')}
@@ -121,13 +171,13 @@ export function LoQueSeVe({ chat, token }: { chat: Chat; token: string }) {
           ) : null}
           {partner.languages.length > 0 && (
             <Text style={estilos.respuesta}>
-              Habla {partner.languages.map(nombreDeIdioma).join(', ')}
+              {t('perfilOtro.habla', { idiomas: partner.languages.map(nombreDeIdioma).join(', ') })}
             </Text>
           )}
         </Tarjeta>
       ) : (
         <View style={estilos.bloqueado}>
-          <Text style={estilos.pista}>🔒 Foto y resto del perfil, en el nivel 3</Text>
+          <Text style={estilos.pista}>{t('perfilOtro.masBloqueado')}</Text>
         </View>
       )}
     </View>
@@ -151,9 +201,7 @@ export function PedirFoto({
     return (
       <View style={estilos.franja}>
         <Text style={estilos.franjaEmoji}>📸</Text>
-        <Text style={[estilos.pista, { flexShrink: 1 }]}>
-          Pedido. La foto aparecerá si la otra persona también lo pide, y no sabrá que tú lo hiciste.
-        </Text>
+        <Text style={[estilos.pista, { flexShrink: 1 }]}>{t('foto.pedido')}</Text>
       </View>
     );
   }
@@ -161,9 +209,9 @@ export function PedirFoto({
     <View style={estilos.franja}>
       <Text style={estilos.franjaEmoji}>📸</Text>
       <View style={{ flex: 1, gap: 8 }}>
-        <Text style={estilos.franjaTitulo}>¿Queréis veros?</Text>
-        <Text style={estilos.pista}>Hace falta que lo pidáis los dos. Nadie sabe si el otro lo pidió.</Text>
-        <Boton texto="Quiero verte" onPress={onQuieroVerte} ocupado={pidiendo} />
+        <Text style={estilos.franjaTitulo}>{t('foto.titulo')}</Text>
+        <Text style={estilos.pista}>{t('foto.ayuda')}</Text>
+        <Boton texto={t('foto.quieroVerte')} onPress={onQuieroVerte} ocupado={pidiendo} />
       </View>
     </View>
   );
@@ -202,7 +250,12 @@ const estilos = StyleSheet.create({
   },
   interrogante: { fontFamily: fonts.displayFuerte, fontSize: 40, color: colors.ink },
   nombre: { fontFamily: fonts.display, fontSize: 26, color: colors.ink },
-  filaNivel: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  filaNivel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   pregunta: { fontFamily: fonts.sansNegrita, fontSize: 14, color: colors.ink },
   respuesta: { fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 21, color: colors.ink2 },
   pista: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 19, color: colors.ink3 },

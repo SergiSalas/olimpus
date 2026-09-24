@@ -12,8 +12,18 @@ const PASOS: { paso: PasoDemo; emoji: string; titulo: string; detalle: string }[
     detalle: 'Nivel 2, si ya os habéis escrito 3 veces cada uno',
   },
   { paso: 'PHOTO', emoji: '📸', titulo: '+4 horas', detalle: 'Aparece «quiero verte»' },
-  { paso: 'DECISION', emoji: '⏳', titulo: 'Última media hora', detalle: 'Se abre la pregunta final' },
-  { paso: 'CLOSE', emoji: '🌙', titulo: 'Cerrar el día ya', detalle: 'Si los dos dijisteis sí, conexión' },
+  {
+    paso: 'DECISION',
+    emoji: '⏳',
+    titulo: 'Última media hora',
+    detalle: 'Se abre la pregunta final',
+  },
+  {
+    paso: 'CLOSE',
+    emoji: '🌙',
+    titulo: 'Cerrar el día ya',
+    detalle: 'Si los dos dijisteis sí, conexión',
+  },
 ];
 
 /**

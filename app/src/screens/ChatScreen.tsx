@@ -34,6 +34,7 @@ import { Presentacion } from '../components/Presentacion';
 import { Entrada, Rebote } from '../components';
 import { marcarPresentacionVista, presentacionVista } from '../session';
 import { colors, fonts } from '../theme';
+import { horaCorta as hora, t } from '../i18n';
 
 /**
  * El chat del día. Los mensajes se envían por HTTP y se reciben por la conexión
@@ -74,7 +75,7 @@ export function ChatScreen({
     try {
       setChat(await fetchChat(token, conversationId));
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No se pudo abrir la conversación.');
+      setError(e instanceof ApiError ? e.message : t('chat.errorAbrir'));
     }
   }, [token, conversationId]);
 
@@ -98,9 +99,9 @@ export function ChatScreen({
     if (nivel === null) return;
     if (nivelAnterior.current !== null && nivel > nivelAnterior.current) {
       setSubio(true);
-      const t = setTimeout(() => setSubio(false), 700);
+      const reloj = setTimeout(() => setSubio(false), 700);
       nivelAnterior.current = nivel;
-      return () => clearTimeout(t);
+      return () => clearTimeout(reloj);
     }
     nivelAnterior.current = nivel;
   }, [nivel]);
@@ -146,7 +147,7 @@ export function ChatScreen({
       // servidor, así que se le vuelve a preguntar en vez de adivinarlo aquí.
       cargar();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No se pudo enviar.');
+      setError(e instanceof ApiError ? e.message : t('comun.noSePudoEnviar'));
     } finally {
       setEnviando(false);
     }
@@ -171,7 +172,7 @@ export function ChatScreen({
       await likeMessage(token, conversationId, mensaje.id, liked);
     } catch (e) {
       marcarCorazon(mensaje.id, !liked);
-      setError(e instanceof ApiError ? e.message : 'No se pudo dar el corazón.');
+      setError(e instanceof ApiError ? e.message : t('chat.errorCorazon'));
     }
   }
 
@@ -184,7 +185,7 @@ export function ChatScreen({
       // Si los dos lo habéis pedido, la foto está lista: se abre su perfil.
       if (respuesta.bothAccepted) setViendoPerfil(true);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No se pudo pedir.');
+      setError(e instanceof ApiError ? e.message : t('chat.errorPedir'));
     } finally {
       setPidiendoFoto(false);
     }
@@ -197,7 +198,7 @@ export function ChatScreen({
       await decide(token, conversationId, respuesta);
       await cargar();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No se pudo responder.');
+      setError(e instanceof ApiError ? e.message : t('chat.errorResponder'));
     } finally {
       setRespondiendo(false);
     }
@@ -212,7 +213,7 @@ export function ChatScreen({
           <ActivityIndicator color={colors.accent} />
         )}
         <Pressable onPress={onVolver}>
-          <Text style={estilos.volver}>‹ Volver</Text>
+          <Text style={estilos.volver}>{t('comun.volver')}</Text>
         </Pressable>
       </View>
     );
@@ -247,24 +248,26 @@ export function ChatScreen({
           )}
           <View style={{ flexShrink: 1, gap: 3 }}>
             <Text style={estilos.nombre} numberOfLines={1}>
-              {partner.nickname ? `${partner.nickname}, ${partner.age}` : `${partner.age} años`}
+              {partner.nickname
+                ? `${partner.nickname}, ${partner.age}`
+                : t('comun.anos', { edad: partner.age })}
             </Text>
             <View style={estilos.filaNivel}>
               <Escalones nivel={partner.level} />
               <Text style={estilos.nivel}>{NIVELES[partner.level]?.titulo}</Text>
             </View>
-            <Text style={estilos.verPerfil}>Ver perfil ›</Text>
+            <Text style={estilos.verPerfil}>{t('chat.verPerfil')}</Text>
           </View>
         </Rebote>
 
         <View style={estilos.derecha}>
           <View style={[estilos.pastillaCierre, chat.connected && estilos.pastillaConexion]}>
             <Text style={estilos.pastillaCierreTexto}>
-              {chat.connected ? '💖 Conexión' : `⏳ ${hora(chat.closesAt)}`}
+              {chat.connected ? t('chat.conexion') : `⏳ ${hora(chat.closesAt)}`}
             </Text>
           </View>
           <Pressable onPress={() => setReportando(true)} hitSlop={10}>
-            <Text style={estilos.reportar}>Reportar</Text>
+            <Text style={estilos.reportar}>{t('chat.reportar')}</Text>
           </Pressable>
         </View>
       </View>
@@ -306,9 +309,9 @@ export function ChatScreen({
           <View style={estilos.arranque}>
             <Text style={estilos.arranqueEmoji}>💡</Text>
             <View style={{ flexShrink: 1, gap: 4 }}>
-              <Text style={estilos.arranqueEtiqueta}>Para romper el hielo</Text>
+              <Text style={estilos.arranqueEtiqueta}>{t('chat.hielo')}</Text>
               <Text style={estilos.arranqueTexto}>{chat.icebreaker}</Text>
-              <Text style={estilos.pistaCorazon}>Toca dos veces un mensaje suyo para darle ❤️</Text>
+              <Text style={estilos.pistaCorazon}>{t('chat.pistaCorazon')}</Text>
             </View>
           </View>
         }
@@ -317,7 +320,7 @@ export function ChatScreen({
             <Entrada style={{ alignItems: 'center', paddingVertical: 6 }}>
               <Rebote style={estilos.desbloqueo} onPress={() => setViendoPerfil(true)}>
                 <Text style={estilos.desbloqueoTexto}>🔓 {item.texto}</Text>
-                <Text style={estilos.desbloqueoVer}>Ver perfil ›</Text>
+                <Text style={estilos.desbloqueoVer}>{t('chat.verPerfil')}</Text>
               </Rebote>
             </Entrada>
           ) : (
@@ -350,9 +353,7 @@ export function ChatScreen({
       {cerrada ? (
         <View style={estilos.barra}>
           <Text style={estilos.cerradoTexto}>
-            {chat.state === 'BLOCKED'
-              ? 'Esta conversación está cortada. No os volveremos a emparejar.'
-              : 'Esta conversación se cerró a las 22:00. Mañana a las 4:00 hay reparto nuevo.'}
+            {chat.state === 'BLOCKED' ? t('chat.cortada') : t('chat.cerrada')}
           </Text>
         </View>
       ) : (
@@ -361,7 +362,7 @@ export function ChatScreen({
             style={estilos.campo}
             value={texto}
             onChangeText={setTexto}
-            placeholder="Escribe algo…"
+            placeholder={t('chat.escribe')}
             placeholderTextColor={colors.ink5}
             multiline
             maxLength={1000}
@@ -385,7 +386,7 @@ export function ChatScreen({
       {presentando && (
         <Presentacion
           inicial={(yo.charAt(0) || '?').toUpperCase()}
-          detalle={`${partner.age} años · a ${partner.approxDistanceKm} km`}
+          detalle={t('comun.edadYDistancia', { edad: partner.age, km: partner.approxDistanceKm })}
           onFin={() => setPresentando(false)}
         />
       )}
@@ -424,10 +425,6 @@ function conAvisos(chat: Chat): Fila[] {
   }
 
   return filas;
-}
-
-function hora(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 const estilos = StyleSheet.create({
