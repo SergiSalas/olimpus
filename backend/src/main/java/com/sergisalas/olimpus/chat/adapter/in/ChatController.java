@@ -3,6 +3,7 @@ package com.sergisalas.olimpus.chat.adapter.in;
 import com.sergisalas.olimpus.auth.adapter.in.CurrentAccount;
 import com.sergisalas.olimpus.auth.domain.Account;
 import com.sergisalas.olimpus.chat.application.GetChat;
+import com.sergisalas.olimpus.chat.application.LikeMessage;
 import com.sergisalas.olimpus.matching.application.AskToSeePhoto;
 import com.sergisalas.olimpus.notifications.application.Announce;
 import com.sergisalas.olimpus.shared.adapter.Messages;
@@ -31,7 +32,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ChatController {
 
     /** {@code mine} saves the phone from comparing ids. */
-    public record MessageResponse(UUID id, boolean mine, String text, Instant sentAt) {}
+    public record MessageResponse(UUID id, boolean mine, String text, Instant sentAt, boolean liked) {}
+
+    public record LikeRequest(boolean liked) {}
+
+    public record LikeResponse(UUID messageId, boolean liked) {}
 
     /**
      * Only what the level allows travels. A field that is null is not missing: it
@@ -86,6 +91,7 @@ public class ChatController {
 
     private final GetChat getChat;
     private final SendMessage sendMessage;
+    private final LikeMessage likeMessage;
     private final ChatBroadcaster broadcaster;
     private final IcebreakerWording icebreakers;
     private final AskToSeePhoto askToSeePhoto;
@@ -97,6 +103,7 @@ public class ChatController {
     public ChatController(
             GetChat getChat,
             SendMessage sendMessage,
+            LikeMessage likeMessage,
             ChatBroadcaster broadcaster,
             IcebreakerWording icebreakers,
             AskToSeePhoto askToSeePhoto,
@@ -106,6 +113,7 @@ public class ChatController {
             Messages messages) {
         this.getChat = getChat;
         this.sendMessage = sendMessage;
+        this.likeMessage = likeMessage;
         this.broadcaster = broadcaster;
         this.icebreakers = icebreakers;
         this.askToSeePhoto = askToSeePhoto;
@@ -162,7 +170,9 @@ public class ChatController {
                                                 messages.get(
                                                         "unlock.level-" + unlock.level().number())))
                         .toList(),
-                chat.messages().stream().map(m -> toResponse(m, account.id())).toList());
+                chat.messages().stream()
+                        .map(m -> toResponse(m, account.id(), chat.liked().contains(m.id())))
+                        .toList());
     }
 
     @PostMapping("/messages")
@@ -181,7 +191,22 @@ public class ChatController {
         // Y si tiene la app cerrada, le llega igual.
         announce.newMessage(sent.conversation(), account.id());
 
-        return toResponse(sent.message(), account.id());
+        return toResponse(sent.message(), account.id(), false);
+    }
+
+    /**
+     * A heart on one of the other person's messages, or taking it off. The other
+     * person sees it land at once, over the long-lived connection.
+     */
+    @PostMapping("/messages/{messageId}/like")
+    public LikeResponse like(
+            @PathVariable UUID id,
+            @PathVariable UUID messageId,
+            @CurrentAccount Account account,
+            @RequestBody LikeRequest body) {
+        var result = likeMessage.execute(id, account.id(), messageId, body.liked());
+        broadcaster.liked(result.conversation(), messageId, result.liked());
+        return new LikeResponse(messageId, result.liked());
     }
 
     /**
@@ -222,11 +247,12 @@ public class ChatController {
         decideOnPartner.execute(id, account.id(), body.answer());
     }
 
-    private static MessageResponse toResponse(Message message, UUID viewer) {
+    private static MessageResponse toResponse(Message message, UUID viewer, boolean liked) {
         return new MessageResponse(
                 message.id(),
                 message.senderAccountId().equals(viewer),
                 message.text(),
-                message.sentAt());
+                message.sentAt(),
+                liked);
     }
 }

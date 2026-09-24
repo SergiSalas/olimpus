@@ -63,6 +63,17 @@ public class ChatBroadcaster {
         }
     }
 
+    /** A heart put on or taken off: both phones update the message at once. */
+    public void liked(Conversation conversation, UUID messageId, boolean liked) {
+        String payload =
+                """
+                {"type":"like","conversationId":"%s","messageId":"%s","liked":%s}"""
+                        .formatted(conversation.id(), messageId, liked);
+        for (UUID recipient : List.of(conversation.accountA(), conversation.accountB())) {
+            send(recipient, payload);
+        }
+    }
+
     private void send(UUID accountId, String payload) {
         Set<WebSocketSession> sessions = open.get(accountId);
         if (sessions == null) return;

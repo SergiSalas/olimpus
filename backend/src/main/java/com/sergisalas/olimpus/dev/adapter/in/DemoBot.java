@@ -2,6 +2,7 @@ package com.sergisalas.olimpus.dev.adapter.in;
 
 import com.sergisalas.olimpus.chat.adapter.in.ChatBroadcaster;
 import com.sergisalas.olimpus.chat.application.GetChat;
+import com.sergisalas.olimpus.chat.application.LikeMessage;
 import com.sergisalas.olimpus.chat.application.SendMessage;
 import com.sergisalas.olimpus.chat.domain.Message;
 import com.sergisalas.olimpus.chat.domain.MessageRepository;
@@ -26,8 +27,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * Plays the other side of every test conversation, through the same use cases a
- * phone would call: it answers, asks to see you as soon as the rules allow and
- * says yes at the end. That way every level can be reached alone.
+ * phone would call: it answers, puts a heart on every third message of yours,
+ * asks to see you as soon as the rules allow and says yes at the end. That way every level can be reached alone.
  *
  * <p>It answers anything with canned lines: it is there to test the flow, not to
  * hold a conversation.
@@ -56,6 +57,7 @@ public class DemoBot {
     private final ConversationRepository conversations;
     private final MessageRepository messages;
     private final SendMessage sendMessage;
+    private final LikeMessage likeMessage;
     private final GetChat getChat;
     private final AskToSeePhoto askToSeePhoto;
     private final DecideOnPartner decideOnPartner;
@@ -68,6 +70,7 @@ public class DemoBot {
             ConversationRepository conversations,
             MessageRepository messages,
             SendMessage sendMessage,
+            LikeMessage likeMessage,
             GetChat getChat,
             AskToSeePhoto askToSeePhoto,
             DecideOnPartner decideOnPartner,
@@ -78,6 +81,7 @@ public class DemoBot {
         this.conversations = conversations;
         this.messages = messages;
         this.sendMessage = sendMessage;
+        this.likeMessage = likeMessage;
         this.getChat = getChat;
         this.askToSeePhoto = askToSeePhoto;
         this.decideOnPartner = decideOnPartner;
@@ -121,6 +125,7 @@ public class DemoBot {
             if (!last.senderAccountId().equals(seat.bot())
                     && last.sentAt().plus(THINKING).isBefore(now)) {
                 answer(conversation, seat.bot(), thread.size());
+                if (thread.size() % 3 == 0) heart(conversation, seat.bot(), last);
             }
         }
 
@@ -138,6 +143,11 @@ public class DemoBot {
         if (conversation.acceptsDecisionAt(now) && conversation.decisionBy(seat.bot()) == null) {
             decideOnPartner.execute(conversation.id(), seat.bot(), Decision.YES);
         }
+    }
+
+    private void heart(Conversation conversation, UUID bot, Message yours) {
+        var liked = likeMessage.execute(conversation.id(), bot, yours.id(), true);
+        broadcaster.liked(liked.conversation(), yours.id(), true);
     }
 
     /** Same steps as the chat endpoint, so the phone sees it live. */

@@ -251,6 +251,8 @@ export type ChatMessage = {
   mine: boolean;
   text: string;
   sentAt: string;
+  /** Si lleva el corazón de quien lo recibió. Los que llegan en directo aún no lo tienen. */
+  liked?: boolean;
 };
 
 /** Un aviso de desbloqueo, para pintarlo justo después del mensaje que lo abrió. */
@@ -298,12 +300,7 @@ export type Connection = {
 };
 
 export type ReportReason =
-  | 'DISRESPECT'
-  | 'UNWANTED_SEXUAL'
-  | 'SPAM'
-  | 'FAKE_PROFILE'
-  | 'LOOKS_UNDERAGE'
-  | 'OTHER';
+  'DISRESPECT' | 'UNWANTED_SEXUAL' | 'SPAM' | 'FAKE_PROFILE' | 'LOOKS_UNDERAGE' | 'OTHER';
 
 /** Un toque: corta la conversación al momento y no os vuelve a emparejar. */
 export const reportar = (token: string, conversationId: string, reason: ReportReason | null) =>
@@ -315,7 +312,11 @@ export const reportar = (token: string, conversationId: string, reason: ReportRe
 
 /** Dónde encontrar este móvil, para los cinco avisos. */
 export const registerPushToken = (token: string, pushToken: string) =>
-  request<void>('/api/push-token', { method: 'POST', body: JSON.stringify({ token: pushToken }) }, token);
+  request<void>(
+    '/api/push-token',
+    { method: 'POST', body: JSON.stringify({ token: pushToken }) },
+    token,
+  );
 
 export const fetchConnections = (token: string) =>
   request<Connection[]>('/api/connections', {}, token);
@@ -357,13 +358,27 @@ export const sendMessage = (token: string, conversationId: string, text: string)
     token,
   );
 
+/** Pone o quita el corazón en un mensaje de la otra persona. */
+export const likeMessage = (
+  token: string,
+  conversationId: string,
+  messageId: string,
+  liked: boolean,
+) =>
+  request<{ messageId: string; liked: boolean }>(
+    `/api/conversations/${conversationId}/messages/${messageId}/like`,
+    { method: 'POST', body: JSON.stringify({ liked }) },
+    token,
+  );
+
 /**
- * Conexión permanente para recibir lo que escribe el otro al instante.
- * Solo baja mensajes: enviar se hace por HTTP, donde ya están las reglas.
+ * Conexión permanente para recibir lo que escribe el otro al instante, y los
+ * corazones que se ponen o se quitan. Enviar se hace por HTTP, donde están las reglas.
  */
 export function openChatSocket(
   token: string,
   onMessage: (m: ChatMessage & { conversationId: string; level: number }) => void,
+  onLike?: (like: { conversationId: string; messageId: string; liked: boolean }) => void,
 ) {
   const url = `${backendUrl().replace(/^http/, 'ws')}/ws/chat?token=${encodeURIComponent(token)}`;
   const socket = new WebSocket(url);
@@ -372,6 +387,7 @@ export function openChatSocket(
     try {
       const data = JSON.parse(String(event.data));
       if (data.type === 'message') onMessage(data);
+      if (data.type === 'like') onLike?.(data);
     } catch {
       // Un mensaje que no se entiende no puede tumbar el chat.
     }

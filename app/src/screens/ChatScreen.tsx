@@ -18,12 +18,14 @@ import {
   askToSeePhoto,
   decide,
   fetchChat,
+  likeMessage,
   openChatSocket,
   partnerPhotoSource,
   sendMessage,
   type Chat,
   type ChatMessage,
 } from '../api';
+import { Burbuja } from '../components/Burbuja';
 import { PreguntaFinal } from '../components/Decision';
 import { Reportar } from '../components/Reportar';
 import { Escalones, LoQueSeVe, NIVELES, PedirFoto } from '../components/Escalera';
@@ -105,19 +107,26 @@ export function ChatScreen({
 
   // Lo que escribe el otro llega por aquí.
   useEffect(() => {
-    const socket = openChatSocket(token, (mensaje) => {
-      if (mensaje.conversationId !== conversationId || mensaje.mine) return;
+    const socket = openChatSocket(
+      token,
+      (mensaje) => {
+        if (mensaje.conversationId !== conversationId || mensaje.mine) return;
 
-      setChat((actual) => {
-        if (!actual) return actual;
-        // Si ese mensaje ha abierto un nivel, hay cosas nuevas que enseñar (su
-        // apodo, sus preguntas) y el aviso que lo cuenta: se le pide todo al servidor.
-        if (mensaje.level > actual.partner.level) {
-          cargar();
-        }
-        return { ...actual, messages: [...actual.messages, mensaje] };
-      });
-    });
+        setChat((actual) => {
+          if (!actual) return actual;
+          // Si ese mensaje ha abierto un nivel, hay cosas nuevas que enseñar (su
+          // apodo, sus preguntas) y el aviso que lo cuenta: se le pide todo al servidor.
+          if (mensaje.level > actual.partner.level) {
+            cargar();
+          }
+          return { ...actual, messages: [...actual.messages, mensaje] };
+        });
+      },
+      (corazon) => {
+        if (corazon.conversationId !== conversationId) return;
+        marcarCorazon(corazon.messageId, corazon.liked);
+      },
+    );
     return () => socket.close();
   }, [token, conversationId, cargar]);
 
@@ -140,6 +149,29 @@ export function ChatScreen({
       setError(e instanceof ApiError ? e.message : 'No se pudo enviar.');
     } finally {
       setEnviando(false);
+    }
+  }
+
+  function marcarCorazon(messageId: string, liked: boolean) {
+    setChat((actual) =>
+      actual
+        ? {
+            ...actual,
+            messages: actual.messages.map((m) => (m.id === messageId ? { ...m, liked } : m)),
+          }
+        : actual,
+    );
+  }
+
+  /** Se pinta al momento y se deshace si el servidor dice que no. */
+  async function darCorazon(mensaje: ChatMessage) {
+    const liked = !mensaje.liked;
+    marcarCorazon(mensaje.id, liked);
+    try {
+      await likeMessage(token, conversationId, mensaje.id, liked);
+    } catch (e) {
+      marcarCorazon(mensaje.id, !liked);
+      setError(e instanceof ApiError ? e.message : 'No se pudo dar el corazón.');
     }
   }
 
@@ -275,6 +307,7 @@ export function ChatScreen({
             <View style={{ flexShrink: 1, gap: 4 }}>
               <Text style={estilos.arranqueEtiqueta}>Para romper el hielo</Text>
               <Text style={estilos.arranqueTexto}>{chat.icebreaker}</Text>
+              <Text style={estilos.pistaCorazon}>Toca dos veces un mensaje suyo para darle ❤️</Text>
             </View>
           </View>
         }
@@ -287,14 +320,11 @@ export function ChatScreen({
               </Rebote>
             </Entrada>
           ) : (
-            <Entrada style={[estilos.burbuja, item.mensaje.mine ? estilos.mia : estilos.suya]}>
-              <Text style={item.mensaje.mine ? estilos.textoMio : estilos.textoSuyo}>
-                {item.mensaje.text}
-              </Text>
-              <Text style={item.mensaje.mine ? estilos.horaMia : estilos.horaSuya}>
-                {hora(item.mensaje.sentAt)}
-              </Text>
-            </Entrada>
+            <Burbuja
+              mensaje={item.mensaje}
+              hora={hora(item.mensaje.sentAt)}
+              onCorazon={item.mensaje.mine || cerrada ? undefined : () => darCorazon(item.mensaje)}
+            />
           )
         }
       />
@@ -501,6 +531,7 @@ const estilos = StyleSheet.create({
     textTransform: 'uppercase',
     color: '#A87A00',
   },
+  pistaCorazon: { fontFamily: fonts.sansMedia, fontSize: 12, color: '#A87A00', marginTop: 4 },
   arranqueTexto: { fontFamily: fonts.sansMedia, fontSize: 15, lineHeight: 22, color: colors.ink },
 
   desbloqueo: {
@@ -520,32 +551,6 @@ const estilos = StyleSheet.create({
     textAlign: 'center',
   },
   desbloqueoVer: { fontFamily: fonts.sansMedia, fontSize: 11.5, color: colors.onInk2 },
-  burbuja: { maxWidth: '82%', borderRadius: 22, paddingHorizontal: 18, paddingVertical: 14 },
-  mia: {
-    alignSelf: 'flex-end',
-    backgroundColor: colors.accent,
-    borderBottomWidth: 4,
-    borderColor: colors.accentOscuro,
-    borderBottomRightRadius: 6,
-  },
-  suya: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderBottomWidth: 4,
-    borderColor: colors.line,
-    borderBottomLeftRadius: 6,
-  },
-  textoMio: { fontFamily: fonts.sansMedia, fontSize: 16, lineHeight: 23, color: '#FFFFFF' },
-  textoSuyo: { fontFamily: fonts.sans, fontSize: 16, lineHeight: 23, color: colors.ink },
-  horaMia: {
-    fontFamily: fonts.sans,
-    fontSize: 10.5,
-    color: colors.accentClaro,
-    marginTop: 4,
-    textAlign: 'right',
-  },
-  horaSuya: { fontFamily: fonts.sans, fontSize: 10.5, color: colors.ink5, marginTop: 4 },
 
   fijos: { paddingHorizontal: 16, paddingTop: 8, gap: 8 },
   barra: {
