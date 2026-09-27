@@ -416,6 +416,10 @@ export function openChatSocket(
 /** Qué paso del día adelantar en la conversación de prueba. */
 export type PasoDemo = 'HOUR' | 'PHOTO' | 'DECISION' | 'CLOSE';
 
+/** El último código enviado a ese email, para no copiarlo de la consola al probar. */
+export const ultimoCodigoDePruebas = (email: string) =>
+  request<{ code: string }>(`/api/dev/last-code?email=${encodeURIComponent(email)}`);
+
 /** Crea una persona de prueba que encaja contigo y te da la conversación de hoy con ella. */
 export const startDemo = (token: string) =>
   request<{ conversationId: string; nickname: string }>('/api/dev/demo', { method: 'POST' }, token);
