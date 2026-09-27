@@ -1311,7 +1311,13 @@ function Hoja({
         <Pressable style={{ flex: 1 }} onPress={onCerrar} />
         <View style={estilos.hoja}>
           <View style={estilos.asa} />
-          <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 30 }}>{children}</ScrollView>
+          {/*
+            El margen va dentro del scroll y no fuera: el scroll recorta lo que se
+            sale, y las tarjetas de los lados se salen un poco al rebotar.
+          */}
+          <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 30, paddingHorizontal: 20 }}>
+            {children}
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -1566,7 +1572,6 @@ const estilos = StyleSheet.create({
     backgroundColor: colors.bg,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    paddingHorizontal: 20,
     paddingTop: 12,
   },
   asa: {
