@@ -74,8 +74,10 @@ export function EditarScreen({
 
       <View style={estilos.cuerpo}>
         <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 24 }}
+          // El scroll llega hasta el borde de la pantalla y el margen va dentro:
+          // así las opciones de los lados tienen sitio para rebotar sin cortarse.
+          style={{ flex: 1, marginHorizontal: -espacios.pantalla }}
+          contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: espacios.pantalla }}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets>
           <Text style={[text.ayuda, { marginBottom: 22 }]}>{t('editar.ayuda')}</Text>

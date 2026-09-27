@@ -173,8 +173,10 @@ export function OnboardingScreen({
         <ScrollView
           key={bloque}
           ref={scroll}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          // El scroll llega hasta el borde de la pantalla y el margen va dentro:
+          // así las opciones de los lados tienen sitio para rebotar sin cortarse.
+          style={{ flex: 1, marginHorizontal: -espacios.pantalla }}
+          contentContainerStyle={{ paddingBottom: 20, paddingHorizontal: espacios.pantalla }}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets>
           <Entrada desdeX={sentido * 60} style={estilos.encabezado}>
